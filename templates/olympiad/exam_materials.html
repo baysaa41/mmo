@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+{% load latex_filter %}
+
+{% block title %}Дүн{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="justify-content-center">
+        <h3>{{ title }}</h3>
+        <p class="alert alert-warning">Батлагдаагүй оноонууд нэмэгдэх эсвэл хасагдах боломжтой гэдгийг анхаар!</p>
+        {% autoescape off %}
+            <table class="table table bordered">
+                <tr>
+                    <th>№</th>
+                    <th>Овог, нэр</th>
+                    <th>ID</th>
+                    <th>Координатор</th>
+                    <th>Оноо</th>
+                    <th>Статус</th>
+                    <th>Материал харах</th>
+                    <th>Тайлбар</th>
+                </tr>
+                {% for result in results %}
+                    {# if result.upload_set.all #}
+                    <tr id="result{{ result.id }}">
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ result.contestant.last_name }}, {{ result.contestant.first_name }}</td>
+                        <td>{{ result.contestant.id }}</td>
+                        <td>{{ result.coordinator.username }}</td>
+                        <td>{{ result.score }}</td>
+                        <td class="text-center">{{ result.get_state }}</td>
+                        <td><button class="btn btn-sm btn-secondary"
+                                    onclick="viewUploads({{ result.id }})">Материал үзэх</button></td>
+                        <td>{{ result.olympiad.name }}, {{ result.problem.order }}-р бодлого:<br>{{ result.grader_comment|linebreaksbr }}</td>
+                    </tr>
+                    {#  endif #}
+                {% endfor %}
+            </table>
+        {% endautoescape %}
+    </div>
+    <div class="modal" id="grading" style="z-index: 10000">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h4 class="modal-title">Материал үзэх</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+
+                <!-- Modal body -->
+                <div class="modal-body">
+                    Modal body..
+                </div>
+
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-info btn-sm" onclick="viewerClose()">Зураг хаах</button>
+                    <button type="button" class="btn btn-danger btn-sm" data-dismiss="modal">Цонх хаах</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <script>
+        function viewUploads(i) {
+            $.get('{% url 'olympiad_view_result' %}', {'result_id': i }, function (data) {
+                console.log(data)
+                $("#grading").modal({backdrop: false})
+                $("#grading .modal-body").empty().append(data)
+                MathJax.Hub.Queue(["Typeset",MathJax.Hub])
+            }).done(
+                $("#student-result").submit(function(){
+                    console.log("hi")
+                })
+            )
+        }
+
+        function load() {
+            $("#images").viewer({
+                inline: true,
+                viewed: function() {
+                    $("#images").viewer('zoomTo', 1);
+                }
+            })
+        }
+
+        function viewerClose() {
+            $("#images").viewer('destroy')
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Олимпиадын бодлогууд{% endblock %}
+
+{% block content %}
+    {% if messages %}
+        {% for message in messages %}
+            <h5 class="alert alert-danger">{{ message }}</h5>
+        {% endfor %}
+    {% endif %}
+    <h3>Олимпиадууд</h3>
+    <ol>
+        {% for olympiad in olympiads %}
+            <li><a href="{% url 'olympiad_problems' %}?id={{ olympiad.id }}">{{ olympiad.name }}</a></li>
+        {% endfor %}
+    </ol>
+{% endblock %}

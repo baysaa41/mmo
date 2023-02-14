@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Баярлаа{% endblock %}
+
+{% block content %}
+    {% if messages %}
+            {% for message in messages %}
+                <h5 class="alert alert-danger">{{ message }}</h5>
+            {% endfor %}
+    {% endif %}
+    <h3>Олимпиадад оролцсонд баярлалаа.</h3>
+    <p>{% autoescape off %}{{ quiz.final_message }}{% endautoescape %}</p>
+{% endblock %}

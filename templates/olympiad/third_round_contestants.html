@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Дүн{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="ustify-content-center">
+        <h3>{{ title }}</h3>
+        <p class="alert alert-info">IMO сорилгод оролцож байгаа дунд ангиллын сурагчид ММО-57-д дунд ангилалд оролцож болно.
+        Энэ тохиолдолд оноог IMO шалгаруулалтын нийт дүнд оролцуулж тооцохгүй.</p>
+        <table class="table table bordered">
+            <tr>
+                <th>№</th>
+                <th>Овог, нэр</th>
+                <th>Аймаг, дүүрэг</th>
+                <!--th>Сургууль</th-->
+                <th>Анги</th>
+                <th>Ангилал</th>
+                {% if request.user.is_staff %}
+                    <th>Цахим шуудан</th>
+                    <th>Утас</th>
+                {% endif %}
+            </tr>
+            {% for contestant in students %}
+                {% if contestant.data.grade.id < 13 %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ contestant.last_name }}, {{ contestant.first_name }}</td>
+                    <td>{{ contestant.data.province.name }}</td>
+                    <!--td>{{ contestant.data.school }}</td-->
+                    <td>{{ contestant.data.grade.name }}</td>
+                    <td>{{ contestant.data.level.name }}</td>
+                    {% if request.user.is_staff %}
+                        <td>{{ contestant.email }}</td>
+                        <td>{{ contestant.data.mobile }}</td>
+                    {% endif %}
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+    </div>
+{% endblock %}

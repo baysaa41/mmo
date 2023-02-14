@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Олимпиадын дүн{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="ustify-content-center">
+        <table class="table table-bordered">
+            <tr>
+                <th>№</th>
+                <th>Хичээлийн жил</th>
+                <th>Нэр</th>
+                <th>Ангилал</th>
+                <th>Дүн</th>
+            </tr>
+            {% for olympiad in olympiads %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ olympiad.get_school_year }}</td>
+                    <td>{{ olympiad.name }}</td>
+                    <td>{{ olympiad.level.name }}</td>
+                    <td><a href="{% url 'olympiad_result_view' olympiad_id=olympiad.id %}" target="_blank">Дүн харах</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+        <h3>Хоёрдугаар шатны нэгдсэн дүн</h3>
+        <ol>
+            <li><a href="{% url 'olympiad_results_second_all' %}?level_id=4"
+                   target="_blank">Улсын нэгдсэн дүн, Дунд ангилал</a></li>
+            <li><a href="{% url 'olympiad_results_second_all' %}?level_id=5"
+                   target="_blank">Улсын нэгдсэн дүн, Ахлах ангилал</a></li>
+            <li><a href="{% url 'olympiad_results_second' %}?level_id=4"
+                   target="_blank">Улаанбаатар хотын нэгдсэн дүн, Дунд ангилал</a></li>
+            <li><a href="{% url 'olympiad_results_second' %}?level_id=5"
+                   target="_blank">Улаанбаатар хотын нэгдсэн дүн, Ахлах ангилал</a></li>
+            {% for province in provinces %}
+                <li><a href="{% url 'olympiad_results_second' %}?level_id=4&province_id={{ province.id }}"
+                       target="_blank">{{ province.name }}, Дунд ангилал</a></li>
+                <li><a href="{% url 'olympiad_results_second' %}?level_id=5&province_id={{ province.id }}"
+                       target="_blank">{{ province.name }}, Ахлах ангилал</a></li>
+            {% endfor %}
+        </ol>
+        <h3>Нэгдүгээр шатны нэгдсэн дүн</h3>
+
+        <div class="alert alert-info mt-3">
+            <a href="{% url 'olympiad_contestants_second' %}" target="_blank"
+               class="btn btn-sm btn-info">II шатанд шалгарсан сурагчдын нэрс</a>
+        </div>
+
+        <ol>
+            <li><a href="{% url 'olympiad_results_first' %}?level_id=4"
+                   target="_blank">Улаанбаатар хот, Дунд ангилал</a></li>
+            <li><a href="{% url 'olympiad_results_first' %}?level_id=5"
+                   target="_blank">Улаанбаатар хот, Ахлах ангилал</a></li>
+            {% for province in provinces %}
+                <li><a href="{% url 'olympiad_results_first' %}?level_id=4&province_id={{ province.id }}"
+                       target="_blank">{{ province.name }}, Дунд ангилал</a></li>
+                <li><a href="{% url 'olympiad_results_first' %}?level_id=5&province_id={{ province.id }}"
+                       target="_blank">{{ province.name }}, Ахлах ангилал</a></li>
+            {% endfor %}
+        </ol>
+    </div>
+{% endblock %}

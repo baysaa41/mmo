@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+{% load latex_filter %}
+
+{% block title %}Шалгалт{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <h3>ID: {{ contestant.id }}. {{ contestant.first_name }}, {{ contestant.last_name }}</h3>
+    <p class="alert alert-danger">Бодлого хамгаалах хүсэлт ирүүлэхдээ цаасны дээр <strong>Бодлого хамгаалах хүсэлт</strong>
+        гэж тодоор бичиж ирүүлнэ.
+        Дүгнэх аргачлалын аль заалтаар оноо авах үндэслэл үүсч буйг тодорхой бичээрэй. Бодлого хамгаалах сурагч өөрийн үндсэн материалын зураг системд ороогүй, эсвэл шаардлага хангахгүй гэж үзвэл
+        нэмэлтээр оруулах хүсэлт ирүүлж болно (өөрт зураг нь байхгүй бол материалыг нэмүүлэх хүсэлт ирүүлнэ).
+        Хүсэлтийг хүлээн авсан тохиолдолд материал үндсэн материалд нэмэгдэх (дүнгийн хуудаснаас харж болно) ба энэ хуудсанд харагдахгүй. Шаардлага хангаагүй материалыг системээс устгана. Энэ тохиолдолд дүнгийн хуудас болон энэ хуудасны алинд ч материал харагдахгүй.</p
+    <h4>Бодлогууд</h4>
+    {% autoescape off %}
+        {% for result in results %}
+            <div>{{ result.problem.order }}. {{ result.problem.statement|latex|linebreaksbr }}</div>
+            <div class="my-3">
+                {% if result.get_supplements %}
+                    <b>Илгээсэн бодолтууд:</b>
+                    {% for upload in result.get_supplements %}
+                        <img src="/media/{{ upload.file }}" style="width: 100px;height: 100px">
+                    {% endfor %}
+                    <a href="{% url 'olympiad_result_viewer' %}?result_id={{ result.id }}"
+                       target="_blank">Харах</a>
+                {% endif %}
+            </div>
+            <div id="form-{{ result.id }}" class="upload-form"></div>
+            <div class="my-3">
+                <button type="submit" class="btn btn-sm btn-secondary" onclick="upload({{ result.id }})">Бодолт илгээх
+                </button>
+            </div>
+        {% endfor %}
+    {% endautoescape %}
+    <script>
+        function upload(i) {
+            $(".upload-form").empty()
+            $.get('{% url 'olympiad_get_result_form' %}', {'result_id': i}, function (data) {
+                $("#form-" + i).empty()
+                $("#form-" + i).append(data)
+            })
+        }
+    </script>
+{% endblock %}

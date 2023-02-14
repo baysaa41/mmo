@@ -1,0 +1,44 @@
+{% extends 'muis.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Даалгаврууд{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="ustify-content-center">
+        <p>{{ now | date:'Y-m-d H:i' }}</p>
+        {% if messages %}
+            {% for message in messages %}
+                <h5 class="alert alert-danger">{{ message }}</h5>
+            {% endfor %}
+        {% endif %}
+        {% if quizzes %}
+            <table class="table">
+                <th>№</th>
+                <th>Тестийн нэр</th>
+                <th>Эхлэх хугацаа</th>
+                <th>Дуусах хугацаа</th>
+                <th>Тестэд оролцох</th>
+                {% for quiz in quizzes %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ quiz.name }}</td>
+                        <td>{{ quiz.start_time | date:'Y-m-d H:i' }}</td>
+                        <td>{{ quiz.end_time | date:'Y-m-d H:i' }}</td>
+                        {% if quiz.quiz_type == 0 %}
+                            <td><a class="btn btn-info" href="{% url 'quiz_main' quiz_id=quiz.id pos=1 %}">Эхлэх</a>
+                            </td>
+                        {% else %}
+                            <td><a class="btn btn-info" href="{% url 'quiz_exam' quiz_id=quiz.id %}">Эхлэх</a></td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>Одоогоор даалгавар байхгүй байна.</p>
+        {% endif %}
+    </div>
+{% endblock %}

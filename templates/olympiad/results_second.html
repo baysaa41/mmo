@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Дүн{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="ustify-content-center">
+        <h3>&quot;{{ province.name }}&quot; дүн</h3>
+        <table class="table table bordered">
+            <tr>
+                <th>№</th>
+                <th>Овог, нэр</th>
+                <th>Аймаг, дүүрэг</th>
+                <th>Сургууль</th>
+                <th>Анги</th>
+                <th class="text-center">Оноо</th>
+                <th class="text-center">Байр</th>
+                {% if request.user.is_staff %}
+                    <th class="text-center">Утас</th>
+                    <th class="text-center">И-мэйл</th>
+                {% endif %}
+                <th>ММО-57</th>
+            </tr>
+            {% for result in results %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ result.1 }}, {{ result.2 }}</td>
+                    <td>{{ result.3 }}</td>
+                    <td>{{ result.4 }}</td>
+                    <td>{{ result.5 }}</td>
+                    <td class="text-center">{{ result.6 }}</td>
+                    <td class="text-center">{{ result.7 }}</td>
+                    {% if request.user.is_staff %}
+                        <td class="text-center">{{ result.8 }}</td>
+                        <td>{{ result.9 }}</td>
+                    {% endif %}
+                    {% if result.10 %}
+                        <td><span class="text-success">ММО-57</span></td>
+                    {% elif request.user.is_staff %}
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    onclick="add2third({{ result.0 }})">
+                                ММO-57
+                            </button>
+                        </td>
+                    {% else %}
+                        <td></td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <script>
+    function add2third(user_id) {
+        $.get('{% url "add_to_third" %}', {'user_id': user_id, group_id: 3}, function(data){
+              console.log(data)
+        })
+    }
+    </script>
+{% endblock %}

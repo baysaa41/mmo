@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Нэмэлт материал{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="justify-content-center">
+        {% if messages %}
+            {% for message in messages %}
+                <h5 class="alert alert-danger">{{ message }}</h5>
+            {% endfor %}
+        {% endif %}
+        <h3>Нэмэлт материал оруулах</h3>
+        <table class="table table-hover">
+            <tr>
+                <th>Олимпиад</th>
+                <th>Ангилал</th>
+                <th>Оролцох</th>
+            </tr>
+            {% for olympiad in olympiads %}
+                <tr>
+                    <td>{{ olympiad.name }}</td>
+                    <td>{{ olympiad.level.name }}</td>
+                    <td>
+                        <a class="btn btn-info" href="{% url 'student_supplement_view' olympiad_id=olympiad.id %}">Эхлэх</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+{% endblock %}

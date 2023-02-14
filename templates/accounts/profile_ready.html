@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block title %}Бүртгэл амжилттай{% endblock %}
+
+{% block content %}
+    <p>Таны бүртгэл амжилттай боллоо. Таны бүртгэлийн дугаар (ID): {{ request.user.id }}</p>
+    <p><a href="{% url 'home' %}">Нүүр хуудасд очих</a></p>
+    <p><a href="{% url 'olympiad_home' %}">Олимпиадад оролцох</a></p>
+{% endblock %}

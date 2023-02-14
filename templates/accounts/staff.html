@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Бүртгэлтэй хэрэглэгчид{% endblock %}
+
+{% block content %}
+    <h3>Багш, гишүүд дэмжигчдийн жагсаалт</h3>
+    {% if users %}
+        <table class="table table-bordered">
+            <tr>
+                <th>№</th>
+                <th>Овог</th>
+                <th>Нэр</th>
+                <th>ID</th>
+                <th>Бүс</th>
+                <th>Сургууль</th>
+                <th>Утас</th>
+                <th>Email</th>
+            </tr>
+            {% for user in users %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ user.last_name }}</td>
+                    <td>{{ user.first_name }}</td>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.data.province.zone.name }}</td>
+                    <td>{{ user.data.school }}</td>
+                    <td>{{ user.data.mobile }}</td>
+                    <td>{{ user.email }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% load latex_filter %}
+
+{% block title %}Бодлогууд{% endblock %}
+
+{% block content %}
+    {% autoescape off %}
+        <h3>{{ olympiad.name }}, {{ olympiad.level.name }} ангилал</h3>
+        {% if problems|length > 0 %}
+            {% for p in problems %}
+                <div class="border-top">
+                    <p class="bg-light p-2">{% autoescape off %}<b>{{ p.order }}.</b> {{ p.statement|latex|linebreaksbr }}{% endautoescape %}</p>
+                {% if p.numerical_answer is not null %}
+                    <p><span class="text-danger">Хариу: {{ p.numerical_answer }}</span></p>{% endif %}
+                {% if p.solution_set %}
+                    {% for s in p.solution_set.all %}
+                        <div>
+                            <p><b>Бодолт {{ forloop.counter }}.</b></p>
+                            {{ s.content|latex|linebreaksbr }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="card p-3 mt-2 bg-light text-dark">Бодлогуудыг үзэх боломжгүй.</div>
+        {% endif %}
+    {% endautoescape %}
+{% endblock %}

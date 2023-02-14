@@ -1,0 +1,36 @@
+{% extends 'base-fluid.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Олимпиадын дүн{% endblock %}
+
+{% block style %}
+    .dataframe {
+        border: 1px solid #000;
+        font-family: "Roboto", Verdana, Arial, sans-serif;
+    }
+
+    .dataframe td {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        text-align: right;
+        border: 1px solid #000;
+    }
+
+    .dataframe th {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        border: 1px solid #000;
+    }
+{% endblock %}
+
+{% block content %}
+    <h3>{{ title }}</h3>
+    <h4>{{ quiz.name }}, {{ quiz.level.name }} ангилал</h4>
+    {% if quiz.level.id == 1 %}
+        <p>Бага ангийн сурагчдын дүнг нэрсээр гаргаагүй. Өөрсдийн ID-гаараа дүнгээ шалгаарай.</p>
+    {% endif %}
+    <div class="ustify-content-center">
+        {{ pivot | safe }}
+    </div>
+{% endblock %}

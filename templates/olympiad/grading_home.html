@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% load latex_filter %}
+
+{% block title %}Координатор хуудас{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <style>
+    td, th {
+        max-width: 450px;
+        overflow: hidden;
+    }
+    </style>
+    <table class="table table-bordered">
+        <tr>
+            <th>№</th>
+            <th>Олимпиад</th>
+            <th>Бодлого</th>
+            <th>Засагдаагүй</th>
+            <th>Зассан</th>
+            <th>Маргаантай</th>
+            <th>Засах линк</th>
+        </tr>
+        {% for olympiad in olympiads %}
+            {% for problem in olympiad.problem_set.all %}
+                <tr>
+                    <td>{{ forloop.parentloop.counter }}.{{ forloop.counter }}</td>
+                    <td>{{ problem.olympiad.name }}</td>
+                    <td>Бодлого №{{ problem.order }} ({{ problem.id }})<br>{% autoescape off %}{{ problem.statement|latex|linebreaksbr }}{% endautoescape %}</td>
+                    <td>{{ problem.get_nongraded }}</td>
+                    <td>{{ problem.get_graded }}</td>
+                    <td>{{ problem.get_disputed }}</td>
+                    <td><a href="{% url 'olympiad_exam_grading' problem_id=problem.id %}"
+                           class="btn btn-sm {% if problem.is_active %}btn-warning{% else %}btn-secondary{% endif %}">засах</a></td>
+                </tr>
+            {% endfor %}
+        {% endfor %}
+    </table>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+{% load latex_filter %}
+
+{% block title %}Шалгалт{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <h3>ID: {{ contestant.id }}. {{ contestant.first_name }}, {{ contestant.last_name }}</h3>
+    <p>Дараах зүйлсийг анхаарна уу!</p>
+    <ol>
+        <li>Хянагч багшаас өгөх шаардлагыг даган биелүүлнэ.</li>
+        <li>Бодолтын туршид камер асаалттай байна.</li>
+        <li>Камер унтарсан хүмүүст сануулах ба сануулаад нээгээгүй тохиолдолд бодолтыг тооцохгүй.</li>
+        <li>00 орох тохиолдолд 00 орлоо гэж чатад бичээд явна. Удах ёсгүй.</li>
+        <li>Бусдад саад болох дуу чимээ гаргахгүй байх.</li>
+        <li>Бодлоготой холбоотой асуултыг эхний 45 минутад асууж болно.</li>
+        <li>Бодолтын цаас бүр дээр өөрийн ID дугаар, бодлогын дугаарыг бичнэ.</li>
+        <li>Бодолтын явцад бодолт хийсэн материалаа системд тогтмол оруулаарай. Илгээсэн файлуудын нэр харагдаж байх тул
+        аль болох давтаж явуулахгүйг хичээгээрэй!</li>
+        <li>Бодолт дууссаны дараа 15 минутын дотор бүх бодолтоо mmo57sub@gmail.com хаяг руу давхар явуулна.</li>
+        <li>Бодолт хүлээн авах эцсийн хугацаа 13:45.</li>
+    </ol>
+    <h4>Бодлогууд</h4>
+    {% autoescape off %}
+        {% for result in results %}
+            <div>{{ result.problem.order }}. {{ result.problem.statement|latex|linebreaksbr}}</div>
+            <div class="my-3">
+                {% if result.get_supplements %}
+                    <b>Илгээсэн бодолтууд:</b>
+                    {% for upload in result.get_supplements %}
+                        <img src="/media/{{ upload.file }}" style="width: 100px;height: 100px">
+                    {% endfor %}
+                    <a href="{% url 'olympiad_result_viewer' %}?result_id={{ result.id }}"
+                       target="_blank">Харах</a>
+                {% endif %}
+            </div>
+            <div id="form-{{ result.id }}" class="upload-form"></div>
+            <div class="my-3">
+                <button type="submit" class="btn btn-sm btn-secondary" onclick="upload({{ result.id }})">Бодолт илгээх
+                </button>
+            </div>
+        {% endfor %}
+    {% endautoescape %}
+    <script>
+        function upload(i) {
+            $(".upload-form").empty()
+            $.get('{% url 'olympiad_get_result_form' %}', {'result_id': i}, function (data) {
+                $("#form-" + i).empty()
+                $("#form-" + i).append(data)
+            })
+        }
+    </script>
+{% endblock %}

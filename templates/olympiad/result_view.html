@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Бодолт харах{% endblock %}
+
+{% block content %}
+
+    <div style="min-height: 500px;">
+        <ul id="images" class="list-inline">
+            {% for upload in result.upload_set.all %}
+                <li class="list-inline-item"><img src="/media/{{ upload.file }}" style="width: 100px; height: 100px"></li>
+            {% endfor %}
+        </ul>
+    </div>
+        <button class="btn btn-sm btn-primary" onclick="load()">Зургийг тодруулж харах</button>
+        <button class="btn btn-sm btn-danger" onclick="viewerClose()">Зургийг хаах</button>
+
+    <script>
+        function load() {
+            $("#images").viewer({
+                inline: true,
+                viewed: function() {
+                    $("#images").viewer('zoomTo', 1);
+                }
+            })
+        }
+
+        function viewerClose() {
+            $("#images").viewer('destroy')
+        }
+    </script>
+{% endblock %}

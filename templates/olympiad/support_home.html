@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Олимпиад{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="justify-content-center">
+        {% if messages %}
+            {% for message in messages %}
+                <h5 class="alert alert-danger">{{ message }}</h5>
+            {% endfor %}
+        {% endif %}
+        <div id="time">Улаанбаатарын цаг: {{ now | date:'Y-m-d H:i' }}</div>
+        <h3>Таны оролцох ангилал: {{ request.user.data.level.name }}</h3>
+        <p class="alert alert-danger">Өөрийн оролцох ангиллаа зөв эсэхийг шалгаад буруу бол
+            <a href="{% url 'user_profile' %}" class="btn btn-sm btn-danger">Профайл засах</a> ашиглан солиорой.</p>
+        <table class="table table-hover">
+            <tr>
+                <th>Олимпиад</th>
+                <th>Оролцох</th>
+            </tr>
+            {% for olympiad in olympiads %}
+                <tr>
+                    <td>{{ olympiad.name }}</td>
+                    <td>
+                        <a class="btn btn-info" href="{% url 'student_support_view' olympiad_id=olympiad.id %}">Эхлэх</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+{% endblock %}

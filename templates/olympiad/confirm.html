@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% load latex_filter %}
+{% load crispy_forms_filters %}
+
+{% block content %}
+    <h3>Хариулт баталгаажуулах</h3>
+    <p class="alert alert-info">Дараах хариултууд серверт хадгалагдсан бөгөөд өөрчлөх бол доор байгаа буцах товчийг дарж
+        өөрчлөөрэй!</p>
+    {% for result in results %}
+        <p>{% autoescape off %}{{ result.problem.order }}.
+            {{ result.problem.statement | latex }}
+        {% endautoescape %}</p>
+        <p><strong>Таны хариулт:</strong> {{ result.answer }}</p>
+        <hr>
+    {% endfor %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row mt-4">
+            <div class="col-6"><a href="{% url 'olympiad_quiz' quiz_id=olympiad.id %}"
+                                  class="btn btn-block btn-warning">Хариултаа засах (буцах)</a></div>
+            <div class="col-6"><a href="{% url 'olympiad_quiz_end' quiz_id=olympiad.id %}"
+                                  class="btn btn-block btn-success">Дуусгах</a></div>
+        </div>
+    </form>
+    </div>
+{% endblock %}

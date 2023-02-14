@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Монголын Математикийн Олимпиадын Хороо{% endblock %}
+
+{% block content %}
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    <div class="mt-3 d-flex justify-content-between">
+        <div>{%if prev is not None %}<a class="btn btn-light btn-sm" href="/?year={{ prev.id }}">&larr; {{ prev.name }}</a>{% endif %}</div>
+        <div><button class="btn btn-secondary btn-sm">{{ year.name }}</button></div>
+        <div>{%if next is not None %}<a class="btn btn-light btn-sm" href="/?year={{ next.id }}">{{ next.name }} &rarr;</a>{% endif %}</div>
+    </div>
+    {% if articles %}
+    {% for article in articles %}
+        <div class="card p-3 mt-2 bg-light text-dark">
+            <h4 class="my-3"><a href="{% url 'post_view' %}?id={{ article.id }}" class="text-info">{{ article.title }}</a></h4>
+        {% if request.user.is_staff and mode %}
+            <a href="/admin/olympiad/article/{{ article.id }}/change/" target="_blank">Засах</a>
+        {% endif %}
+        {% autoescape off %}{{ article.Descr }} {% endautoescape %}
+        <p>Нийтэлсэн: {{ article.StartDate | date:'Y-m-d' }}, Сүүлийн засвар: {{ article.CreateDate | date:'Y-m-d' }}</p>
+        </div>
+    {% endfor %}
+    <div class="mt-3 d-flex justify-content-between">
+        <div>{%if prev is not None %}<a class="btn btn-light btn-sm" href="/?year={{ prev.id }}">&larr; {{ prev.name }}</a>{% endif %}</div>
+        <div><button class="btn btn-secondary btn-sm">{{ year.name }}</button></div>
+        <div>{%if next is not None %}<a class="btn btn-light btn-sm" href="/?year={{ next.id }}">{{ next.name }} &rarr;</a>{% endif %}</div>
+    </div>
+        {% else %}
+        <div class="card p-2 mt-3 bg-light text-dark">Ямар нэг мэдээ алга байна.</div>
+    {% endif %}
+{% endblock %}

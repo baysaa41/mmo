@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+{% load latex_filter %}
+
+{% block title %}Бодлогууд{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="ustify-content-center">
+        <h4>{{ olympiad.name }}</h4>
+        <h5>Оролцогчийн овог, нэр: {{ username }}</h5>
+        {% if results %}
+            <table class="table">
+                <tr>
+                    <th class="text-center">№</th>
+                    <th>Бодлого</th>
+                    {% if olympiad.type == 1 %}
+                        <th class="text-center">Бодлогын зөв хариулт</th>
+                        <th class="text-center">Сурагчийн хариулт</th>
+                    {% else %}
+                        <th class="text-center">Материал</th>
+                        <th class="text-center">Тайлбар</th>
+                    {% endif %}
+                    <th class="text-center">Оноо</th>
+                    <th>Төлөв</th>
+                    {% if request.user.is_superuser %}
+                        <th>Материал нэмэх
+                        </th>
+                    {% endif %}
+                </tr>
+                {% autoescape off %}
+                    {% for result in results %}
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>Бодлого №{{ result.problem.order }}</td>
+                            {% if olympiad.type == 1 %}
+                                <td class="text-center">{{ result.problem.numerical_answer }}</td>
+                                <td class="text-center">{{ result.answer }}</td>
+                            {% else %}
+                                <td>
+                                    {% for upload in result.get_uploads %}
+                                        <div><a href="http://www.mmo.mn/media/{{ upload.file }}"
+                                                target="_blank">{{ upload.file }}</a></div>
+                                    {% endfor %}
+                                    {% if result.get_supplements_num > 0 %}
+                                        <strong>Нэмэлт материал:</strong><br>
+                                    {% endif %}
+                                    {% for upload in result.get_supplements %}
+                                        <div><a href="http://www.mmo.mn/media/{{ upload.file }}"
+                                                target="_blank">{{ upload.file }}</a></div>
+                                    {% endfor %}
+                                </td>
+                                <td>{{ result.grader_comment }}</td>
+                            {% endif %}
+                            <td class="text-center">{{ result.get_score|floatformat:1 }}</td>
+                            <td>{{ result.get_state }}</td>
+                            {% if request.user.is_superuser %}
+                                <td>
+                                    <a href="{% url 'olympiad_exam_staff' olympiad_id=result.olympiad.id contestant_id=result.contestant.id %}"
+                                       target="_blank">Материал
+                                        нэмэх</a>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                {% endautoescape %}
+            </table>
+        {% else %}
+            Та энэ олимпиадад оролцоогүй байна.
+        {% endif %}
+    </div>
+{% endblock %}

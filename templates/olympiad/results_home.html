@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Олимпиадын дүн {{ year.name }}{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="ustify-content-center">
+        <div class="mt-3 d-flex justify-content-between">
+            <div>{% if prev is not None %}<a class="btn btn-light btn-sm" href="/olympiads/results/?year={{ prev.id }}">&larr; {{ prev.name }}</a>{% endif %}
+            </div>
+            <div>
+                <button class="btn btn-secondary btn-sm">{{ year.name }}</button>
+            </div>
+            <div>{% if next is not None %}
+                <a class="btn btn-light btn-sm" href="/olympiads/results/?year={{ next.id }}">{{ next.name }}
+                    &rarr;</a>{% endif %}</div>
+        </div>
+        {% if olympiads|length > 0 %}
+        <table class="table table-bordered mt-2">
+            <tr>
+                <th>№</th>
+                <th>Нэр</th>
+                <th>Ангилал</th>
+                <th>Дүн</th>
+            </tr>
+            {% for olympiad in olympiads %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ olympiad.name }}</td>
+                    <td>{{ olympiad.level.name }}</td>
+                    <td><a class="btn btn-sm btn-light" href="{% url 'olympiad_result_view' olympiad_id=olympiad.id %}" target="_blank"><i class="fas fa-list"></i>&nbsp;&nbsp;Дүнгийн
+                        жагсаалт</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+            {% else %}
+            <div class="card p-3 mt-2 bg-light text-dark">Ямар нэг дүн байхгүй байна.</div>
+    {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'muis.html' %}
+
+{% load crispy_forms_tags %}
+{% load latex_filter %}
+
+{% block title %}Бодлогууд{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="ustify-content-center">
+        <ol>
+        {% autoescape off %}
+            {% for problem in problems %}
+                <li value="{{ problem.order }}">
+                    <div><b>Бодлого№{{ problem.id }}.</b> ({{ problem.get_score }} оноо) {{ problem.statement|latex }}
+                        <a href="{% url 'clone_problem' problem_id=problem.id %}">clone</a></div>
+                    {% for choice in problem.answerchoice_set.all %}
+                        <div>{{ choice.label }}. {{ choice.value }} {% if choice.points > 0 %}&check;{% endif %}</div>
+                    {% endfor %}
+                </li>
+            {% endfor %}
+        {% endautoescape %}
+        </ol>
+    </div>
+{% endblock %}

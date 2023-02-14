@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>{{ title }}</h3>
+    <p class="alert alert-info">Дутуу мэдээллээ <a href="{% url 'user_profile' %}" class="text-primary">профайл
+        хэсэгт</a> оруулна уу. Дүүргээ сонгохдоо сургуулийнхаа харъяа дүүргийг сонгоно. Дүүрэг буруу сонгосон
+        нь дараагийн шатанд шалгарах квотоос хасагдах үндэслэл болохыг анхаар!
+    </p>
+    <style>
+    th, td {
+        max-width: 300px;
+    }
+    </style>
+    <table class="table table-bordered mt-3">
+        <tr>
+            <th>№</th>
+            <th>Овог, Нэр</th>
+            <th>ID</th>
+            <th>Хэрэглэгчийн нэр</th>
+            <th>Аймаг, дүүрэг</th>
+            <th>Сургууль</th>
+            <th>Анги</th>
+        </tr>
+        {% for user in users %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ user.last_name }}, {{ user.first_name }}</td>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td><a href="{% url 'group_users' group_id=group %}?p={{ user.data.province.id }}">{{ user.data.province.name }}</a></td>
+                <td>{{ user.data.school }}</td>
+                <td>{{ user.data.grade.name }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'muis.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Эхлэл{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+<div>
+<div class="my-3">
+    {% for result in results %}
+        {% if result.pos == problem.order %}
+        <a href="{% url 'quiz_main' quiz_id=result.quiz_id pos=result.pos %}" class="btn btn-sm btn-info">
+            Бодлого №{{ result.pos }}</a>
+        {% else %}
+        <a href="{% url 'quiz_main' quiz_id=result.quiz_id pos=result.pos %}" class="btn btn-sm btn-secondary">
+            Бодлого №{{ result.pos }}</a>
+        {% endif %}
+    {% endfor %}
+</div>
+    <div class="my-3">{{ problem.order }}. ({{ problem.get_score }} оноо) {{ problem.statement }}</div>
+<form method="post">
+    {% csrf_token %}
+    {% for choice in problem.answerchoice_set.all %}
+        <div>
+            <input type="hidden" name="problem" value="{{ problem.id }}">
+            <input type="radio" name="user_choice" id="user_choice{{ choice.label }}"
+                   {% if choice.id == user_choice %}checked="checked"{% endif %}
+                   value="{{ choice.id }}">
+            <label for="user_choice{{ choice.label }}">{{ choice.value }}</label>
+        </div>
+    {% endfor %}
+<button type="submit" class="btn btn-sm btn-danger">Хариуг батлах</button>
+</form>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Олимпиадын дүн{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <style>
+    th, td {
+        max-width: 200px;
+    }
+    </style>
+    <div class="ustify-content-center">
+        <h3>"{{ olympiad.name }}" дүн{% if province %}, ({{ province.name }}){% endif %}</h3>
+        {% autoescape off %}
+            {% if values|length > 0 %}
+                <table class="table table-bordered">
+                    <tr>
+                        {% for item in head %}
+                            <th class="text-center">{{ item }}</th>
+                        {% endfor %}
+                    </tr>
+                    {% for value in values %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            {% for item in value %}
+                                {% if forloop.last %}
+                                    {% if olympiad.id > 0 %}
+                                        <td class="text-center">
+                                            <a href="{% url 'olympiad_student_result' olympiad_id=olympiad.id contestant_id=item %}"
+                                               class="btn btn-sm btn-light"><i class="far fa-list"></i></a>
+                                        </td>
+                                    {% endif %}
+                                {% else %}
+                                    <td>{{ item }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <div class="card p-3 mt-2 bg-light text-dark">Оролцсон сурагч байхгүй.</div>
+            {% endif %}
+        {% endautoescape %}
+    </div>
+{% endblock %}

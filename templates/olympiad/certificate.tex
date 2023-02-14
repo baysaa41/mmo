@@ -1,0 +1,64 @@
+\documentclass[12pt,landscape]{article}
+ % change to your own language
+\usepackage{fontspec}
+
+\setmainfont{Mon Ribbon}
+
+\usepackage[top=1.5cm,bottom=1cm,left=1cm,right=1cm,headsep=10pt,a4paper]{geometry}
+\usepackage{graphicx}
+
+
+\usepackage[none]{hyphenat}
+\usepackage{ifthen}
+\usepackage{scalefnt}
+\usepackage[listings,skins,breakable]{tcolorbox}
+
+
+\usepackage{xcolor}
+\definecolor{azul}{HTML}{002244}
+\definecolor{vermelho}{HTML}{600404}
+\definecolor{dourado}{HTML}{bb953d}
+
+
+
+\usepackage[pages=some]{background}
+
+\backgroundsetup{
+scale=1,
+color=black,
+opacity=1,
+angle=0,
+contents={
+  \includegraphics[width=\paperwidth,height=\paperheight]{{ '{'}}{{template}}}
+  }
+}
+
+
+
+\begin{document}
+\pagestyle{empty}
+\BgThispage
+
+\vspace*{6cm}
+\begin{center} 
+\begin{minipage}{\textwidth}
+\begin{center}
+\fontsize{50}{60}\selectfont
+{{ lastname }} овогтой {{ firstname }}
+\end{center}
+\end{minipage}
+\end{center}
+
+\vspace*{3.8cm}
+{% if points  %}
+\begin{center} 
+\begin{minipage}{0.1\textwidth}
+\begin{center}
+\Large {{ points }} бодлого\\[-2mm]
+бодсон
+\end{center}
+\end{minipage}
+\end{center}
+{% endif %}
+
+\end{document}

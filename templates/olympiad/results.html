@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}"{{ olympiad.name }}" дүн{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <div class="ustify-content-center">
+        <h3>&quot;{{ olympiad.name }}, {{ olympiad.level }}&quot; дүн</h3>
+        {% if olympiad.level.id == 1 %}
+            <p>Бага ангийн сурагчдын дүнг нэрсээр гаргаагүй. Өөрсдийн ID-гаараа дүнгээ шалгаарай.</p>
+        {% endif %}
+        <table class="table table bordered">
+            <tr>
+                <th>№</th>
+                <th>Овог, нэр</th>
+                <th>Аймаг, дүүрэг</th>
+                <th>Сургууль</th>
+                <th>Анги</th>
+                <th class="text-center">Оноо</th>
+                <th class="text-center">Байр</th>
+            </tr>
+            {% for result in results %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        <a href="{% url 'olympiad_student_result' olympiad_id=olympiad.id contestant_id=result.0 %}">{{ result.1 }}, {{ result.2 }}</a>
+                    </td>
+                    <td>{{ result.3 }}</td>
+                    <td>{{ result.4 }}</td>
+                    <td>{{ result.5 }}</td>
+                    <td class="text-center">{{ result.6 }}</td>
+                    <td class="text-center">{{ result.7 }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+{% endblock %}

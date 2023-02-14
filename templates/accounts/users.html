@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Бүртгэлтэй хэрэглэгчид{% endblock %}
+
+{% block content %}
+    <h3>{{ title }}</h3>
+    <p class="alert alert-info">Оролцох ангилалаа <a href="{% url 'user_profile' %}" class="text-primary">профайл хэсэгт</a> солино. Сурагч зөвхөн нэг
+        ангилалд оролцох бөгөөд хоёр ангилалд оролцсон тохиолдолд оноог тооцохгүй болохыг анхаарна уу!</p>
+    <table class="table table-bordered mt-3">
+            <tr>
+                <th>№</th>
+                <th>Овог</th>
+                <th>Нэр</th>
+                <th>ID</th>
+                <th>Аймаг, дүүрэг</th>
+                <th>Сургууль</th>
+                <th>Анги</th>
+                <th>Оролцох ангилал</th>
+            </tr>
+            {% for user in users %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ user.user.last_name }}</td>
+                    <td>{{ user.user.first_name }}</td>
+                    <td>{{ user.user.id }}</td>
+                    <td>{{ user.province.name }}</td>
+                    <td>{{ user.school }}</td>
+                    <td>{{ user.grade.name }}</td>
+                    <td>{{ user.level }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+{% endblock %}

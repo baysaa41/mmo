@@ -1,0 +1,10 @@
+{% load latex_filter %}
+
+<label>Бодлого {{ result.problem.order }}.</label>
+<div>{% autoescape off %}{{ result.problem.statement | latex }}{% endautoescape %}</div>
+<div id="images">
+        {% for upload in result.upload_set.all %}
+            <img src="/media/{{ upload.file }}" style="width: 100px; height: 100px">
+        {% endfor %}
+</div>
+<button type="button" onclick="load()" class="btn btn-secondary btn-sm">Зураг үзэх</button>
