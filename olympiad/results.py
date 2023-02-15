@@ -32,6 +32,10 @@ def update_results(request, olympiad_id):
     return HttpResponse('Results are updated.')
 
 
+
+    return HttpResponse('.')
+
+
 def pandasView(request,quiz_id):
     pd.options.display.float_format = '{:,.2f}'.format
     try:

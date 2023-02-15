@@ -161,6 +161,26 @@ def get_active_emails():
 
     return emails
 
+
+def create_diploms_mail(request):
+    num = 0
+    subject = 'Охидын багыг дэмжих олммпиад батламж'
+    from_email = 'ММОХ <no-reply@mmo.mn>'
+    ids=[100,101,102,103,104]
+    num = 0
+    for id in ids:
+        with connection.cursor() as cursor:
+            cursor.execute("select distinct contestant_id from  olympiad_result where olympiad_id=%s", [id])
+            results = cursor.fetchall()
+            for result in results:
+                contestant=User.objects.get(pk=result[0])
+                text_html = render_to_string("newsletter/certificate_email.html", {'quiz_id': id, 'contestant_id': result[0]})
+                text = strip_tags(text_html)
+                UserMails.objects.create(subject=subject, text=text, text_html=text_html, from_email=from_email,
+                                         to_email=contestant.email)
+                num = num + 1
+    return HttpResponse(num)
+
 def create_emails(request):
     num = 0
     subject = 'ММОХ, Мэдээллийн товхимол №1'
