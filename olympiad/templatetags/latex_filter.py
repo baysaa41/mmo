@@ -23,6 +23,7 @@ def enum2ol(value):
 
 def emph2em(text):
     text = re.sub(r'\\emph{(.*?)}',r'<em>\1</em>',text)
+    text = re.sub(r'``(.*?)\'\'',r'<q>\1</q>',text)
     return text
 
 

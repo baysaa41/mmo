@@ -47,9 +47,7 @@ def logoutView(request):
 @login_required
 def quizzesView(request):
     now = datetime.now(timezone.utc)
-    start = now + timedelta(hours=-12)
-    end = now + timedelta(days=12)
-    quizzes = Quiz.objects.filter(start_time__gt=start, start_time__lte=end)
+    quizzes = Quiz.objects.exclude(start_time__gt=now).exclude(end_time__lte=now)
 
     return render(request, 'quiz/quizzes.html', {'quizzes': quizzes})
 
