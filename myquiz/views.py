@@ -156,4 +156,4 @@ def pandasView(request, quiz_id):
         'pivot': pivot,
         'quiz': quiz,
     }
-    return render(request, 'myquiz/pandas.html', context)
+    return render(request, 'myquiz/../templates/olympiad/pandas3.html', context)

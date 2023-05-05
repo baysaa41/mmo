@@ -27,10 +27,26 @@
 {% block content %}
     <h3>{{ title }}</h3>
     <h4>{{ quiz.name }}, {{ quiz.level.name }} ангилал</h4>
+<div>
+{% if provinces|length > 0 %}
+<label for="provinces">Аймаг, Дүүрэг сонгох:</label>
+    <select onchange="reloadPage(this.value)">
+    <option>------</option>
+        {% for province in provinces %}
+        <option value="{{province.id}}">{{province.name}}</option>
+        {% endfor %}
+    </select>
+{% endif %}
+</div>
     {% if quiz.level.id == 1 %}
         <p>Бага ангийн сурагчдын дүнг нэрсээр гаргаагүй. Өөрсдийн ID-гаараа дүнгээ шалгаарай.</p>
     {% endif %}
     <div class="ustify-content-center">
         {{ pivot | safe }}
     </div>
+<script>
+    function reloadPage(i) {
+        window.location.replace('?p=' + i)
+    }
+</script>
 {% endblock %}
