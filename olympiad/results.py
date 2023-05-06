@@ -115,7 +115,6 @@ def pandasView3(request,olympiad_id):
     else:
         users_df = read_frame(users,fieldnames=['last_name','first_name','id','data__school'],verbose=False)
 
-
     answers_df['score'] = answers_df['score'].fillna(0)
     pivot = answers_df.pivot_table(index='contestant_id',columns='problem_id',values='score')
     pivot["Дүн"] = pivot.sum(axis=1)
@@ -123,7 +122,7 @@ def pandasView3(request,olympiad_id):
     awards = Award.objects.filter(olympiad_id=olympiad_id)
     awards_df = read_frame(awards,fieldnames=['place','contestant_id'],verbose=False)
     results = results_merged.merge(awards_df,left_on='id',right_on='contestant_id',how='left')
-    results.drop(columns='contestant_id')
+    results = results.drop(['contestant_id'], axis=1)
     results.sort_values(by='Дүн',ascending=False,inplace=True)
     results['id'].fillna(0).astype(int)
     results["link"] = results["id"].apply(lambda x: "<a href='/olympiads/result/{quiz_id}/{user_id:.0f}'><i class='fas fa-expand-wide'></i></a>".format(quiz_id=quiz_id,user_id=x))
@@ -133,15 +132,15 @@ def pandasView3(request,olympiad_id):
         'first_name': 'Нэр',
         'last_name': 'Овог',
         'data__school': 'Cургууль',
-        'place': 'Медаль',
+        'place': 'Медал',
         'link': '<i class="fas fa-expand-wide"></i>',
     },inplace=True)
     results.index = np.arange(1,results.__len__()+1)
 
     pd.set_option('colheader_justify', 'center')
 
-    #for item in quiz.problem_set.all().order_by('order'):
-    #    results = results.rename(columns={item.id: '№' + str(item.order)})
+    for item in quiz.problem_set.all().order_by('order'):
+        results = results.rename(columns={item.id: '№' + str(item.order)})
 
     context = {
         'df': results.to_html(classes='table table-bordered table-hover',border=3,na_rep="",escape=False),
