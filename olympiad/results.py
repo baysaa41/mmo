@@ -1,7 +1,7 @@
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from olympiad.models import Olympiad, Result, SchoolYear
+from olympiad.models import Olympiad, Result, SchoolYear, Award
 from accounts.models import Province, Zone, UserMeta
 from django.forms import modelformset_factory
 from .forms import ResultsForm
@@ -119,7 +119,11 @@ def pandasView3(request,olympiad_id):
     answers_df['score'] = answers_df['score'].fillna(0)
     pivot = answers_df.pivot_table(index='contestant_id',columns='problem_id',values='score')
     pivot["Дүн"] = pivot.sum(axis=1)
-    results = users_df.merge(pivot,left_on='id',right_on='contestant_id',how='right')
+    results_merged = users_df.merge(pivot,left_on='id',right_on='contestant_id',how='right')
+    awards = Award.objects.filter(olympiad_id=olympiad_id)
+    awards_df = read_frame(awards,fieldnames=['place','contestant_id'],verbose=False)
+    results = results_merged.merge(awards_df,left_on='id',right_on='contestant_id',how='left')
+    results.drop(columns='contestant_id')
     results.sort_values(by='Дүн',ascending=False,inplace=True)
     results['id'].fillna(0).astype(int)
     results["link"] = results["id"].apply(lambda x: "<a href='/olympiads/result/{quiz_id}/{user_id:.0f}'><i class='fas fa-expand-wide'></i></a>".format(quiz_id=quiz_id,user_id=x))
@@ -129,10 +133,10 @@ def pandasView3(request,olympiad_id):
         'first_name': 'Нэр',
         'last_name': 'Овог',
         'data__school': 'Cургууль',
+        'place': 'Медаль',
         'link': '<i class="fas fa-expand-wide"></i>',
     },inplace=True)
     results.index = np.arange(1,results.__len__()+1)
-
 
     pd.set_option('colheader_justify', 'center')
 
