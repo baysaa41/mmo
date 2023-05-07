@@ -16,6 +16,10 @@
                 <th>Сургууль</th>
                 <th>Анги</th>
                 <th>Оролцох ангилал</th>
+                {% if request.user.is_staff %}
+                    <th>Утас</th>
+                    <th>И-мэйл</th>
+                {% endif %}
             </tr>
             {% for user in users %}
                 <tr>
@@ -27,6 +31,10 @@
                     <td>{{ user.school }}</td>
                     <td>{{ user.grade.name }}</td>
                     <td>{{ user.level }}</td>
+                    {% if request.user.is_staff %}
+                        <th>{{ user.mobile }}</th>
+                        <th>{{ user.user.email }}</th>
+                    {% endif %}
                 </tr>
             {% endfor %}
         </table>

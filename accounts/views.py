@@ -96,7 +96,6 @@ def profile(request):
 def profile_ready(request):
     return render(request, 'accounts/profile_ready.html')
 
-
 def users(request):
     #create_users()
     provinces = Province.objects.all()

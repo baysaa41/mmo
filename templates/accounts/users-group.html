@@ -22,6 +22,10 @@
             <th>Аймаг, дүүрэг</th>
             <th>Сургууль</th>
             <th>Анги</th>
+            {% if request.user.is_staff %}
+                <th>Утас</th>
+                <th>И-мэйл</th>
+            {% endif %}
         </tr>
         {% for user in users %}
             <tr>
@@ -32,6 +36,10 @@
                 <td><a href="{% url 'group_users' group_id=group %}?p={{ user.data.province.id }}">{{ user.data.province.name }}</a></td>
                 <td>{{ user.data.school }}</td>
                 <td>{{ user.data.grade.name }}</td>
+                {% if request.user.is_staff %}
+                    <td>{{ user.data.mobile }}</td>
+                    <td>{{ user.email }}</td>
+                {% endif %}
             </tr>
         {% endfor %}
     </table>
