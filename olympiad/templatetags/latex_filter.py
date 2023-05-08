@@ -44,8 +44,8 @@ def center2div(text):
 
 def pst2png(text):
     TEX_ROOT = "/home/deploy/static/latex"
-    latex = '/usr/local/texlive/2019/bin/x86_64-linux/latex'
-    dvips = '/usr/local/texlive/2019/bin/x86_64-linux/dvips'
+    latex = '/usr/bin/latex'
+    dvips = '/usr/bin/dvips'
     convert = '/usr/bin/convert -density 140 -trim -transparent \"#FFFFFF\"'
     os.chdir( TEX_ROOT )
     matches=re.findall(r'\[pst\](.*?)\[/pst\]',text, re.MULTILINE|re.DOTALL)
