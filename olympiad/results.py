@@ -1401,7 +1401,7 @@ def createCertificate(request,quiz_id,contestant_id):
     except:
         return HttpResponse("contestant or results")
 
-    TEX_ROOT = "/home/deploy/latex"
+    TEX_ROOT = "/home/deploy/django/latex"
     xelatex = '/usr/bin/xelatex'
     os.chdir(TEX_ROOT)
     name='{}-{}'.format(quiz_id,contestant_id)
