@@ -1305,6 +1305,95 @@ def thirdRoundResults(request):
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
 
+def getResults(request):
+    dir = '/home/deploy/results'
+
+    list = os.listdir(dir)
+    print(list)
+    num = 0
+    for f in list:
+        name = dir + '/' + f
+        # print(name)
+        filename, file_extension = os.path.splitext(name)
+        # print(file_extension)
+        if file_extension.lower() in ['.xls', '.xlsx']:
+
+            df = pd.read_excel(name, 'info', engine='openpyxl')
+
+            for item0 in df.iterrows():
+                idx, ol = item0
+                print(ol['Ангилал'])
+                print(ol['ID'])
+                try:
+                    dfr = pd.read_excel(name, ol['Ангилал'], engine='openpyxl')
+                    oid = ol['ID']
+                    olympiad = Olympiad.objects.get(pk=oid)
+                    problems = olympiad.problem_set.all()
+                    size = len(problems)
+
+                    for item in dfr.iterrows():
+                        ind, row = item
+                        try:
+                            user_id = int(row[row.keys()[1]])
+                            user = User.objects.get(pk=user_id)
+                        except:
+                            last_name = str(row[row.keys()[2]])
+                            first_name = str(row[row.keys()[3]])
+                            province_id = int(row[row.keys()[4]])
+                            school = str(row[row.keys()[5]])
+                            user = User.objects.filter(last_name__startswith=last_name,
+                                                       first_name__startswith=first_name,
+                                                       data__province_id=province_id).first()
+                            if not user:
+                                username = 'user-' + str(row[row.keys()[4]]) + '-' + str(oid) + '-' + str(
+                                    row[row.keys()[0]])
+                                user, created = User.objects.get_or_create(username=username)
+                                if created:
+                                    print(username)
+                                    user.username = username
+                                    user.email = 'dm2020baysa@gmail.com'
+                                    user.last_name = str(row[row.keys()[2]]) + '-' + str(oid)
+                                    user.first_name = str(row[row.keys()[3]]) + '-' + str(oid)
+                                    user.save()
+                                    meta = UserMeta.objects.create(user=user)
+                                    meta.province_id = int(row[row.keys()[4]])
+                                    meta.school = str(row[row.keys()[5]])
+                                    meta.save()
+
+                        if user:
+                            if user.first_name == '':
+                                user.last_name = str(row[row.keys()[2]]) + '-system'
+                                user.first_name = str(row[row.keys()[3]]) + '-system'
+                                user.save()
+
+                            i = 0
+                            for problem in problems:
+                                # print(i)
+                                value = row[row.keys()[i + 7]]
+                                try:
+                                    answer, created = Result.objects.get_or_create(problem_id=problem.id,
+                                                                                   olympiad_id=oid,
+                                                                                   contestant_id=user.id)
+
+                                    try:
+                                        floatval = float(value)
+                                        answer.score = floatval
+                                        answer.source_file = name
+                                        answer.save()
+                                    except:
+                                        pass
+
+                                except:
+                                    print("Алдаа:")
+                                    print(row[row.keys()[1]])
+                                    print(user.first_name)
+
+                                i = i + 1
+                except:
+                    pass
+
+    return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
+
 def importResults(df,oid,name):
     try:
         olympiad = Olympiad.objects.get(pk=oid)
@@ -1318,7 +1407,6 @@ def importResults(df,oid,name):
 
     for item in df.iterrows():
         ind, row = item
-        print(row[row.keys()[1]])
         try:
             id = int(row[row.keys()[1]])
             user = User.objects.get(pk=id)
