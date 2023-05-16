@@ -43,7 +43,7 @@ def center2div(text):
 
 
 def pst2png(text):
-    TEX_ROOT = "/home/deploy/static/latex"
+    TEX_ROOT = "/home/deploy/django/static/latex"
     latex = '/usr/bin/latex'
     dvips = '/usr/bin/dvips'
     convert = '/usr/bin/convert -density 140 -trim -transparent \"#FFFFFF\"'
