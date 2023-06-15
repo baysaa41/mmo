@@ -1,4 +1,5 @@
 from django import template
+from django.conf import settings
 import re, hashlib, io, os
 
 register = template.Library()
@@ -43,10 +44,10 @@ def center2div(text):
 
 
 def pst2png(text):
-    TEX_ROOT = "/home/deploy/django/static/latex"
-    latex = '/usr/bin/latex'
-    dvips = '/usr/bin/dvips'
-    convert = '/usr/bin/convert -density 140 -trim -transparent \"#FFFFFF\"'
+    TEX_ROOT = settings.TEX_ROOT
+    latex = settings.LATEX
+    dvips = settings.DVIPS
+    convert = settings.CONVERT
     os.chdir( TEX_ROOT )
     matches=re.findall(r'\[pst\](.*?)\[/pst\]',text, re.MULTILINE|re.DOTALL)
     for match in matches:

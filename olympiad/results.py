@@ -13,6 +13,9 @@ from django.contrib.auth.models import User, Group
 from datetime import datetime, timezone
 import csv
 import os, io
+import json
+from django.core import serializers
+from django.core.serializers.json import DjangoJSONEncoder
 from django_tex.core import render_template_with_context
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
@@ -154,6 +157,72 @@ def pandasView3(request,olympiad_id):
         'provinces': provinces,
     }
     return render(request, 'olympiad/pandas3.html', context)
+
+def queryset_to_json(queryset):
+    data = list(queryset.values())
+    json_data = json.dumps(data, cls=DjangoJSONEncoder)
+    return json_data
+
+def getOlympiadResults(olympiad_id):
+    answers = Result.objects.filter(olympiad_id=olympiad_id).order_by('problem__order')
+    user_ids = answers.values_list('contestant', flat=True)
+    users = User.objects.filter(id__in=user_ids)
+    awards = Award.objects.filter(olympiad_id=olympiad_id)
+    return users, answers, awards
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()  # Convert datetime to string format
+        return super().default(obj)
+
+def getJSONResults(request,olympiad_id):
+    olympiad = Olympiad.objects.get(pk=olympiad_id)
+
+    users, answers, awards = getOlympiadResults(olympiad_id)
+    json_users = []
+    for user in users:
+        try:
+            juser = {
+                'id': user.id,
+                'Овог': user.last_name,
+                'Нэр': user.first_name,
+                'Аймаг/Дүүрэг': user.data.province.name,
+                'Сургууль': user.data.school,
+                'Анги': user.data.grade.name
+            }
+            json_users.append(juser)
+        except:
+            pass
+
+    json_answers = []
+    for answer in answers:
+        janswer = {
+            'user_id': answer.contestant_id,
+            'problem': answer.problem.order,
+            'score': answer.score,
+            'status': answer.state
+        }
+        json_answers.append(janswer)
+
+    json_awards = []
+    for award in awards:
+        jaward = {
+            'user_id': award.contestant_id,
+            'award': award.place
+        }
+        json_awards.append(jaward)
+
+    data = {
+        'users': json_users,
+        'answers': json_answers,
+        'awards': json_awards
+    }
+    return JsonResponse(data)
+
+
+def newResultView(request, olympiad_id):
+    return render(request, "olympiad/javascript_pivot.html", {'olympiad', olympiad_id})
 
 
 def pandasIMO64(request):
