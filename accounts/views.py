@@ -312,3 +312,34 @@ def import_users():
                 pass
 
     return num
+
+def import_muis_students():
+    dir = '/home/deploy/muis'
+
+    list = os.listdir(dir)
+    print(list)
+    num = 0
+    for f in list:
+        name = dir + '/' + f
+        print(name)
+        filename, file_extension = os.path.splitext(name)
+        print(file_extension)
+        if file_extension.lower() in ['.xls', '.xlsx']:
+            try:
+                df = pd.read_excel(name, 'Sheet1', engine='openpyxl')
+                for item in df.iterrows():
+                    ind, row = item
+                    user, created = User.objects.get_or_create(username=row[row.keys()[3]])
+                    if created:
+                        user.firstname = row[row.keys()[3]]
+                        user.set_password(row[row.keys()[3]])
+                        user.save()
+                        m, c = UserMeta.objects.get_or_create(user=user)
+                        m.is_valid = True
+                        m.save()
+                        num = num + 1
+            except:
+                print('error')
+                pass
+
+    return num
