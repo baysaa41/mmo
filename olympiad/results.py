@@ -1389,29 +1389,29 @@ def igo10Results(request):
 
             try:
                 print('D')
-                df2 = pd.read_excel(name, 'E', engine='openpyxl')
-                num = num + importResults(df2, 119, f)
+                df2 = pd.read_excel(name, 'D', engine='openpyxl')
+                num = num + importResults(df2, 128, f)
             except:
                 pass
 
             try:
                 print('E')
                 df3 = pd.read_excel(name, 'E', engine='openpyxl')
-                num = num + importResults(df3, 119, f)
+                num = num + importResults(df3, 129, f)
             except:
                 pass
 
             try:
                 print('F')
                 df4 = pd.read_excel(name, 'F', engine='openpyxl')
-                num = num + importResults(df4, 120, f)
+                num = num + importResults(df4, 130, f)
             except:
                 pass
 
             try:
                 print('T')
                 df6 = pd.read_excel(name, 'T', engine='openpyxl')
-                num = num + importResults(df6, 121, f)
+                num = num + importResults(df6, 131, f)
             except:
                 pass
 
