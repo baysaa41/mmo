@@ -1374,6 +1374,49 @@ def thirdRoundResults(request):
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
 
+def igo10Results(request):
+    dir = '/home/deploy/results/2023-igo'
+
+    list = os.listdir(dir)
+    print(list)
+    num = 0
+    for f in list:
+        name = dir + '/' + f
+        print(name)
+        filename, file_extension = os.path.splitext(name)
+        print(file_extension)
+        if file_extension.lower() in ['.xls', '.xlsx']:
+
+            try:
+                print('D')
+                df2 = pd.read_excel(name, 'E', engine='openpyxl')
+                num = num + importResults(df2, 119, f)
+            except:
+                pass
+
+            try:
+                print('E')
+                df3 = pd.read_excel(name, 'E', engine='openpyxl')
+                num = num + importResults(df3, 119, f)
+            except:
+                pass
+
+            try:
+                print('F')
+                df4 = pd.read_excel(name, 'F', engine='openpyxl')
+                num = num + importResults(df4, 120, f)
+            except:
+                pass
+
+            try:
+                print('T')
+                df6 = pd.read_excel(name, 'T', engine='openpyxl')
+                num = num + importResults(df6, 121, f)
+            except:
+                pass
+
+    return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
+
 def getResults(request):
     dir = '/home/deploy/results'
 
