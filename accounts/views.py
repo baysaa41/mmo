@@ -19,6 +19,9 @@ from django.core.mail import get_connection, EmailMultiAlternatives
 import os
 import pandas as pd
 import numpy as np
+import string
+import random
+import re
 
 # Create your views here.
 
@@ -341,5 +344,103 @@ def import_muis_students():
             except:
                 print('error')
                 pass
+
+    return num
+
+def random_string(n=8):
+    characterList = string.ascii_letters + string.digits
+    password = []
+    for i in range(n):
+        randomchar = random.choice(characterList)
+        password.append(randomchar)
+    return "".join(password)
+
+
+# Define a function for
+# for validating an Email
+def check(email):
+    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+    # pass the regular expression
+    # and the string into the fullmatch() method
+    if (re.fullmatch(regex, email)):
+        return True
+    else:
+        return False
+
+def create_mass_students():
+    dir = '/home/deploy/registration'
+
+    list = os.listdir(dir)
+    print(list)
+    num = 0
+    for f in list:
+        name = dir + '/' + f
+        print(name)
+        filename, file_extension = os.path.splitext(name)
+        print(file_extension)
+        if file_extension.lower() in ['.xls', '.xlsx']:
+            df = pd.read_excel(name, 'contestants', engine='openpyxl')
+            for item in df.iterrows():
+                ind, row = item
+                # print(item)
+                # print(row['ID'])
+                # print(row['Овог'])
+                # print(row['Нэр'])
+                # print(row['Утасны дугаар'])
+                # print(row['Регистрийн дугаар'])
+                # print(row['E-mail'])
+                # print(row['Аймаг, Дүүргийн ID код'])
+                # print(row['Сургууль'])
+                # print(row['Анги'])
+                # print(row['Оролцох ангилал'])
+                # row['Анги']=10
+                # print(row)
+                levels = {
+                    'B': 1,
+                    'C': 2,
+                    'D': 3,
+                    'E': 4,
+                    'F': 5,
+                    'S': 6,
+                    'T': 7,
+                    'O': 8
+                }
+                salt = 'user' + random_string(8)
+                try:
+                    user = User.objects.get(pk=int(row['ID']))
+                    created = False
+                except:
+                    if check(row['E-mail']):
+                        email = row['E-mail']
+                    else:
+                        email = 'mmo60official@gmail.com'
+                    user = User.objects.create_user(
+                        username=salt,
+                        first_name=row['Нэр'],
+                        last_name=row['Овог'],
+                        email=email
+                    )
+                    created = True
+                    pass
+
+                if created:
+                    user.username = 'user' + str(user.id)
+                    user.set_password(user.username)
+                    try:
+                        user.save()
+                    except:
+                        user.username = 'user' + str(user.id) + 's' + salt[-3:]
+                        user.set_password(user.username)
+                        user.save()
+                    m, c = UserMeta.objects.get_or_create(user=user)
+                    if c:
+                        m.mobile = int(row['Утасны дугаар'])
+                        m.grade_id = int(row['Анги'])
+                        m.level_id = levels[row['Оролцох ангилал']]
+                        m.province_id = int(row['Аймаг, Дүүргийн ID код'])
+                        m.reg_num = row['Регистрийн дугаар']
+                        m.is_valid = True
+                        m.save()
+                    num = num + 1
 
     return num
