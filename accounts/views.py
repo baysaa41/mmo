@@ -384,7 +384,6 @@ def check(email):
 def register_sheet(name, sheet, teacher):
     num = 0
     users = []
-    text = sheet
     if sheet == 'C (5-6)':
         pgroup = Group.objects.get(pk=26)
         mgroup = Group.objects.get(pk=30)
@@ -397,6 +396,13 @@ def register_sheet(name, sheet, teacher):
     else:
         pgroup = Group.objects.get(pk=29)
         mgroup = Group.objects.get(pk=33)
+    text = '''{}
+    Шинээр бүртгүүлсэн:
+    {}
+    
+    Өмн
+    '''
+    text_rows = ''
     html = '''
     <h4>{}</h4>
     <table border=1 cellspacing=0>
@@ -446,14 +452,18 @@ def register_sheet(name, sheet, teacher):
         try:
             # print(row['ID'])
             user_id = row['ID']
+            # print("user_id:", user_id)
             user = User.objects.get(pk=user_id)
+            text_rows = text_rows + '\n' + ', '.join(
+                [row['Овог'], row['Нэр'], str(user.id), user.username,'Бүртгэлтэй имэйл: ' + user.email])
             error_rows = (error_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
                 .format(row['Овог'], row['Нэр'], user.id, user.username,'Бүртгэлтэй имэйл: ' + user.email))
         except User.DoesNotExist:
             meta = UserMeta.objects.filter(reg_num=row['Регистрийн дугаар']).first()
             if meta:
                 user = meta.user
-                error = error + '\n' + user.username + ' бүртгэлтэй.'
+                text_rows = text_rows + '\n' + ', '.join(
+                    [row['Овог'], row['Нэр'], str(user.id), user.username, 'Бүртгэлтэй имэйл: ' + user.email])
                 error_rows = (error_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
                               .format(row['Овог'], row['Нэр'], user.id, user.username,
                                       'Бүртгэлтэй имэйл: ' + user.email))
@@ -475,14 +485,14 @@ def register_sheet(name, sheet, teacher):
                 user.set_password(salt)
                 try:
                     user.save()
-                    text = text + "\n" + ",".join([user.last_name, user.first_name, user.username, salt])
+                    text_rows = text_rows + "\n" + ",".join([user.last_name, user.first_name, user.username, salt])
                     html_rows = (html_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
                                  .format(user.last_name, user.first_name, user.id, user.username, salt))
                 except:
                     user.username = 'u' + str(user.id) + random_salt(3)
                     user.set_password(salt)
                     user.save()
-                    text = text + "\n" + ",".join([user.last_name, user.first_name, user.username, salt])
+                    text_rows = text_rows + "\n" + ",".join([user.last_name, user.first_name, user.username, salt])
                     html_rows = (html_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
                                  .format(user.last_name, user.first_name, user.id, user.username, salt))
                 num = num + 1
@@ -496,7 +506,7 @@ def register_sheet(name, sheet, teacher):
             m.level_id = level_id
             m.province_id = int(row['Аймаг, Дүүргийн ID код'])
             m.school = row['Сургууль']
-            m.reg_num = row['Регистрийн дугаар']
+            m.reg_num = row['Регистрийн дугаар'].strip()
             m.is_valid = True
             m.save()
         else:
@@ -512,7 +522,7 @@ def register_sheet(name, sheet, teacher):
         mgroup.user_set.add(user)
         users.append(user.id)
 
-    return num, html.format(sheet, html_rows), html.format(sheet, html_rows), error_html.format(sheet, error_rows), error_html.format(sheet, error_rows)
+    return num, text.format(sheet, text_rows), html.format(sheet, html_rows), error_html.format(sheet, error_rows)
 
 
 def register_students():
@@ -526,10 +536,6 @@ def register_students():
 
     Бүртгэлтэй холбоотой мэдээллийг илгээж байна:
     
-    Шинэээр бүртгүүлсэн:
-    Овог, Нэр, Хэрэглэгчийн нэр, Нууц үг
-    {}
-    Бусад (Өмнө бүртгүүлсэн сурагчдыг регистрийн дугаар эсвэл ID-аар шүүв. Хэрвээ нууц үгээ мартсан бол бүртгүүлсэн имэйл хаягаар сэргээнэ):
     {}
     
     ММОХ
@@ -560,9 +566,9 @@ def register_students():
     num = 0
     for f in list:
         message = ''
-        message_html = ''
+        html_message = ''
         errors = ''
-        error_htmls = ''
+        html_errors = ''
 
         name = dir + '/' + f
         if os.path.isfile(name):
@@ -590,45 +596,39 @@ def register_students():
                                            nrows=1,
                                            header=None,
                                            names=["Value"]).iloc[0]["Value"]
+
                 try:
-                    if math.isnan(teacher_id):
-                        teacher_id = 0
-                    else:
-                        teacher_id = np.nan_to_num(teacher_id)
+                    teacher_id = int(teacher_id)
                     teacher = User.objects.get(pk=teacher_id)
-                except User.DoesNotExist:
-                    continue
+                except:
+                    teacher = User.objects.get(pk=1)
 
                 group = Group.objects.get(pk=34)
                 group.user_set.add(teacher)
 
-                new, text, html, error, error_html = register_sheet(name, 'C (5-6)', teacher)
+                new, text, html, error_html = register_sheet(name, 'C (5-6)', teacher)
                 num = num + new
                 message = message + '\n' + text
-                message_html = message_html + html
-                errors = errors + '\n' + error
-                error_htmls = error_htmls + error_html
-                new, text, html, error, error_html = register_sheet(name, 'D (7-8)', teacher)
+                html_message = html_message + html
+                html_errors = html_errors + error_html
+                new, text, html, error_html = register_sheet(name, 'D (7-8)', teacher)
                 num = num + new
                 message = message + '\n' + text
-                message_html = message_html + html
-                errors = errors + '\n' + error
-                error_htmls = error_htmls + error_html
-                new, text, html, error, error_html = register_sheet(name, 'E (9-10)', teacher)
+                html_message = html_message + html
+                html_errors = html_errors + error_html
+                new, text, html, error_html = register_sheet(name, 'E (9-10)', teacher)
                 num = num + new
                 message = message + '\n' + text
-                message_html = message_html + html
-                errors = errors + '\n' + error
-                error_htmls = error_htmls + error_html
-                new, text, html, error, error_html = register_sheet(name, 'F (11-12)', teacher)
+                html_message = html_message + html
+                html_errors = html_errors + error_html
+                new, text, html, error_html = register_sheet(name, 'F (11-12)', teacher)
                 num = num + new
                 message = message + '\n' + text
-                message_html = message_html + html
-                errors = errors + '\n' + error
-                error_htmls = error_htmls + error_html
+                html_message = html_message + html
+                html_errors = html_errors + error_html
 
-                UserMails.objects.create(subject=subject, text=body.format(message, errors),
-                             text_html=body_html.format(message_html, error_htmls), from_email=from_email,
+                UserMails.objects.create(subject=subject, text=body.format(message),
+                             text_html=body_html.format(html_message, html_errors), from_email=from_email,
                              to_email=teacher.email)
 
                 source = name
