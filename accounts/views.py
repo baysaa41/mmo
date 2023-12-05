@@ -1,3 +1,5 @@
+import math
+
 from django.shortcuts import render, redirect, HttpResponse
 from accounts.forms import UserForm, UserMetaForm
 from django.contrib.auth.models import User, Group
@@ -23,6 +25,7 @@ import string
 import random
 import re
 
+
 # Create your views here.
 
 def index(request):
@@ -45,10 +48,11 @@ def index(request):
         school_year = SchoolYear.objects.create()
         school_year.id = 0
 
-    prev = SchoolYear.objects.filter(pk=year.id-1).first()
-    next = SchoolYear.objects.filter(pk=year.id+1).first()
+    prev = SchoolYear.objects.filter(pk=year.id - 1).first()
+    next = SchoolYear.objects.filter(pk=year.id + 1).first()
 
-    articles = Article.objects.filter(year_id=year.id,IsShow=True).exclude(EndDate__lt=now).order_by('-IsSpec','-StartDate')
+    articles = Article.objects.filter(year_id=year.id, IsShow=True).exclude(EndDate__lt=now).order_by('-IsSpec',
+                                                                                                      '-StartDate')
 
     context = {'articles': articles, 'mode': mode, 'year': year, 'prev': prev, 'next': next}
 
@@ -99,8 +103,9 @@ def profile(request):
 def profile_ready(request):
     return render(request, 'accounts/profile_ready.html')
 
+
 def users(request):
-    #create_users()
+    # create_users()
     provinces = Province.objects.all()
     levels = Level.objects.all()
     p = request.GET.get('p', 0)
@@ -130,35 +135,37 @@ def special_members(request):
     else:
         return redirect('account_users')
 
+
 def staff(request):
     users = User.objects.filter(is_staff=1).order_by('data__province__zone')
     return render(request, 'accounts/staff.html', {'users': users})
 
 
-def group_users(request,group_id):
+def group_users(request, group_id):
     group = Group.objects.filter(pk=group_id).first()
     title = group.name
-    users = group.user_set.all().order_by('data__province__zone','data__province','data__school')
+    users = group.user_set.all().order_by('data__province__zone', 'data__province', 'data__school')
 
-    z_id = request.GET.get('z',False)
+    z_id = request.GET.get('z', False)
     if z_id:
         zone = Zone.objects.filter(pk=z_id).first()
         title = group.name + ', ' + zone.name
         users = users.filter(data__province__zone_id=z_id)
 
-    p_id = request.GET.get('p',False)
+    p_id = request.GET.get('p', False)
     if p_id:
         province = Province.objects.filter(pk=p_id).first()
         title = group.name + ', ' + province.name
         users = users.filter(data__province_id=p_id)
 
-    g_id = request.GET.get('g',False)
+    g_id = request.GET.get('g', False)
     if g_id:
         grade = Grade.objects.filter(pk=g_id).first()
         title = title + ', ' + grade.name
         users = users.filter(data__grade_id=g_id)
 
     return render(request, 'accounts/users-group.html', {'group': group_id, 'users': users, 'title': title})
+
 
 def get_active_emails():
     with connection.cursor() as cursor:
@@ -172,20 +179,22 @@ def create_diploms_mail(request):
     num = 0
     subject = 'Охидын багыг дэмжих олммпиад батламж'
     from_email = 'ММОХ <no-reply@mmo.mn>'
-    ids=[100,101,102,103,104]
+    ids = [100, 101, 102, 103, 104]
     num = 0
     for id in ids:
         with connection.cursor() as cursor:
             cursor.execute("select distinct contestant_id from  olympiad_result where olympiad_id=%s", [id])
             results = cursor.fetchall()
             for result in results:
-                contestant=User.objects.get(pk=result[0])
-                text_html = render_to_string("newsletter/certificate_email.html", {'quiz_id': id, 'contestant_id': result[0]})
+                contestant = User.objects.get(pk=result[0])
+                text_html = render_to_string("newsletter/certificate_email.html",
+                                             {'quiz_id': id, 'contestant_id': result[0]})
                 text = strip_tags(text_html)
                 UserMails.objects.create(subject=subject, text=text, text_html=text_html, from_email=from_email,
                                          to_email=contestant.email)
                 num = num + 1
     return HttpResponse(num)
+
 
 def create_emails(request):
     num = 0
@@ -200,6 +209,7 @@ def create_emails(request):
                                  to_email=email[0])
         num = num + 1
     return HttpResponse(num)
+
 
 def create_mails(request):
     num = 0
@@ -267,14 +277,15 @@ def send_mass_html_mail(request):
         uemail.save()
     return HttpResponse(connection.send_messages(messages))
 
+
 def create_users(request):
     imports = []
 
     count = 0
     for item in imports:
         user, created = User.objects.get_or_create(username=item[3])
-        user.first_name=item[2]
-        user.last_name=item[5]
+        user.first_name = item[2]
+        user.last_name = item[5]
         user.set_password(item[3])
         user.save()
         m, c = UserMeta.objects.get_or_create(user=user)
@@ -316,6 +327,7 @@ def import_users():
 
     return num
 
+
 def import_muis_students():
     dir = '/home/deploy/muis'
 
@@ -347,13 +359,14 @@ def import_muis_students():
 
     return num
 
-def random_string(n=8):
+
+def random_salt(n=8):
     characterList = string.ascii_letters + string.digits
-    password = []
+    salt = ['s']
     for i in range(n):
         randomchar = random.choice(characterList)
-        password.append(randomchar)
-    return "".join(password)
+        salt.append(randomchar)
+    return "".join(salt)
 
 
 # Define a function for
@@ -367,80 +380,265 @@ def check(email):
     else:
         return False
 
-def create_mass_students():
+
+def register_sheet(name, sheet, teacher):
+    num = 0
+    users = []
+    text = sheet
+    if sheet == 'C (5-6)':
+        pgroup = Group.objects.get(pk=26)
+        mgroup = Group.objects.get(pk=30)
+    elif sheet == 'D (7-8)':
+        pgroup = Group.objects.get(pk=27)
+        mgroup = Group.objects.get(pk=31)
+    elif sheet == 'E (9-10)':
+        pgroup = Group.objects.get(pk=28)
+        mgroup = Group.objects.get(pk=32)
+    else:
+        pgroup = Group.objects.get(pk=29)
+        mgroup = Group.objects.get(pk=33)
+    html = '''
+    <h4>{}</h4>
+    <table border=1 cellspacing=0>
+    <tr><th>Овог</th><th>Нэр</th><th>ID</th><th>Хэрэглэгчийн нэр</th><th>Нууц үг</th></tr>
+    {}
+    </table>'''
+    html_rows = ''
+    error = sheet
+    error_html = '''
+    <h4>{}</h4>
+    <table border=1 cellspacing=0>
+    <tr><th>Овог</th><th>Нэр</th><th>ID</th><th>Хэрэглэгчийн нэр</th><th>Тайлбар</th></tr>{}
+    </table>'''
+    error_rows = ''
+    try:
+        df = pd.read_excel(name, sheet, engine='openpyxl')
+        df['ID'] = pd.to_numeric(df['ID'], errors='coerce').fillna(0).astype(int)
+        df['Овог'] = df['Овог'].fillna('')
+        df['Нэр'] = df['Нэр'].fillna('')
+        df['Утасны дугаар'] = pd.to_numeric(df['Утасны дугаар'], errors='coerce').fillna(0).astype(int)
+        df['E-mail'] = df['E-mail'].fillna('')
+        df['Аймаг, Дүүргийн ID код'] = pd.to_numeric(df['Аймаг, Дүүргийн ID код'], errors='coerce').fillna(30).astype(int)
+        df['Сургууль'] = df['Сургууль'].fillna('')
+        df['Анги'] = pd.to_numeric(df['Анги'], errors='coerce').fillna(12).astype(int)
+        df['Бэлтгэл даваанд оролцох эсэх'] = pd.to_numeric(df['Бэлтгэл даваанд оролцох эсэх'], errors='coerce').fillna(0).astype(int)
+    except Exception as e:
+        print("df aldaa")
+        print(e)
+
+    if sheet == 'C (5-6)':
+        level_id = 2
+    elif sheet == 'D (7-8)':
+        level_id = 3
+    elif sheet == 'E (9-10)':
+        level_id = 4
+    elif sheet == 'F (11-12)':
+        level_id = 5
+    else:
+        level_id = 8
+
+    print(name, sheet)
+    for item in df.iterrows():
+        ind, row = item
+        # print(row)
+        salt = random_salt(8)
+        # user_id = 0
+        try:
+            # print(row['ID'])
+            user_id = row['ID']
+            user = User.objects.get(pk=user_id)
+            error_rows = (error_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
+                .format(row['Овог'], row['Нэр'], user.id, user.username,'Бүртгэлтэй имэйл: ' + user.email))
+        except User.DoesNotExist:
+            meta = UserMeta.objects.filter(reg_num=row['Регистрийн дугаар']).first()
+            if meta:
+                user = meta.user
+                error = error + '\n' + user.username + ' бүртгэлтэй.'
+                error_rows = (error_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
+                              .format(row['Овог'], row['Нэр'], user.id, user.username,
+                                      'Бүртгэлтэй имэйл: ' + user.email))
+            else:
+                email = row['E-mail']
+                if not check(email):
+                    email = teacher.email
+                if not check(email):
+                    email = 'mmo60official@gmail.com'
+
+                user = User.objects.create_user(
+                    username=salt,
+                    first_name=row['Нэр'],
+                    last_name=row['Овог'],
+                    email=email
+                )
+
+                user.username = 'u' + str(user.id)
+                user.set_password(salt)
+                try:
+                    user.save()
+                    text = text + "\n" + ",".join([user.last_name, user.first_name, user.username, salt])
+                    html_rows = (html_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
+                                 .format(user.last_name, user.first_name, user.id, user.username, salt))
+                except:
+                    user.username = 'u' + str(user.id) + random_salt(3)
+                    user.set_password(salt)
+                    user.save()
+                    text = text + "\n" + ",".join([user.last_name, user.first_name, user.username, salt])
+                    html_rows = (html_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
+                                 .format(user.last_name, user.first_name, user.id, user.username, salt))
+                num = num + 1
+        except Exception as e:
+            print(e)
+
+        m, c = UserMeta.objects.get_or_create(user=user)
+        if c:
+            m.mobile = int(row['Утасны дугаар'])
+            m.grade_id = int(row['Анги'])
+            m.level_id = level_id
+            m.province_id = int(row['Аймаг, Дүүргийн ID код'])
+            m.school = row['Сургууль']
+            m.reg_num = row['Регистрийн дугаар']
+            m.is_valid = True
+            m.save()
+        else:
+            m.mobile = int(row['Утасны дугаар'])
+            m.grade_id = int(row['Анги'])
+            m.level_id = level_id
+            m.province_id = int(row['Аймаг, Дүүргийн ID код'])
+            m.school = row['Сургууль']
+            m.save()
+
+        if row['Бэлтгэл даваанд оролцох эсэх']:
+            pgroup.user_set.add(user)
+        mgroup.user_set.add(user)
+        users.append(user.id)
+
+    return num, html.format(sheet, html_rows), html.format(sheet, html_rows), error_html.format(sheet, error_rows), error_html.format(sheet, error_rows)
+
+
+def register_students():
     dir = '/home/deploy/registration'
 
     list = os.listdir(dir)
-    print(list)
+
+    subject = "ММОХ бүртгэл"
+    body = '''
+    Та 2023-2024 оны хичээлийн жилд ММОХ-ноос зохион байгуулах олимпиадад оролцох сурагчдаа бүртгүүллээ. 
+
+    Бүртгэлтэй холбоотой мэдээллийг илгээж байна:
+    
+    Шинэээр бүртгүүлсэн:
+    Овог, Нэр, Хэрэглэгчийн нэр, Нууц үг
+    {}
+    Бусад (Өмнө бүртгүүлсэн сурагчдыг регистрийн дугаар эсвэл ID-аар шүүв. Хэрвээ нууц үгээ мартсан бол бүртгүүлсэн имэйл хаягаар сэргээнэ):
+    {}
+    
+    ММОХ
+        '''
+    body_html = '''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Мэдээллийн товхимол №1</title>
+    </head>
+    <body>
+        <p>Та 2023-2024 оны хичээлийн жилд ММОХ-ноос зохион байгуулах олимпиадад оролцох сурагчдаа бүртгүүллээ.</p>
+    
+        <p>Бүртгэлтэй холбоотой мэдээллийг илгээж байна:</p>
+        
+        <p>Шинэээр бүртгүүлсэн:</p>
+        {}
+        <p>Бусад (Өмнө бүртгүүлсэн сурагчдыг регистрийн дугаар, ID-аар шүүв. Хэрвээ нууц үгээ мартсан бол бүртгэлтэй имэйл хаягаар сэргээнэ):</p>
+        {}
+    </body>
+    </html>
+    '''
+
+
+    from_email = 'ММОХ <no-reply@mmo.mn>'
+
     num = 0
     for f in list:
-        name = dir + '/' + f
-        print(name)
-        filename, file_extension = os.path.splitext(name)
-        print(file_extension)
-        if file_extension.lower() in ['.xls', '.xlsx']:
-            df = pd.read_excel(name, 'contestants', engine='openpyxl')
-            for item in df.iterrows():
-                ind, row = item
-                # print(item)
-                # print(row['ID'])
-                # print(row['Овог'])
-                # print(row['Нэр'])
-                # print(row['Утасны дугаар'])
-                # print(row['Регистрийн дугаар'])
-                # print(row['E-mail'])
-                # print(row['Аймаг, Дүүргийн ID код'])
-                # print(row['Сургууль'])
-                # print(row['Анги'])
-                # print(row['Оролцох ангилал'])
-                # row['Анги']=10
-                # print(row)
-                levels = {
-                    'B': 1,
-                    'C': 2,
-                    'D': 3,
-                    'E': 4,
-                    'F': 5,
-                    'S': 6,
-                    'T': 7,
-                    'O': 8
-                }
-                salt = 'user' + random_string(8)
-                try:
-                    user = User.objects.get(pk=int(row['ID']))
-                    created = False
-                except:
-                    if check(row['E-mail']):
-                        email = row['E-mail']
-                    else:
-                        email = 'mmo60official@gmail.com'
-                    user = User.objects.create_user(
-                        username=salt,
-                        first_name=row['Нэр'],
-                        last_name=row['Овог'],
-                        email=email
-                    )
-                    created = True
-                    pass
+        message = ''
+        message_html = ''
+        errors = ''
+        error_htmls = ''
 
-                if created:
-                    user.username = 'user' + str(user.id)
-                    user.set_password(user.username)
-                    try:
-                        user.save()
-                    except:
-                        user.username = 'user' + str(user.id) + 's' + salt[-3:]
-                        user.set_password(user.username)
-                        user.save()
-                    m, c = UserMeta.objects.get_or_create(user=user)
-                    if c:
-                        m.mobile = int(row['Утасны дугаар'])
-                        m.grade_id = int(row['Анги'])
-                        m.level_id = levels[row['Оролцох ангилал']]
-                        m.province_id = int(row['Аймаг, Дүүргийн ID код'])
-                        m.reg_num = row['Регистрийн дугаар']
-                        m.is_valid = True
-                        m.save()
-                    num = num + 1
+        name = dir + '/' + f
+        if os.path.isfile(name):
+            filename, file_extension = os.path.splitext(name)
+            if file_extension.lower() in ['.xls', '.xlsx']:
+                print(name)
+                province_id = pd.read_excel(name, "school",
+                                           usecols="B",
+                                           engine='openpyxl',
+                                           skiprows=1,
+                                           nrows=1,
+                                           header=None,
+                                           names=["Value"]).iloc[0]["Value"]
+                school_name = pd.read_excel(name, "school",
+                                            usecols="B",
+                                            engine='openpyxl',
+                                            skiprows=2,
+                                            nrows=1,
+                                            header=None,
+                                            names=["Value"]).iloc[0]["Value"]
+                teacher_id = pd.read_excel(name, "school",
+                                           usecols="B",
+                                           engine='openpyxl',
+                                           skiprows=3,
+                                           nrows=1,
+                                           header=None,
+                                           names=["Value"]).iloc[0]["Value"]
+                try:
+                    if math.isnan(teacher_id):
+                        teacher_id = 0
+                    else:
+                        teacher_id = np.nan_to_num(teacher_id)
+                    teacher = User.objects.get(pk=teacher_id)
+                except User.DoesNotExist:
+                    continue
+
+                group = Group.objects.get(pk=34)
+                group.user_set.add(teacher)
+
+                new, text, html, error, error_html = register_sheet(name, 'C (5-6)', teacher)
+                num = num + new
+                message = message + '\n' + text
+                message_html = message_html + html
+                errors = errors + '\n' + error
+                error_htmls = error_htmls + error_html
+                new, text, html, error, error_html = register_sheet(name, 'D (7-8)', teacher)
+                num = num + new
+                message = message + '\n' + text
+                message_html = message_html + html
+                errors = errors + '\n' + error
+                error_htmls = error_htmls + error_html
+                new, text, html, error, error_html = register_sheet(name, 'E (9-10)', teacher)
+                num = num + new
+                message = message + '\n' + text
+                message_html = message_html + html
+                errors = errors + '\n' + error
+                error_htmls = error_htmls + error_html
+                new, text, html, error, error_html = register_sheet(name, 'F (11-12)', teacher)
+                num = num + new
+                message = message + '\n' + text
+                message_html = message_html + html
+                errors = errors + '\n' + error
+                error_htmls = error_htmls + error_html
+
+                UserMails.objects.create(subject=subject, text=body.format(message, errors),
+                             text_html=body_html.format(message_html, error_htmls), from_email=from_email,
+                             to_email=teacher.email)
+
+                source = name
+                dest = dir + '/processed/' + str(province_id)
+                if not os.path.isdir(dest):
+                    os.mkdir(dest)
+
+                try:
+                    os.rename(source, dest + '/' + str(teacher_id) + '-' + school_name.strip().replace(" ","") + '-' + random_salt(3) + file_extension)
+                except Exception as e:
+                    print(e)
 
     return num
