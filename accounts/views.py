@@ -499,6 +499,11 @@ def register_sheet(name, sheet, teacher):
         except Exception as e:
             print(e)
 
+        if user.first_name == '' and user.last_name == '':
+            user.first_name = row['Нэр']
+            user.last_name = row['Овог']
+            user.save()
+
         m, c = UserMeta.objects.get_or_create(user=user)
         if c:
             m.mobile = int(row['Утасны дугаар'])
