@@ -639,8 +639,6 @@ def register_students():
                 if not os.path.isdir(dest):
                     os.mkdir(dest)
 
-                if np.isnan(school_name):
-                    school_name = random_salt(3)
                 try:
                     os.rename(source, dest + '/' + str(teacher_id) + '-' + school_name.strip().replace(" ","") + '-' + random_salt(3) + file_extension)
                 except Exception as e:
