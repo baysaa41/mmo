@@ -506,7 +506,10 @@ def register_sheet(name, sheet, teacher):
             m.level_id = level_id
             m.province_id = int(row['Аймаг, Дүүргийн ID код'])
             m.school = row['Сургууль']
-            m.reg_num = row['Регистрийн дугаар'].strip()
+            try:
+                m.reg_num = row['Регистрийн дугаар'].strip()
+            except:
+                m.reg_num = row['Регистрийн дугаар']
             m.is_valid = True
             m.save()
         else:
@@ -636,6 +639,8 @@ def register_students():
                 if not os.path.isdir(dest):
                     os.mkdir(dest)
 
+                if np.isnan(school_name):
+                    school_name = random_salt(3)
                 try:
                     os.rename(source, dest + '/' + str(teacher_id) + '-' + school_name.strip().replace(" ","") + '-' + random_salt(3) + file_extension)
                 except Exception as e:
