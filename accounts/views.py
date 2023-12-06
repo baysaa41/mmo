@@ -496,13 +496,16 @@ def register_sheet(name, sheet, teacher):
                     html_rows = (html_rows + "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>"
                                  .format(user.last_name, user.first_name, user.id, user.username, salt))
                 num = num + 1
+                if user.first_name == '' and user.last_name == '':
+                    user.first_name = row['Нэр']
+                    user.last_name = row['Овог']
+                    user.save()
+            print(row['Нэр'])
         except Exception as e:
             print(e)
 
-        if user.first_name == '' and user.last_name == '':
-            user.first_name = row['Нэр']
-            user.last_name = row['Овог']
-            user.save()
+        if not user:
+            print(row)
 
         m, c = UserMeta.objects.get_or_create(user=user)
         if c:
@@ -597,6 +600,7 @@ def register_students():
                                             nrows=1,
                                             header=None,
                                             names=["Value"]).iloc[0]["Value"]
+                school_name = str(school_name)
                 teacher_id = pd.read_excel(name, "school",
                                            usecols="B",
                                            engine='openpyxl',
