@@ -500,12 +500,8 @@ def register_sheet(name, sheet, teacher):
                     user.first_name = row['Нэр']
                     user.last_name = row['Овог']
                     user.save()
-            print(row['Нэр'])
         except Exception as e:
             print(e)
-
-        if not user:
-            print(row)
 
         m, c = UserMeta.objects.get_or_create(user=user)
         if c:
