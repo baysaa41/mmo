@@ -3,6 +3,7 @@ from . import views, results
 
 urlpatterns = [
     path('', views.list_upcomming_olympiads, name='olympiad_home'),
+    path('excel/', views.upload_file, name='upload_file'),
     path('supplements/', views.supplement_home, name='olympiad_supplement_home'),
     path('supplements/admin/', views.supplements_view, name='supplements_view'),
     path('supplements/approve/', views.approve_supplement, name='approve_supplement'),

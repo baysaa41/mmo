@@ -391,3 +391,16 @@ class Tag(models.Model):
     name = models.CharField(max_length=128)
     def __str__(self):
         return '{}'.format(self.name)
+
+class YourModel(models.Model):
+    id_number = models.CharField(max_length=50, unique=True)
+    last_name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=255)
+    registration_number = models.CharField(max_length=50)
+    phone_number = models.CharField(max_length=20)
+    email = models.EmailField()
+    region_id = models.CharField(max_length=10)
+    school = models.CharField(max_length=255)
+    class_name = models.CharField(max_length=50)
+    is_attending_event = models.BooleanField(default=False)
+

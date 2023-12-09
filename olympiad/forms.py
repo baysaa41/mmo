@@ -31,3 +31,6 @@ class UploadForm(ModelForm):
         widgets = {
             'result': forms.HiddenInput()
         }
+
+class UploadFileForm(forms.Form):
+    file = forms.FileField()
