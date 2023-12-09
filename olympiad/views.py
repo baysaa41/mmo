@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.template.loader import render_to_string
 import os
 import openpyxl
+from accounts.views import random_salt
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
 
@@ -579,6 +580,18 @@ def set_answer(olympiad_id, excel_data):
     for row in excel_data[1:]:
         for i in range(len(row[7:-1])):
             problem = problems.filter(order=i + 1).first()
+            if row[1] == '' and (row[2] != '' or row[3] != ''):
+                user, c = User.objects.get_or_create(username=random_salt(8),
+                                                     first_name=row[3]+'-system',
+                                                     last_name=row[2]+'-system',
+                                                     email='mmo60official@gmail.com',
+                                                     is_active=True)
+                if c:
+                    user.username='u'+str(user.id)
+                    user.save()
+                UserMeta.objects.get_or_create(user=user, province_id=row[4], school=row[5], grade_id=row[6])
+                row[1] = user.id
+
             answer, created = Result.objects.get_or_create(contestant_id=row[1],
                                                            olympiad_id=olympiad_id,
                                                            problem_id=problem.id)
