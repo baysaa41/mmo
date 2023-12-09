@@ -566,7 +566,7 @@ def read_worksheet(worksheet,problems):
                 tailbar.append('ID буруу')
             except TypeError:
                 if str(row[2].value) != 'None' or str(row[3].value) != 'None':
-                    tailbar.append('Шинээр хэрэглэгч үүсгэнэ')
+                    tailbar.append('Шинээр хэрэглэгч үүсгэнэ. Засах шаардлагагүй.')
                 else:
                     tailbar.append('Мэдээлэл дутуу')
                     aldaa = True
