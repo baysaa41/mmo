@@ -555,6 +555,10 @@ def read_worksheet(worksheet,problems):
                         row_data.append(str(cell.value))
                         tailbar.append('Бүхэл тоон хариулт биш')
                         aldaa = True
+                    except Exception as e:
+                        row_data.append(0)
+                        tailbar.append(str(e))
+                        aldaa = True
 
             try:
                 user = User.objects.get(pk=int(row[1].value))
@@ -616,18 +620,30 @@ def upload_file(request):
 
         wb = openpyxl.load_workbook(excel_file)
 
-        worksheet = wb["C (5-6)"]
+        try:
+           worksheet = wb["C (5-6)"]
+        except:
+            worksheet = wb["5-6"]
         excel_data_c, c = read_worksheet(worksheet,10)
 
         # getting a particular sheet by name out of many sheets
-        worksheet = wb["D (7-8)"]
+        try:
+            worksheet = wb["D (7-8)"]
+        except:
+            worksheet = wb["7-8"]
         excel_data_d, d = read_worksheet(worksheet, 10)
 
-        worksheet = wb["E (9-10)"]
+        try:
+            worksheet = wb["E (9-10)"]
+        except:
+            worksheet = wb["9-10"]
         excel_data_e, e = read_worksheet(worksheet,12)
 
         # getting a particular sheet by name out of many sheets
-        worksheet = wb["F (11-12)"]
+        try:
+            worksheet = wb["F (11-12)"]
+        except:
+            worksheet = wb["11-12"]
         excel_data_f, f = read_worksheet(worksheet, 12)
 
         print(excel_data_f)
