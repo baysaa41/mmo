@@ -564,12 +564,14 @@ def read_worksheet(worksheet,problems):
                 user = User.objects.get(pk=int(row[1].value))
             except User.DoesNotExist:
                 tailbar.append('ID буруу')
-            except TypeError:
+            except TypeError as e:
                 if str(row[2].value) != 'None' or str(row[3].value) != 'None':
                     tailbar.append('Шинээр хэрэглэгч үүсгэнэ. Засах шаардлагагүй.')
                 else:
                     tailbar.append('Мэдээлэл дутуу')
                     aldaa = True
+                    print(row[1])
+                    print(str(e))
                     print(3)
 
             row_data.append(', '.join(tailbar))
@@ -595,15 +597,21 @@ def set_answer(olympiad_id, excel_data):
                     user.save()
                 UserMeta.objects.get_or_create(user=user, province_id=row[4], school=row[5], grade_id=row[6])
                 row[1] = user.id
+            else:
+                try:
+                    row[1] = int(float(row[1]))
+                except ValueError:
+                    print(row)
+                    pass
 
-            answer, created = Result.objects.get_or_create(contestant_id=row[1],
+            answer, created = Result.objects.get_or_create(contestant_id=int(float(row[1])),
                                                            olympiad_id=olympiad_id,
                                                            problem_id=problem.id)
+
             answer.state = 2
             if row[i + 7] == '':
                 row[i + 7] = 0
             answer.answer = int(row[i + 7])
-            print(answer.contestant_id,answer.olympiad_id,answer.problem_id,answer.answer)
             answer.save()
     return True
 
@@ -645,8 +653,6 @@ def upload_file(request):
         except:
             worksheet = wb["11-12"]
         excel_data_f, f = read_worksheet(worksheet, 12)
-
-        print(excel_data_f)
 
         aldaa = aldaa or c or d or e or f
 
