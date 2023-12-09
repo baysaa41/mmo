@@ -557,7 +557,7 @@ def read_worksheet(worksheet,problems):
                         aldaa = True
                     except Exception as e:
                         row_data.append(0)
-                        tailbar.append(str(e))
+                        tailbar.append(e)
                         aldaa = True
 
             try:
