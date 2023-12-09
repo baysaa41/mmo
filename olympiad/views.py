@@ -593,6 +593,7 @@ def set_answer(olympiad_id, excel_data):
 
 def upload_file(request):
     if "GET" == request.method:
+        context = {'error': 0}
         return render(request, 'olympiad/upload_file.html', {})
     else:
         aldaa = False
@@ -625,8 +626,11 @@ def upload_file(request):
             set_answer(134,excel_data_d)
             set_answer(135,excel_data_e)
             set_answer(136,excel_data_f)
+            error = 1
+        else:
+            error = 2
 
         context = {"excel_data_c": excel_data_c, "excel_data_d": excel_data_d, "excel_data_e": excel_data_e,
-                "excel_data_f": excel_data_f, 'error': aldaa}
+                "excel_data_f": excel_data_f, 'error': error}
 
         return render(request, 'olympiad/upload_file.html', context)

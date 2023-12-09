@@ -1,0 +1,97 @@
+<html>
+<head>
+    <title>
+        Excel file upload and processing : Django Example : ThePythonDjango.Com
+    </title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body style="margin-top: 30px;margin-left: 30px;">
+<form action="{% url "upload_file" %}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file"
+           title="Upload excel file"
+           name="excel_file"
+           style="border: 1px solid black; padding: 5px;"
+           required="required">
+    <p>
+        <input type="submit"
+               value="Upload"
+               style="border: 1px solid green; padding:5px; border-radius: 2px; cursor: pointer;">
+</form>
+
+<p></p>
+<hr>
+{% if error == 2 %}
+    <p>Тайлбар хэсэгт байгаа алдааг залруулаарай.</p>
+    <h3>C (5-6)</h3>
+    <table class="table table-bordered">
+        {% for row in excel_data_c %}
+            <tr>
+                {% if forloop.counter0 == 0 %}
+                    {% for cell in row %}
+                        <th>{{ cell | safe }}</th>
+                    {% endfor %}
+                {% else %}
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                {% endif %}
+            </tr>
+        {% endfor %}
+    </table>
+    <h3>D (7-8)</h3>
+    <table class="table table-bordered">
+        {% for row in excel_data_d %}
+            <tr>
+                {% if forloop.counter0 == 0 %}
+                    {% for cell in row %}
+                        <th>{{ cell | safe }}</th>
+                    {% endfor %}
+                {% else %}
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                {% endif %}
+            </tr>
+        {% endfor %}
+    </table>
+    <h3>E (9-10)</h3>
+    <table class="table table-bordered">
+        {% for row in excel_data_e %}
+            <tr>
+                {% if forloop.counter0 == 0 %}
+                    {% for cell in row %}
+                        <th>{{ cell | safe }}</th>
+                    {% endfor %}
+                {% else %}
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                {% endif %}
+            </tr>
+        {% endfor %}
+    </table>
+    <h3>F (11-12)</h3>
+    <table class="table table-bordered">
+        {% for row in excel_data_f %}
+            <tr>
+                {% if forloop.counter0 == 0 %}
+                    {% for cell in row %}
+                        <th>{{ cell | safe }}</th>
+                    {% endfor %}
+                {% else %}
+                    {% for cell in row %}
+                        <td>{{ cell | safe }}</td>
+                    {% endfor %}
+                {% endif %}
+            </tr>
+        {% endfor %}
+    </table>
+{% elif error == 1 %}
+    <p>Сурагчдын дүнг системд хууллаа. Асуух зүйл байвал mmo60official@gmail.com хаяг уруу бичээрэй.</p>
+{% else %}
+    <p>Сурагчдынхаа дүнгийн нэгтгэлийг системд хуулна уу.</p>
+{% endif %}
+
+</body>
+</html>
