@@ -469,7 +469,7 @@ def register_sheet(name, sheet, teacher):
                               .format(row['Овог'], row['Нэр'], user.id, user.username,
                                       'Бүртгэлтэй имэйл: ' + user.email))
             else:
-                email = row['E-mail']
+                email = row['E-mail'].strip()
                 if not check(email):
                     email = teacher.email
                 if not check(email):
