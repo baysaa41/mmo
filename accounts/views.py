@@ -943,7 +943,7 @@ def import_file(request):
             context = {'error': 1, 'messages': messages}
             text = '\n'.join(messages)
             text_html = '<html><meta charset="utf-8">{}<body></body></html>'
-            html_content = '<p><strong>Бүртгэлийн мэдээлэл илгээж байна. Хэрвээ багш нэр <a href="{}">энд</a> байхгүй бол \
+            html_content = '<p><strong>Бүртгэлийн мэдээлэл илгээж байна. Хэрвээ сэдэв хүлээн авах багшийн нэр <a href="{}">энд</a> байхгүй бол \
             mmo60official@gmail.com уруу мэдэгдээрэй.</strong></p>'.format('https://www.mmo.mn/accounts/users/34/')
             teacher = User.objects.filter(pk=teacher_id).first()
             for message in messages:
