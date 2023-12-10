@@ -14,5 +14,6 @@ urlpatterns = [
     path('sendmails/',views.send_mass_html_mail,name='user_sendmails'),
     path('create/users/',views.create_users,name='create_users'),
     path('login/', views.login_view, name='user_login'),
-    path('logout/', views.logout_view, name='user_logout')
+    path('logout/', views.logout_view, name='user_logout'),
+    path('addusers/', views.import_file, name='add_users')
 ]

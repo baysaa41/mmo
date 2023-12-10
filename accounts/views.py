@@ -1,7 +1,7 @@
 import math
 
 from django.shortcuts import render, redirect, HttpResponse
-from accounts.forms import UserForm, UserMetaForm
+from accounts.forms import UserForm, UserMetaForm, EmailForm
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
@@ -16,7 +16,7 @@ from django.db import connection
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
-from django.core.mail import get_connection, EmailMultiAlternatives
+from django.core.mail import get_connection, EmailMultiAlternatives, EmailMessage
 
 import os
 import pandas as pd
@@ -24,6 +24,7 @@ import numpy as np
 import string
 import random
 import re
+import openpyxl
 
 
 # Create your views here.
@@ -505,7 +506,7 @@ def register_sheet(name, sheet, teacher):
 
         m, c = UserMeta.objects.get_or_create(user=user)
         if c:
-            m.mobile = int(row['Утасны дугаар'])
+            m.mobile = int(float(row['Утасны дугаар']))
             m.grade_id = int(row['Анги'])
             m.level_id = level_id
             m.province_id = int(row['Аймаг, Дүүргийн ID код'])
@@ -517,7 +518,7 @@ def register_sheet(name, sheet, teacher):
             m.is_valid = True
             m.save()
         else:
-            m.mobile = int(row['Утасны дугаар'])
+            m.mobile = int(float(row['Утасны дугаар']))
             m.grade_id = int(row['Анги'])
             m.level_id = level_id
             m.province_id = int(row['Аймаг, Дүүргийн ID код'])
@@ -650,3 +651,328 @@ def register_students():
                     print(e)
 
     return num
+
+
+def check_row(row):
+    if row[0].value is not None:
+        try:
+            id = int(float(row[0].value))
+            user = User.objects.get(pk=id)
+        except ValueError as e:
+            return False, 'ID натурал тоо байх ёстой'
+        except TypeError as e:
+            return False, 'ID натурал тоо байх ёстой'
+        except User.DoesNotExist:
+            return False, 'ID буруу.'
+    else:
+        try:
+            reg_num = str(row[3].value).strip()
+            user = UserMeta.objects.get(reg_num=reg_num)
+        except UserMeta.DoesNotExist:
+            if row[1].value is None and row[2].value is None:
+                return False, 'Хэрэглэгч үүсгэх боломжгүй. Мэдээлэл дутуу. Нэмэлт мөрийг устгах.'
+        except ValueError as e:
+            return False, 'Регистрийн дугаар буруу'
+        except TypeError as e:
+            return False, 'Регистрийн дугаар буруу'
+
+    try:
+        mobile = int(float(row[4].value))
+    except ValueError as e:
+        return False, 'Утасны дугаар буруу'
+    except TypeError as e:
+        return False, 'Утасны дугаар буруу'
+    try:
+        email = str(row[5].value)
+        if not check(email):
+            return False, 'Email буруу: ' + email
+    except Exception as e:
+        return False, 'Email алдаатай.'
+
+    try:
+        province_id = int(row[6].value)
+        province = Province.objects.get(pk=province_id)
+    except Province.DoesNotExist:
+        return False, 'Аймаг, дүүргийн код буруу. Reference sheet-ээс хар.'
+    except Exception as e:
+        return False, str(e) + ' Аймаг, дүүргийн код Reference sheet-ээс хар. Тоо байна.'
+    try:
+        school = str(row[8].value)
+        if school == 'None':
+            return False, 'Сургуулийн нэр оруулаагүй.'
+    except Exception as e:
+        return False, str(e) + ' Сургуулийн нэр'
+    try:
+        grade = int(float(row[9].value))
+    except Exception as e:
+        return False, str(e)
+
+    return True, ''
+
+def check_error(wb):
+    aldaa = False
+    messages = list()
+
+    sheet = wb["school"]
+    try:
+        province_id = int(float(sheet['B2'].value))
+        province = Province.objects.get(pk=province_id)
+    except Exception as e:
+        aldaa = True
+        messages.append(str(e) + ': B2-д дүүргийн ID-г тоогоор бичнэ. Reference sheet-ээс хар.')
+
+    try:
+        school_name = str(sheet['B3'].value).strip()
+    except Exception as e:
+        aldaa = True
+        messages.append(str(e) + ': Сургуулийн нэр алдаатай.')
+
+    if school_name == 'None':
+        aldaa = True
+        messages.append('B3-д сургуулийн нэр бичнэ.')
+
+    try:
+        teacher_id = int(float(sheet['B4'].value))
+        teacher = User.objects.get(pk=teacher_id)
+        if not teacher.groups.filter(pk=34) and not teacher.is_staff:
+            aldaa = True
+            messages.append('Сэдэв хүлээн авах хүн заавал урьдчилж бүртгүүлсэн байна.')
+    except User.DoesNotExist:
+        aldaa = True
+        messages.append('Сэдэв хүлээн авах хүний ID буруу.')
+    except Exception as e:
+        aldaa = True
+        messages.append(str(e) + ': B4-д сэдэв хүлээн авах хүний ID-г тоогоор бичнэ.')
+
+    if 'C (5-6)' not in wb.sheetnames:
+        aldaa = True
+        messages.append('C (5-6) sheet байхгүй байна. Хариултын хуудаст засвар оруулж болохгүй.')
+    elif 'D (7-8)' not in wb.sheetnames:
+        aldaa = True
+        messages.append('D (7-8) sheet байхгүй байна. Хариултын хуудаст засвар оруулж болохгүй.')
+    elif 'E (9-10)' not in wb.sheetnames:
+        aldaa = True
+        messages.append('E (9-10) sheet байхгүй байна. Хариултын хуудаст засвар оруулж болохгүй.')
+    elif 'F (11-12)' not in wb.sheetnames:
+        aldaa = True
+        messages.append('F (11-12) sheet байхгүй байна. Хариултын хуудаст засвар оруулж болохгүй.')
+    else:
+        title_hash = ['ID', 'Овог', 'Нэр', 'Регистрийн дугаар', 'Утасны дугаар', 'E-mail', 'Аймаг, Дүүргийн ID код', 'Сургууль', 'Анги']
+        sheet_c = wb['C (5-6)']
+        title_c = [sheet_c.cell(row=1,column=i).value for i in range(1, 10)]
+        if title_c != title_hash:
+            aldaa = True
+            messages.append('C (5-6) sheet-ийн толгой өөрчлөгдсөн байна. Хариултын хуудаст засвар оруулж болохгүй.')
+
+        sheet_d = wb['D (7-8)']
+        title_d = [sheet_c.cell(row=1,column=i).value for i in range(1, 10)]
+        if title_d != title_hash:
+            aldaa = True
+            messages.append('D (7-8) sheet-ийн толгой өөрчлөгдсөн байна. Хариултын хуудаст засвар оруулж болохгүй.')
+
+        sheet_e = wb['E (9-10)']
+        title_e = [sheet_c.cell(row=1,column=i).value for i in range(1, 10)]
+        if title_e != title_hash:
+            aldaa = True
+            messages.append('E (9-10) sheet-ийн толгой өөрчлөгдсөн байна. Хариултын хуудаст засвар оруулж болохгүй.')
+
+        sheet_f = wb['F (11-12)']
+        title_f = [sheet_c.cell(row=1,column=i).value for i in range(1, 10)]
+        if title_f != title_hash:
+            aldaa = True
+            messages.append('F (11-12) sheet-ийн толгой өөрчлөгдсөн байна. Хариултын хуудаст засвар оруулж болохгүй.')
+
+        ind = 0
+        messages.append('C (5-6)')
+        for row in sheet_c:
+            if ind > 0:
+                result, message = check_row(row)
+                message = message + ': Мөрийн дугаар ' + str(ind+1)
+                if not result:
+                    aldaa = True
+                    messages.append(message)
+            ind = ind + 1
+
+        ind = 0
+        messages.append('D (7-8)')
+        for row in sheet_d:
+            if ind > 0:
+                result, message = check_row(row)
+                message = message + ': Мөрийн дугаар: ' + str(ind+1)
+                if not result:
+                    aldaa = True
+                    messages.append(message)
+            ind = ind + 1
+
+        ind = 0
+        messages.append('E (9-10)')
+        for row in sheet_e:
+            if ind > 0:
+                result, message = check_row(row)
+                message = message + ': Мөрийн дугаар ' + str(ind+1)
+                if not result:
+                    aldaa = True
+                    messages.append(message)
+            ind = ind + 1
+
+        ind = 0
+        messages.append('F (11-12)')
+        for row in sheet_f:
+            if ind > 0:
+                result, message = check_row(row)
+                message = message + ': Мөрийн дугаар: ' + str(ind+1)
+                if not result:
+                    aldaa = True
+                    messages.append(message)
+            ind = ind + 1
+
+    return aldaa, messages
+
+def import_row(row, level_id):
+    message = ''
+    if row[0].value is not None:
+        id = int(float(row[0].value))
+        user = User.objects.get(pk=id)
+        message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
+            user.id, user.username, user.first_name, user.last_name, user.email)
+    else:
+        try:
+            reg_num = str(row[3].value).strip()
+            m = UserMeta.objects.get(reg_num=reg_num)
+            user = m.user
+            message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
+                user.id, user.username, user.first_name, user.last_name, user.email)
+        except UserMeta.DoesNotExist:
+            username = random_salt(8)
+            user = User.objects.create(username=username,
+                                       last_name=str(row[1].value),
+                                       first_name=str(row[2].value),
+                                       email=str(row[5].value),
+                                       is_active=1,
+                                       password=username)
+            try:
+                user.username = 'u' + str(user.id)
+                user.save()
+            except:
+                user.username = 'u' + str(user.id)+'-'+random_salt(3)
+                user.save()
+
+            message = '{}, {}, {} хэрэглэгч шинээр бүртгүүллээ. Хэрэглэгчийн нэр {}, Нууц үг {}. Бүртгүүлсэн имэйл'.format(
+                user.id, user.last_name, user.first_name, user.username, username, user.email)
+
+        m, c = UserMeta.objects.get_or_create(user=user)
+        if c:
+            m.reg_num = str(row[3].value).upper()
+            m.mobile = int(float(row[4].value))
+            m.province_id = int(float(row[6].value))
+            m.school = str(row[7].value)
+            m.grade_id = int(float(row[8].value))
+            m.level_id = level_id
+        else:
+            m.province_id = int(float(row[6].value))
+            m.school = str(row[7].value)
+            m.grade_id = int(float(row[8].value))
+            m.level_id = level_id
+        m.save()
+    return message
+def import_checked_users(wb):
+    sheet = wb["school"]
+    teacher_id = int(float(sheet['B4'].value))
+    teacher = User.objects.get(pk=teacher_id)
+    group = Group.objects.get(pk=34)
+    group.user_set.add(teacher)
+
+    messages = list()
+
+    ind = 0
+    messages.append('C (5-6)')
+    sheet_c = wb['C (5-6)']
+    for row in sheet_c:
+        if ind > 0:
+            message = import_row(row, 2)
+            messages.append(message)
+        ind = ind + 1
+
+    ind = 0
+    sheet_d = wb['D (7-8)']
+    messages.append('D (7-8)')
+    for row in sheet_d:
+        if ind > 0:
+            message = import_row(row,3)
+            messages.append(message)
+        ind = ind + 1
+
+    ind = 0
+    sheet_e = wb['E (9-10)']
+    messages.append('E (9-10)')
+    for row in sheet_e:
+        if ind > 0:
+            message = import_row(row,4)
+            messages.append(message)
+        ind = ind + 1
+
+    ind = 0
+    sheet_f = wb['F (11-12)']
+    messages.append('F (11-12)')
+    for row in sheet_f:
+        if ind > 0:
+            message = import_row(row,5)
+            messages.append(message)
+        ind = ind + 1
+
+    return messages, teacher_id
+def import_file(request):
+    if "GET" == request.method:
+        context = {'error': 0}
+        return render(request, 'accounts/upload_file.html', context)
+    else:
+        error = False
+        messages = list()
+
+        excel_file = request.FILES["excel_file"]
+
+        wb = openpyxl.load_workbook(excel_file, data_only=True)
+
+        error, messages = check_error(wb)
+
+        if not error:
+            messages, teacher_id = import_checked_users(wb)
+            context = {'error': 1, 'messages': messages}
+        else:
+            context = {'error': error, 'messages': messages}
+
+        return render(request, 'accounts/upload_file.html', context)
+
+@login_required(login_url='/accounts/login/')
+def send_email_with_attachments(request):
+    if not request.user.is_staff:
+        return HttpResponse("")
+    if request.method == 'POST':
+        form = EmailForm(request.POST, request.FILES)
+        if form.is_valid():
+            group_name = 'single'  # Replace with your group name
+            group = Group.objects.get(name=group_name)
+            users_in_group = group.user_set.all()
+
+            subject = form.cleaned_data['subject']
+            message = form.cleaned_data['message']
+            from_email = 'no-replay@mmo.mn'
+            recipient_list = [user.email for user in users_in_group]
+
+            email = EmailMessage(subject, message, from_email, recipient_list)
+            email.content_subtype = "html"
+
+            # Attach files
+            attachments = request.FILES.getlist('attachments')
+            for attachment in attachments:
+                email.attach(attachment.name, attachment.read(), attachment.content_type)
+
+            # Send the email
+            email.send()
+
+            return render(request, 'accounts/success.html', {'message': 'Email sent successfully.'})
+
+    else:
+        form = EmailForm()
+
+    return render(request, 'accounts/send_email.html', {'form': form})

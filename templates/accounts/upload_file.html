@@ -1,0 +1,33 @@
+<html>
+<head>
+    <title>
+        ММОХ бүртгэлийн хуудас
+    </title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body style="margin-top: 30px;margin-left: 30px;">
+<form action="{% url "add_users" %}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file"
+           title="Upload excel file"
+           name="excel_file"
+           style="border: 1px solid black; padding: 5px;"
+           required="required">
+    <p>
+        <input type="submit"
+               value="Upload"
+               style="border: 1px solid green; padding:5px; border-radius: 2px; cursor: pointer;">
+</form>
+
+<p></p>
+<hr>
+{% if error %}
+    {% for message in messages %}
+        <p>{{ message }}</p>
+    {% endfor %}
+{% else %}
+    <p>Сурагчдын бүртгэл харах.</p>
+{% endif %}
+
+</body>
+</html>

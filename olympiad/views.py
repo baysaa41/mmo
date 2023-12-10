@@ -619,7 +619,7 @@ def set_answer(olympiad_id, excel_data):
 def upload_file(request):
     if "GET" == request.method:
         context = {'error': 0}
-        return render(request, 'olympiad/upload_file.html', {})
+        return render(request, 'olympiad/upload_file.html', context)
     else:
         aldaa = False
         excel_file = request.FILES["excel_file"]

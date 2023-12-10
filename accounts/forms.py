@@ -53,3 +53,8 @@ class LoginForm(forms.Form):
         if not qs.exists():
             raise forms.ValidationError("Ийм хэрэглэгч бүртгэгдээгүй байна.")
         return username
+
+class EmailForm(forms.Form):
+    subject = forms.CharField(max_length=100)
+    message = forms.CharField(widget=forms.Textarea)
+    attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
