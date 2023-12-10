@@ -848,14 +848,13 @@ def import_row(row, level_id):
                                        last_name=str(row[1].value),
                                        first_name=str(row[2].value),
                                        email=str(row[5].value),
-                                       is_active=1,
-                                       password=username)
+                                       is_active=1)
+            user.set_password(username)
             try:
                 user.username = 'u' + str(user.id)
-                user.save()
             except:
                 user.username = 'u' + str(user.id)+'-'+random_salt(3)
-                user.save()
+            user.save()
 
             message = '{}, {}, {} хэрэглэгч шинээр бүртгүүллээ. Хэрэглэгчийн нэр {}, Нууц үг {}. Бүртгүүлсэн имэйл'.format(
                 user.id, user.last_name, user.first_name, user.username, username, user.email)
@@ -875,12 +874,14 @@ def import_row(row, level_id):
             m.level_id = level_id
         m.save()
     return message
-def import_checked_users(wb):
+
+def import_checked_users(wb,user):
     sheet = wb["school"]
     teacher_id = int(float(sheet['B4'].value))
     teacher = User.objects.get(pk=teacher_id)
     group = Group.objects.get(pk=34)
     group.user_set.add(teacher)
+    group.user_set.add(user)
 
     messages = list()
 
@@ -921,6 +922,8 @@ def import_checked_users(wb):
         ind = ind + 1
 
     return messages, teacher_id
+
+@login_required()
 def import_file(request):
     if "GET" == request.method:
         context = {'error': 0}
@@ -936,8 +939,38 @@ def import_file(request):
         error, messages = check_error(wb)
 
         if not error:
-            messages, teacher_id = import_checked_users(wb)
+            messages, teacher_id = import_checked_users(wb,request.user)
             context = {'error': 1, 'messages': messages}
+            text = '\n'.join(messages)
+            text_html = '<html><meta charset="utf-8">{}<body></body></html>'
+            html_content = ''
+            teacher = User.objects.filter(pk=teacher_id).first()
+            for message in messages:
+                html_content = html_content + "<p>{}</p>".format(message)
+            text_html = text_html.format(html_content)
+            email = UserMails.objects.create(subject = 'ММОХ бүртгэлийн мэдээлэл',
+                    text = text,
+                    text_html = text_html,
+                    from_email = 'no-reply@mmo.mn',
+                    to_email = request.user.email,
+                    is_sent = False)
+            if teacher_id != request.user.email:
+                teacher_email = UserMails.objects.create(subject='ММОХ бүртгэлийн мэдээлэл',
+                                                 text=text,
+                                                 text_html=text_html,
+                                                 from_email='no-reply@mmo.mn',
+                                                 to_email=request.user.email,
+                                                 is_sent=False)
+            connection = get_connection(fail_silently=False)
+            msgs = []
+            uemails = UserMails.objects.filter(is_sent=False)[0:50]
+            for uemail in uemails:
+                message = EmailMultiAlternatives(uemail.subject, uemail.text, uemail.from_email, [uemail.to_email])
+                message.attach_alternative(uemail.text_html, 'text/html')
+                msgs.append(message)
+                uemail.is_sent = True
+                uemail.save()
+            connection.send_messages(msgs)
         else:
             context = {'error': error, 'messages': messages}
 
