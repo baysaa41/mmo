@@ -18,6 +18,8 @@ from django.utils.html import strip_tags
 
 from django.core.mail import get_connection, EmailMultiAlternatives, EmailMessage
 
+from django_pandas.io import read_frame
+
 import os
 import pandas as pd
 import numpy as np
@@ -141,6 +143,48 @@ def staff(request):
     users = User.objects.filter(is_staff=1).order_by('data__province__zone')
     return render(request, 'accounts/staff.html', {'users': users})
 
+
+def group_users2(request, group_id):
+        group = Group.objects.filter(pk=group_id).first()
+        pd.options.display.float_format = '{:,.1f}'.format
+
+        pid = int(request.GET.get('p', 0))
+        zid = int(request.GET.get('z', 0))
+
+        users = group.user_set.all()
+        users_df = read_frame(users,
+                              fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name', 'data__school'],
+                              verbose=False)
+        users_df.rename(columns={
+            'id': 'ID',
+            'first_name': 'Нэр',
+            'last_name': 'Овог',
+            'username': 'Хэрэглэгчийн нэр',
+            'data__province__name': 'Аймаг/Дүүрэг',
+            'data__school': 'Cургууль',
+        }, inplace=True)
+
+        styled_df = users_df.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
+            {
+                'selector': 'th',
+                'props': [('text-align', 'center')],
+            },
+            {
+                'selector': 'td, th',
+                'props': [('border', '1px solid #ccc')],
+            },
+            {
+                'selector': 'td, th',
+                'props': [('padding', '3px 5px 3px 5px')],
+            },
+        ])
+
+
+        context = {
+            'df': styled_df.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
+            'pivot': styled_df.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
+        }
+        return render(request, 'olympiad/pandas.html', context)
 
 def group_users(request, group_id):
     group = Group.objects.filter(pk=group_id).first()
