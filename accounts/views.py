@@ -955,7 +955,7 @@ def import_file(request):
                     from_email = 'no-reply@mmo.mn',
                     to_email = request.user.email,
                     is_sent = False)
-            if teacher_id != request.user.email:
+            if teacher_id != request.user.id:
                 teacher_email = UserMails.objects.create(subject='ММОХ бүртгэлийн мэдээлэл',
                                                  text=text,
                                                  text_html=text_html,
