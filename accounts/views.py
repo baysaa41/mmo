@@ -919,7 +919,7 @@ def import_row(row, level_id):
     else:
         try:
             reg_num = str(row[3].value).strip()
-            m = UserMeta.objects.get(reg_num=reg_num)
+            m = UserMeta.objects.filter(reg_num=reg_num).first()
             user = m.user
             message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
                 user.id, user.username, user.first_name, user.last_name, user.email)
