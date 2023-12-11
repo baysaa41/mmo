@@ -793,8 +793,11 @@ def check_row(row):
 def check_error(wb):
     aldaa = False
     messages = list()
-
-    sheet = wb["school"]
+    try:
+        sheet = wb["school"]
+    except Exception as e:
+        aldaa = True
+        messages.append('school sheet байхгүй байна.')
     try:
         province_id = int(float(sheet['B2'].value))
         province = Province.objects.get(pk=province_id)
@@ -804,13 +807,12 @@ def check_error(wb):
 
     try:
         school_name = str(sheet['B3'].value).strip()
+        if school_name == 'None':
+            aldaa = True
+            messages.append('B3-д сургуулийн нэр бичнэ.')
     except Exception as e:
         aldaa = True
         messages.append(str(e) + ': Сургуулийн нэр алдаатай.')
-
-    if school_name == 'None':
-        aldaa = True
-        messages.append('B3-д сургуулийн нэр бичнэ.')
 
     try:
         teacher_id = int(float(sheet['B4'].value))
@@ -972,14 +974,17 @@ def import_row(row, level_id):
     return message
 
 def import_checked_users(wb,user):
-    sheet = wb["school"]
-    teacher_id = int(float(sheet['B4'].value))
-    teacher = User.objects.get(pk=teacher_id)
-    group = Group.objects.get(pk=34)
-    group.user_set.add(teacher)
-    group.user_set.add(user)
 
     messages = list()
+    try:
+        sheet = wb["school"]
+        teacher_id = int(float(sheet['B4'].value))
+        teacher = User.objects.get(pk=teacher_id)
+        group = Group.objects.get(pk=34)
+        group.user_set.add(teacher)
+        group.user_set.add(user)
+    except Exception as e:
+        messages.append(str(e))
 
     ind = 0
     messages.append('C (5-6)')
