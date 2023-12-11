@@ -5,6 +5,7 @@ from accounts.models import UserMeta
 from myquiz.models import UserAnswer
 from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.forms import modelformset_factory
 from .forms import ResultsForm, UploadForm, ResultsGraderForm
 from datetime import datetime, timezone, timedelta
@@ -616,6 +617,7 @@ def set_answer(olympiad_id, excel_data):
     return True
 
 
+@staff_member_required
 def upload_file(request):
     if "GET" == request.method:
         context = {'error': 0}
