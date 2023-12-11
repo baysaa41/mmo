@@ -1043,16 +1043,6 @@ def import_file(request):
                                                  from_email='no-reply@mmo.mn',
                                                  to_email=request.user.email,
                                                  is_sent=False)
-            connection = get_connection(fail_silently=False)
-            msgs = []
-            uemails = UserMails.objects.filter(is_sent=False)[0:50]
-            for uemail in uemails:
-                message = EmailMultiAlternatives(uemail.subject, uemail.text, uemail.from_email, [uemail.to_email])
-                message.attach_alternative(uemail.text_html, 'text/html')
-                msgs.append(message)
-                uemail.is_sent = True
-                uemail.save()
-            connection.send_messages(msgs)
         else:
             context = {'error': error, 'messages': messages}
 
