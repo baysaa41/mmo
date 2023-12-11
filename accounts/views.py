@@ -765,8 +765,9 @@ def check_row(row):
         return False, 'Утасны дугаар буруу'
     try:
         email = str(row[5].value)
-        if not check(email):
-            return False, 'Email буруу: ' + email
+        if email is None:
+            if not check(email.strip()):
+                return False, 'Email буруу: ' + email
     except Exception as e:
         return False, 'Email алдаатай.'
 
@@ -778,13 +779,13 @@ def check_row(row):
     except Exception as e:
         return False, str(e) + ' Аймаг, дүүргийн код Reference sheet-ээс хар. Тоо байна.'
     try:
-        school = str(row[8].value)
+        school = str(row[7].value)
         if school == 'None':
             return False, 'Сургуулийн нэр оруулаагүй.'
     except Exception as e:
         return False, str(e) + ' Сургуулийн нэр'
     try:
-        grade = int(float(row[9].value))
+        grade = int(float(row[8].value))
     except Exception as e:
         return False, str(e)
 
