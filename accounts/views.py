@@ -967,7 +967,7 @@ def import_row(row, level_id):
             group = Group.objects.get(pk=32)
         elif level_id == 5:
             group = Group.objects.get(pk=33)
-        group.user_set.add(user)
+    group.user_set.add(user)
     return message
 
 def import_checked_users(wb,user):
