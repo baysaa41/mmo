@@ -1039,15 +1039,15 @@ def import_file(request):
                     text = text,
                     text_html = text_html,
                     from_email = 'no-reply@mmo.mn',
-                    to_email = request.user.email,
+                    to_email = teacher.email,
                     is_sent = False)
             if teacher_id != request.user.id:
                 teacher_email = UserMails.objects.create(subject='ММОХ бүртгэлийн мэдээлэл',
-                                                 text=text,
-                                                 text_html=text_html,
-                                                 from_email='no-reply@mmo.mn',
-                                                 to_email=request.user.email,
-                                                 is_sent=False)
+                                 text=text,
+                                 text_html=text_html,
+                                 from_email='no-reply@mmo.mn',
+                                 to_email=request.user.email,
+                                 is_sent=False)
         else:
             context = {'error': error, 'messages': messages}
 
