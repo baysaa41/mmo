@@ -815,9 +815,9 @@ def check_error(wb):
     try:
         teacher_id = int(float(sheet['B4'].value))
         teacher = User.objects.get(pk=teacher_id)
-        if not teacher.groups.filter(pk=34) and not teacher.is_staff:
-            aldaa = True
-            messages.append('Сэдэв хүлээн авах хүн заавал урьдчилж бүртгүүлсэн байна.')
+        #if not teacher.groups.filter(pk=34) and not teacher.is_staff:
+        #    aldaa = True
+        #    messages.append('Сэдэв хүлээн авах хүн заавал урьдчилж бүртгүүлсэн байна.')
     except User.DoesNotExist:
         aldaa = True
         messages.append('Сэдэв хүлээн авах хүний ID буруу.')

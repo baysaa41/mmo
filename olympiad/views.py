@@ -552,11 +552,11 @@ def read_worksheet(worksheet,problems):
                     try:
                         row_data.append(int(cell.value))
                     except ValueError:
-                        row_data.append(str(cell.value))
+                        row_data.append(cell.value)
                         tailbar.append('Бүхэл тоон хариулт биш')
                         aldaa = True
                     except Exception as e:
-                        row_data.append(0)
+                        row_data.append(cell.value)
                         tailbar.append(str(e))
                         aldaa = True
 
