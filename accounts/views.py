@@ -919,26 +919,31 @@ def import_row(row, level_id):
     else:
         try:
             reg_num = str(row[3].value).strip()
+            m = UserMeta.objects.get(reg_num=reg_num)
+            user = m.user
+            message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
+                user.id, user.username, user.first_name, user.last_name, user.email)
+        except UserMeta.MultipleObjectsReturned:
             m = UserMeta.objects.filter(reg_num=reg_num).first()
             user = m.user
             message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
                 user.id, user.username, user.first_name, user.last_name, user.email)
         except UserMeta.DoesNotExist:
-            username = random_salt(8)
-            user = User.objects.create(username=username,
-                                       last_name=str(row[1].value),
-                                       first_name=str(row[2].value),
-                                       email=str(row[5].value),
-                                       is_active=1)
-            user.set_password(username)
-            try:
-                user.username = 'u' + str(user.id)
-            except:
-                user.username = 'u' + str(user.id)+'-'+random_salt(3)
-            user.save()
+                username = random_salt(8)
+                user = User.objects.create(username=username,
+                                           last_name=str(row[1].value),
+                                           first_name=str(row[2].value),
+                                           email=str(row[5].value),
+                                           is_active=1)
+                user.set_password(username)
+                try:
+                    user.username = 'u' + str(user.id)
+                except:
+                    user.username = 'u' + str(user.id)+'-'+random_salt(3)
+                user.save()
 
-            message = '{}, {}, {} хэрэглэгч шинээр бүртгүүллээ. Хэрэглэгчийн нэр {}, Нууц үг {}. Бүртгүүлсэн имэйл'.format(
-                user.id, user.last_name, user.first_name, user.username, username, user.email)
+                message = '{}, {}, {} хэрэглэгч шинээр бүртгүүллээ. Хэрэглэгчийн нэр {}, Нууц үг {}. Бүртгүүлсэн имэйл'.format(
+                    user.id, user.last_name, user.first_name, user.username, username, user.email)
 
         m, c = UserMeta.objects.get_or_create(user=user)
         if c:
