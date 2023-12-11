@@ -1,31 +1,16 @@
-{% extends 'base.html' %}
+{% if request.user.is_staff %}
+    {% extends 'base-fluid.html' %}
+{% else %}
+    {% extends 'base.html' %}
+{% endif %}
 
 {% load crispy_forms_tags %}
 
-{% block title %}Олимпиадын дүн{% endblock %}
-
-{% block style %}
-    .dataframe {
-        border: 1px solid #000;
-        font-family: "Roboto", Verdana, Arial, sans-serif;
-    }
-
-    .dataframe td {
-        padding-left: 1rem;
-        padding-right: 1rem;
-        text-align: center;
-        border: 1px solid #000;
-    }
-
-    .dataframe th {
-        padding-left: 1rem;
-        padding-right: 1rem;
-        border: 1px solid #000;
-    }
-{% endblock %}
+{% block title %}Бүртгэлтэй хэрэглэгчид{% endblock %}
 
 {% block content %}
+    <h3>{{ group }}</h3>
     <div class="ustify-content-center">
-        {{ pivot | safe }}
+        {{ df | safe }}
     </div>
 {% endblock %}

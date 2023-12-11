@@ -152,9 +152,45 @@ def group_users2(request, group_id):
         zid = int(request.GET.get('z', 0))
 
         users = group.user_set.all()
+        if pid:
+            users = users.filter(data__province__id=pid)
+        elif zid:
+            users =users.filter(data__province__zone__id=zid)
+
+        users = group.user_set.all().order_by('data__province__zone', 'data__province', 'data__school')
+
+        z_id = request.GET.get('z', False)
+        if z_id:
+            try:
+                zone = Zone.objects.filter(pk=z_id).first()
+                title = group.name + ', ' + zone.name
+                users = users.filter(data__province__zone_id=z_id)
+            except Exception as e:
+                print(str(e))
+
+        p_id = request.GET.get('p', False)
+        if p_id:
+            try:
+                province = Province.objects.filter(pk=p_id).first()
+                title = group.name + ', ' + province.name
+                users = users.filter(data__province_id=p_id)
+            except Exception as e:
+                print(str(e))
+
+        g_id = request.GET.get('g', False)
+        if g_id:
+            try:
+                grade = Grade.objects.filter(pk=g_id).first()
+                title = title + ', ' + grade.name
+                users = users.filter(data__grade_id=g_id)
+            except Exception as e:
+                print(str(e))
+
         users_df = read_frame(users,
-                              fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name', 'data__school'],
+                              fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
+                                          'data__school', 'data__grade__name'],
                               verbose=False)
+
         users_df.rename(columns={
             'id': 'ID',
             'first_name': 'Нэр',
@@ -162,6 +198,7 @@ def group_users2(request, group_id):
             'username': 'Хэрэглэгчийн нэр',
             'data__province__name': 'Аймаг/Дүүрэг',
             'data__school': 'Cургууль',
+            'data__grade__name': 'Анги'
         }, inplace=True)
 
         styled_df = users_df.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
@@ -181,8 +218,8 @@ def group_users2(request, group_id):
 
 
         context = {
-            'df': styled_df.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
-            'pivot': styled_df.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
+            'group': group.name,
+            'pivot': styled_df.to_html(escape=False),
         }
         return render(request, 'olympiad/pandas.html', context)
 
@@ -711,7 +748,7 @@ def check_row(row):
     else:
         try:
             reg_num = str(row[3].value).strip()
-            user = UserMeta.objects.get(reg_num=reg_num)
+            user = UserMeta.objects.filter(reg_num=reg_num).first()
         except UserMeta.DoesNotExist:
             if row[1].value is None and row[2].value is None:
                 return False, 'Хэрэглэгч үүсгэх боломжгүй. Мэдээлэл дутуу. Нэмэлт мөрийг устгах.'
