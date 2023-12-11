@@ -959,6 +959,15 @@ def import_row(row, level_id):
             m.grade_id = int(float(row[8].value))
             m.level_id = level_id
         m.save()
+        if level_id == 2:
+            group = Group.objects.get(pk=30)
+        elif level_id == 3:
+            group = Group.objects.get(pk=31)
+        elif level_id == 4:
+            group = Group.objects.get(pk=32)
+        elif level_id == 5:
+            group = Group.objects.get(pk=33)
+        group.user_set.add(user)
     return message
 
 def import_checked_users(wb,user):
