@@ -915,9 +915,12 @@ def import_row(row, level_id):
     message = ''
     if row[0].value is not None:
         id = int(float(row[0].value))
-        user = User.objects.get(pk=id)
-        message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
-            user.id, user.username, user.first_name, user.last_name, user.email)
+        try:
+            user = User.objects.get(pk=id)
+            message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
+               user.id, user.username, user.first_name, user.last_name, user.email)
+        except User.DoesNotExist:
+            return 'Ийм ID-тай хэрэглэгч байхгүй байна.'
     else:
         try:
             reg_num = str(row[3].value).strip()
@@ -931,7 +934,8 @@ def import_row(row, level_id):
             message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
                 user.id, user.username, user.first_name, user.last_name, user.email)
         except UserMeta.DoesNotExist:
-                username = random_salt(8)
+            username = random_salt(8)
+            if str(row[1]).value !='None' or str(row[2]).value !='None':
                 user = User.objects.create(username=username,
                                            last_name=str(row[1].value),
                                            first_name=str(row[2].value),
@@ -943,24 +947,27 @@ def import_row(row, level_id):
                 except:
                     user.username = 'u' + str(user.id)+'-'+random_salt(3)
                 user.save()
-
                 message = '{}, {}, {} хэрэглэгч шинээр бүртгүүллээ. Хэрэглэгчийн нэр {}, Нууц үг {}. Бүртгүүлсэн имэйл'.format(
                     user.id, user.last_name, user.first_name, user.username, username, user.email)
+            else:
+                return 'Мэдээлэл дутуу.'
+        except Exception as e:
+            return str(e)
 
-        m, c = UserMeta.objects.get_or_create(user=user)
-        if c:
-            m.reg_num = str(row[3].value).upper()
-            m.mobile = int(float(row[4].value))
-            m.province_id = int(float(row[6].value))
-            m.school = str(row[7].value)
-            m.grade_id = int(float(row[8].value))
-            m.level_id = level_id
-        else:
-            m.province_id = int(float(row[6].value))
-            m.school = str(row[7].value)
-            m.grade_id = int(float(row[8].value))
-            m.level_id = level_id
-        m.save()
+    m, c = UserMeta.objects.get_or_create(user=user)
+    if c:
+        m.reg_num = str(row[3].value).upper()
+        m.mobile = int(float(row[4].value))
+        m.province_id = int(float(row[6].value))
+        m.school = str(row[7].value)
+        m.grade_id = int(float(row[8].value))
+        m.level_id = level_id
+    else:
+        m.province_id = int(float(row[6].value))
+        m.school = str(row[7].value)
+        m.grade_id = int(float(row[8].value))
+        m.level_id = level_id
+    m.save()
 
     if level_id == 2:
         group = Group.objects.get(pk=30)
@@ -971,6 +978,7 @@ def import_row(row, level_id):
     elif level_id == 5:
         group = Group.objects.get(pk=33)
     group.user_set.add(user)
+
     return message
 
 def import_checked_users(wb,user):
