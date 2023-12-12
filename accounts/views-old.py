@@ -201,9 +201,7 @@ def group_users2(request, group_id):
             'data__grade__name': 'Анги'
         }, inplace=True)
 
-        users_df.index = np.arange(1, users_df.__len__() + 1)
-
-        styled_df = (users_df.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
+        styled_df = users_df.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
             {
                 'selector': 'th',
                 'props': [('text-align', 'center')],
@@ -216,13 +214,14 @@ def group_users2(request, group_id):
                 'selector': 'td, th',
                 'props': [('padding', '3px 5px 3px 5px')],
             },
-        ]))
+        ])
+
 
         context = {
-            'title': group.name,
-            'pivot': styled_df.to_html(escape=False, header=False),
+            'group': group.name,
+            'pivot': styled_df.to_html(escape=False),
         }
-        return render(request, 'accounts/pd-users.html', context)
+        return render(request, 'olympiad/pandas.html', context)
 
 def group_users(request, group_id):
     group = Group.objects.filter(pk=group_id).first()
@@ -931,14 +930,13 @@ def import_row(row, level_id):
             message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
                 user.id, user.username, user.first_name, user.last_name, user.email)
         except UserMeta.MultipleObjectsReturned:
-            reg_num = str(row[3].value).strip()
             m = UserMeta.objects.filter(reg_num=reg_num).first()
             user = m.user
             message = '{}, {}, {}, {} хэрэглэгч бүртгэлтэй. Бүртгэлтэй имэйл хаяг: {}'.format(
                 user.id, user.username, user.first_name, user.last_name, user.email)
         except UserMeta.DoesNotExist:
             username = random_salt(8)
-            if str(row[1].value) !='None' or str(row[2].value) !='None':
+            if str(row[1]).value !='None' or str(row[2]).value !='None':
                 user = User.objects.create(username=username,
                                            last_name=str(row[1].value),
                                            first_name=str(row[2].value),
