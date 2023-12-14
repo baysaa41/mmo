@@ -1,6 +1,6 @@
 from django.urls import include, path
 from django.contrib.auth import views as auth_views
-from . import views
+from . import views, views_old
 
 urlpatterns = [
     path('users/', views.users, name='account_users'),
@@ -12,7 +12,7 @@ urlpatterns = [
          name='user_password'),
     path('createmails/',views.create_mails,name='user_createmails'),
     path('sendmails/',views.send_mass_html_mail,name='user_sendmails'),
-    path('create/users/',views.create_users,name='create_users'),
+    path('create/users/',views_old.create_users,name='create_users'),
     path('login/', views.login_view, name='user_login'),
     path('logout/', views.logout_view, name='user_logout'),
     path('addusers/', views.import_file, name='add_users')

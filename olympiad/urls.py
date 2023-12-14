@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, results
+from . import views, results, beltgel2023
 
 urlpatterns = [
     path('', views.list_upcomming_olympiads, name='olympiad_home'),
@@ -49,4 +49,5 @@ urlpatterns = [
     path('results/mmo/58/second/bagsh/', results.olympiad_result_mmo58_second_bagsh, name='olympiad_result_mmo58_second_bagsh'),
     path('results/import/', results.firstRoundResults, name='olympiad_import_first_round'),
     path('certificate/<int:quiz_id>/<int:contestant_id>/', results.createCertificate, name='olympiad_certificate'),
+    path('beltgel2023/', beltgel2023.index, name='beltgel_2023'),
 ]

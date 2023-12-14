@@ -3,14 +3,17 @@ import math
 from django.shortcuts import render, redirect, HttpResponse
 from accounts.forms import UserForm, UserMetaForm, EmailForm
 from django.contrib.auth.models import User, Group
+from django.contrib.auth.views import PasswordResetView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from .forms import LoginForm
+from .forms import LoginForm, CustomPasswordResetForm
 from .models import UserMeta, Province, Level, Grade, UserMails, Zone
 from django.urls import reverse
 from django.core.mail import send_mass_mail
 from olympiad.models import Article, SchoolYear, Result
 from datetime import datetime, timezone
+
+
 
 from django.db import connection
 from django.template.loader import render_to_string
@@ -107,6 +110,11 @@ def profile_ready(request):
     return render(request, 'accounts/profile_ready.html')
 
 
+class CustomPasswordResetView(PasswordResetView):
+    form_class = CustomPasswordResetForm
+    email_template_name = 'registration/password_reset_email.html'
+    success_url = '/password_reset/done/'  # customize as needed
+
 def users(request):
     # create_users()
     provinces = Province.objects.all()
@@ -146,7 +154,7 @@ def staff(request):
 
 def group_users2(request, group_id):
         group = Group.objects.filter(pk=group_id).first()
-        pd.options.display.float_format = '{:,.1f}'.format
+        pd.options.display.float_format = '{:,.0f}'.format
 
         pid = int(request.GET.get('p', 0))
         zid = int(request.GET.get('z', 0))
@@ -185,21 +193,38 @@ def group_users2(request, group_id):
                 users = users.filter(data__grade_id=g_id)
             except Exception as e:
                 print(str(e))
+        if request.user.is_staff:
+            users_df = read_frame(users,
+                                  fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
+                                              'data__school', 'data__grade__name', 'data__mobile', 'email'],
+                                  verbose=False)
+            users_df['data__mobile'] = users_df['data__mobile'].astype(pd.Int64Dtype())
+            users_df.rename(columns={
+                'id': 'ID',
+                'first_name': 'Нэр',
+                'last_name': 'Овог',
+                'username': 'Хэрэглэгчийн нэр',
+                'data__province__name': 'Аймаг/Дүүрэг',
+                'data__school': 'Cургууль',
+                'data__grade__name': 'Анги',
+                'data__mobile': 'Гар утас',
+                'email': 'И-мэйл'
+            }, inplace=True)
+        else:
+            users_df = read_frame(users,
+                                  fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
+                                              'data__school', 'data__grade__name'],
+                                  verbose=False)
 
-        users_df = read_frame(users,
-                              fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
-                                          'data__school', 'data__grade__name'],
-                              verbose=False)
-
-        users_df.rename(columns={
-            'id': 'ID',
-            'first_name': 'Нэр',
-            'last_name': 'Овог',
-            'username': 'Хэрэглэгчийн нэр',
-            'data__province__name': 'Аймаг/Дүүрэг',
-            'data__school': 'Cургууль',
-            'data__grade__name': 'Анги'
-        }, inplace=True)
+            users_df.rename(columns={
+                'id': 'ID',
+                'first_name': 'Нэр',
+                'last_name': 'Овог',
+                'username': 'Хэрэглэгчийн нэр',
+                'data__province__name': 'Аймаг/Дүүрэг',
+                'data__school': 'Cургууль',
+                'data__grade__name': 'Анги'
+            }, inplace=True)
 
         users_df.index = np.arange(1, users_df.__len__() + 1)
 
@@ -218,37 +243,14 @@ def group_users2(request, group_id):
             },
         ]))
 
+        last_hack = styled_df.to_html(classes='table table-bordered table-hover',na_rep="",escape=False)
+        last_hack = re.sub('<th class="blank level0" >&nbsp;</th>','<th class="blank level0" >№</th>', last_hack)
+
         context = {
             'title': group.name,
-            'pivot': styled_df.to_html(escape=False, header=False),
+            'pivot': last_hack,
         }
         return render(request, 'accounts/pd-users.html', context)
-
-def group_users(request, group_id):
-    group = Group.objects.filter(pk=group_id).first()
-    title = group.name
-    users = group.user_set.all().order_by('data__province__zone', 'data__province', 'data__school')
-
-    z_id = request.GET.get('z', False)
-    if z_id:
-        zone = Zone.objects.filter(pk=z_id).first()
-        title = group.name + ', ' + zone.name
-        users = users.filter(data__province__zone_id=z_id)
-
-    p_id = request.GET.get('p', False)
-    if p_id:
-        province = Province.objects.filter(pk=p_id).first()
-        title = group.name + ', ' + province.name
-        users = users.filter(data__province_id=p_id)
-
-    g_id = request.GET.get('g', False)
-    if g_id:
-        grade = Grade.objects.filter(pk=g_id).first()
-        title = title + ', ' + grade.name
-        users = users.filter(data__grade_id=g_id)
-
-    return render(request, 'accounts/users-group.html', {'group': group_id, 'users': users, 'title': title})
-
 
 def get_active_emails():
     with connection.cursor() as cursor:
@@ -360,25 +362,6 @@ def send_mass_html_mail(request):
         uemail.save()
     return HttpResponse(connection.send_messages(messages))
 
-
-def create_users(request):
-    imports = []
-
-    count = 0
-    for item in imports:
-        user, created = User.objects.get_or_create(username=item[3])
-        user.first_name = item[2]
-        user.last_name = item[5]
-        user.set_password(item[3])
-        user.save()
-        m, c = UserMeta.objects.get_or_create(user=user)
-        m.is_valid = True
-        m.save()
-        if created:
-            count = count + 1
-    return HttpResponse(count)
-
-
 def import_users():
     dir = '/home/deploy/2223'
 
@@ -398,38 +381,6 @@ def import_users():
                     user, created = User.objects.get_or_create(username=row[row.keys()[3]])
                     if created:
                         user.firstname = row[row.keys()[2]]
-                        user.set_password(row[row.keys()[3]])
-                        user.save()
-                        m, c = UserMeta.objects.get_or_create(user=user)
-                        m.is_valid = True
-                        m.save()
-                        num = num + 1
-            except:
-                print('error')
-                pass
-
-    return num
-
-
-def import_muis_students():
-    dir = '/home/deploy/muis'
-
-    list = os.listdir(dir)
-    print(list)
-    num = 0
-    for f in list:
-        name = dir + '/' + f
-        print(name)
-        filename, file_extension = os.path.splitext(name)
-        print(file_extension)
-        if file_extension.lower() in ['.xls', '.xlsx']:
-            try:
-                df = pd.read_excel(name, 'Sheet1', engine='openpyxl')
-                for item in df.iterrows():
-                    ind, row = item
-                    user, created = User.objects.get_or_create(username=row[row.keys()[3]])
-                    if created:
-                        user.firstname = row[row.keys()[3]]
                         user.set_password(row[row.keys()[3]])
                         user.save()
                         m, c = UserMeta.objects.get_or_create(user=user)
@@ -761,9 +712,9 @@ def check_row(row):
     try:
         mobile = int(float(row[4].value))
     except ValueError as e:
-        return False, 'Утасны дугаар буруу'
+        return False, 'Утасны дугаар буруу. Хэрвээ хоосон мөр бол уг мөрийг арилгаарай.'
     except TypeError as e:
-        return False, 'Утасны дугаар буруу'
+        return False, 'Утасны дугаар буруу. Хэрвээ хоосон мөр бол уг мөрийг арилгаарай.'
     try:
         email = str(row[5].value)
         if email is None:

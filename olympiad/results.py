@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 import csv
 import os, io
 import json
+import re
 from django.core import serializers
 from django.core.serializers.json import DjangoJSONEncoder
 from django_tex.core import render_template_with_context
@@ -144,14 +145,31 @@ def pandasView3(request,olympiad_id):
     },inplace=True)
     results.index = np.arange(1,results.__len__()+1)
 
-    pd.set_option('colheader_justify', 'center')
+    # pd.set_option('colheader_justify', 'center')
 
     for item in quiz.problem_set.all().order_by('order'):
         results = results.rename(columns={item.order: '№' + str(item.order)})
 
+    styled_df = (results.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
+            {
+                'selector': 'th',
+                'props': [('text-align', 'center')],
+            },
+            {
+                'selector': 'td, th',
+                'props': [('border', '1px solid #ccc')],
+            },
+            {
+                'selector': 'td, th',
+                'props': [('padding', '3px 5px 3px 5px')],
+            },
+        ]))
+
+    last_hack = styled_df.to_html(classes='table table-bordered table-hover',na_rep="",escape=False)
+    last_hack = re.sub('<th class="blank level0" >&nbsp;</th>','<th class="blank level0" >№</th>',last_hack)
+
     context = {
-        'df': results.to_html(classes='table table-bordered table-hover',border=3,na_rep="",escape=False),
-        'pivot':  results.to_html(classes='table table-bordered table-hover',na_rep="",escape=False),
+        'pivot': last_hack,
         'quiz': quiz,
         'title': title,
         'provinces': provinces,
