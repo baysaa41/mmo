@@ -50,5 +50,4 @@ urlpatterns = [
     path('results/import/', results.firstRoundResults, name='olympiad_import_first_round'),
     path('certificate/<int:quiz_id>/<int:contestant_id>/', results.createCertificate, name='olympiad_certificate'),
     path('beltgel2023/', beltgel2023.index, name='beltgel_2023'),
-    # path('r/<int:olympiad_id>/', results.result_view, name='result_view')
 ]

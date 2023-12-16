@@ -921,6 +921,9 @@ def import_row(row, level_id):
         m.school = str(row[7].value)
         m.grade_id = int(float(row[8].value))
         m.level_id = level_id
+    print(user.first_name, level_id)
+    for item in row[:7]:
+        print(item.value)
     m.save()
 
     if level_id == 2:
