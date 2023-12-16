@@ -1,7 +1,7 @@
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from olympiad.models import Olympiad, Result, SchoolYear, Award
+from olympiad.models import Olympiad, Result, SchoolYear, Award, Problem
 from accounts.models import Province, Zone, UserMeta
 from django.forms import modelformset_factory
 from .forms import ResultsForm
@@ -11,6 +11,7 @@ from django_pandas.io import read_frame
 from django.db import connection
 from django.contrib.auth.models import User, Group
 from datetime import datetime, timezone
+from olympiad.utils import adjusted_int_name
 import csv
 import os, io
 import json
@@ -35,12 +36,10 @@ def update_results(request, olympiad_id):
         return HttpResponse("Olympiad doesn't exist.")
     return HttpResponse('Results are updated.')
 
-
-
     return HttpResponse('.')
 
 
-def pandasView(request,quiz_id):
+def pandasView(request, quiz_id):
     pd.options.display.float_format = '{:,.2f}'.format
     try:
         quiz = Olympiad.objects.get(pk=quiz_id)
@@ -49,56 +48,55 @@ def pandasView(request,quiz_id):
 
     answers = Result.objects.filter(olympiad_id=quiz_id)
     users = User.objects.filter(is_active=True)
-    answers_df = read_frame(answers,fieldnames=['contestant_id','problem_id','score'],verbose=False)
-    users_df = read_frame(users,fieldnames=['last_name','first_name','id'],verbose=False)
+    answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
+    users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id'], verbose=False)
 
-    pivot = answers_df.pivot_table(index='contestant_id',columns='problem_id',values='score')
-    pivot["Дүн"]=pivot.sum(axis=1)
+    pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
+    pivot["Дүн"] = pivot.sum(axis=1)
     pivot.loc['AVG'] = pivot.mean()
     print(pivot)
-    results = users_df.merge(pivot,left_on='id',right_on='contestant_id',how='right')
-    results.sort_values(by='Дүн',ascending=False,inplace=True)
+    results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='right')
+    results.sort_values(by='Дүн', ascending=False, inplace=True)
     results["link"] = results["id"]
-    results["link"] = results["link"].apply(lambda x: "<a href='/olympiads/result/{0}/{1}'>ХАРИУЛТ</a>".format(quiz_id,x))
+    results["link"] = results["link"].apply(
+        lambda x: "<a href='/olympiads/result/{0}/{1}'>ХАРИУЛТ</a>".format(quiz_id, x))
     results.rename(columns={
         'id': 'ID',
         'first_name': 'Нэр',
         'last_name': 'Овог',
         'link': 'ХАРИУЛТ',
-    },inplace=True)
-    results.index = np.arange(1,results.__len__()+1)
-
+    }, inplace=True)
+    results.index = np.arange(1, results.__len__() + 1)
 
     pd.set_option('colheader_justify', 'center')
     context = {
-        'df': results.to_html(classes='table table-bordered table-hover',border=3,na_rep="",escape=False),
-        'pivot':  results.to_html(classes='table table-bordered table-hover',na_rep="",escape=False),
+        'df': results.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
+        'pivot': results.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
         'quiz': quiz,
     }
     return render(request, 'olympiad/pandas3.html', context)
 
 
-def pandasView3(request,olympiad_id):
+def pandasView3(request, olympiad_id):
     provinces = Province.objects.all()
-    quiz_id=olympiad_id
     pd.options.display.float_format = '{:,.1f}'.format
     try:
-        quiz = Olympiad.objects.get(pk=quiz_id)
+        olympiad = Olympiad.objects.get(pk=olympiad_id)
     except ObjectDoesNotExist:
         return redirect('/')
 
-    pid = int(request.GET.get('p',0))
-    zid = int(request.GET.get('z',0))
-    answers = Result.objects.filter(olympiad_id=quiz_id).order_by('problem__order')
+    pid = int(request.GET.get('p', 0))
+    zid = int(request.GET.get('z', 0))
+    answers = Result.objects.filter(olympiad_id=olympiad_id).order_by('problem__order')
     title = 'Нэгдсэн дүн'
-    if pid>0:
-        province = Province.objects.filter(pk=pid).first()
-        if province:
+    if pid > 0:
+        if Province.objects.filter(pk=pid).exists():
+            province = Province.objects.get(pk=pid)
             title = province.name
         answers = answers.filter(contestant__data__province_id=pid)
-    elif zid>0:
-        zone = Zone.objects.filter(pk=zid).first()
-        if zone:
+    elif zid > 0:
+        if Zone.objects.filter(pk=zid).exists():
+            zone = Zone.objects.filter(pk=zid).first()
             title = zone.name
         answers = answers.filter(contestant__data__province__zone_id=zid)
 
@@ -113,8 +111,8 @@ def pandasView3(request,olympiad_id):
         return render(request, 'olympiad/pandas3.html', context)
 
     users = User.objects.filter(is_active=True)
-    answers_df = read_frame(answers,fieldnames=['contestant_id','problem__order','score'],verbose=False)
-    if quiz.level_id == 1:
+    answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem__order', 'score'], verbose=False)
+    if olympiad.level_id == 1:
         users_df = read_frame(users, fieldnames=['id'], verbose=False)
     else:
         users_df = read_frame(users,
@@ -122,17 +120,17 @@ def pandasView3(request,olympiad_id):
                               verbose=False)
 
     answers_df['score'] = answers_df['score'].fillna(0)
-    pivot = answers_df.pivot_table(index='contestant_id',columns='problem__order',values='score')
+    pivot = answers_df.pivot_table(index='contestant_id', columns='problem__order', values='score')
     pivot["Дүн"] = pivot.sum(axis=1)
-    results = users_df.merge(pivot,left_on='id', right_on='contestant_id', how='right')
+    results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='right')
     awards = Award.objects.filter(olympiad_id=olympiad_id)
-    awards_df = read_frame(awards, fieldnames=['place','contestant_id'], verbose=False)
+    awards_df = read_frame(awards, fieldnames=['place', 'contestant_id'], verbose=False).fillna(value='', inplace=True)
     results = results.merge(awards_df, left_on='id', right_on='contestant_id', how='left')
     results = results.drop(['contestant_id'], axis=1)
-    results.sort_values(by='Дүн',ascending=False,inplace=True)
+    results.sort_values(by='Дүн', ascending=False, inplace=True)
     results['id'].fillna(0).astype(int)
     results["link"] = results["id"].apply(lambda x: "<a href='/olympiads/result/{quiz_id}/{user_id:.0f}'> \
-                                    <i class='fas fa-expand-wide'></i></a>".format(quiz_id=quiz_id,user_id=x))
+                                    <i class='fas fa-expand-wide'></i></a>".format(quiz_id=quiz_id, user_id=x))
     results['id'] = results['id'].apply(lambda x: "{id:.0f}".format(id=x))
     results.rename(columns={
         'id': 'ID',
@@ -142,31 +140,29 @@ def pandasView3(request,olympiad_id):
         'data__school': 'Cургууль',
         'place': 'Медал',
         'link': '<i class="fas fa-expand-wide"></i>',
-    },inplace=True)
-    results.index = np.arange(1,results.__len__()+1)
-
-    # pd.set_option('colheader_justify', 'center')
+    }, inplace=True)
+    results.index = np.arange(1, results.__len__() + 1)
 
     for item in quiz.problem_set.all().order_by('order'):
         results = results.rename(columns={item.order: '№' + str(item.order)})
 
     styled_df = (results.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
-            {
-                'selector': 'th',
-                'props': [('text-align', 'center')],
-            },
-            {
-                'selector': 'td, th',
-                'props': [('border', '1px solid #ccc')],
-            },
-            {
-                'selector': 'td, th',
-                'props': [('padding', '3px 5px 3px 5px')],
-            },
-        ]))
+        {
+            'selector': 'th',
+            'props': [('text-align', 'center')],
+        },
+        {
+            'selector': 'td, th',
+            'props': [('border', '1px solid #ccc')],
+        },
+        {
+            'selector': 'td, th',
+            'props': [('padding', '3px 5px 3px 5px')],
+        },
+    ]))
 
-    last_hack = styled_df.to_html(classes='table table-bordered table-hover',na_rep="",escape=False)
-    last_hack = re.sub('<th class="blank level0" >&nbsp;</th>','<th class="blank level0" >№</th>',last_hack)
+    last_hack = styled_df.to_html(classes='table table-bordered table-hover', na_rep="", escape=False)
+    last_hack = re.sub('<th class="blank level0" >&nbsp;</th>', '<th class="blank level0" >№</th>', last_hack)
 
     context = {
         'pivot': last_hack,
@@ -176,10 +172,12 @@ def pandasView3(request,olympiad_id):
     }
     return render(request, 'olympiad/pandas3.html', context)
 
+
 def queryset_to_json(queryset):
     data = list(queryset.values())
     json_data = json.dumps(data, cls=DjangoJSONEncoder)
     return json_data
+
 
 def getOlympiadResults(olympiad_id):
     answers = Result.objects.filter(olympiad_id=olympiad_id).order_by('problem__order')
@@ -188,13 +186,15 @@ def getOlympiadResults(olympiad_id):
     awards = Award.objects.filter(olympiad_id=olympiad_id)
     return users, answers, awards
 
+
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
             return obj.isoformat()  # Convert datetime to string format
         return super().default(obj)
 
-def getJSONResults(request,olympiad_id):
+
+def getJSONResults(request, olympiad_id):
     olympiad = Olympiad.objects.get(pk=olympiad_id)
 
     users, answers, awards = getOlympiadResults(olympiad_id)
@@ -244,7 +244,7 @@ def newResultView(request, olympiad_id):
 
 
 def pandasIMO64(request):
-    ids = [117,118,120]
+    ids = [117, 118, 120]
     quizzes = Olympiad.objects.filter(pk__in=ids).order_by('id')
     answers = Result.objects.filter(olympiad_id__in=ids)
     title = 'Нэгдсэн дүн'
@@ -259,13 +259,13 @@ def pandasIMO64(request):
         return render(request, 'olympiad/pandas3.html', context)
 
     users = User.objects.filter(groups__name='IMO-64 сорилго')
-    answers_df = read_frame(answers,fieldnames=['contestant_id','problem_id','score'],verbose=False)
-    users_df = read_frame(users,fieldnames=['last_name','first_name','id','data__school'],verbose=False)
+    answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
+    users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id', 'data__school'], verbose=False)
     answers_df['score'] = answers_df['score'].fillna(0)
-    pivot = answers_df.pivot_table(index='contestant_id',columns='problem_id',values='score')
+    pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
     pivot["Дүн"] = pivot.sum(axis=1)
-    results = users_df.merge(pivot,left_on='id',right_on='contestant_id',how='inner')
-    results.sort_values(by='Дүн',ascending=False,inplace=True)
+    results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='inner')
+    results.sort_values(by='Дүн', ascending=False, inplace=True)
     results['id'].fillna(0).astype(int)
     results['id'] = results['id'].apply(lambda x: "{id:.0f}".format(id=x))
     results.rename(columns={
@@ -274,9 +274,8 @@ def pandasIMO64(request):
         'last_name': 'Овог',
         'data__school': 'Cургууль',
         'link': '<i class="fas fa-expand-wide"></i>',
-    },inplace=True)
-    results.index = np.arange(1,results.__len__()+1)
-
+    }, inplace=True)
+    results.index = np.arange(1, results.__len__() + 1)
 
     pd.set_option('colheader_justify', 'center')
 
@@ -288,14 +287,15 @@ def pandasIMO64(request):
             results = results.rename(columns={item.id: '№' + str(num) + '.' + str(item.order)})
 
     context = {
-        'df': results.to_html(classes='table table-bordered table-hover',border=3,na_rep="",escape=False),
-        'pivot':  results.to_html(classes='table table-bordered table-hover',na_rep="",escape=False),
+        'df': results.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
+        'pivot': results.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
         'quiz': {
-                'name': 'IMO-64 сорилго',
-                 },
+            'name': 'IMO-64 сорилго',
+        },
         'title': title,
     }
     return render(request, 'olympiad/pandas3.html', context)
+
 
 def fix_results(request):
     return False
@@ -344,7 +344,7 @@ def results_home(request):
     prev = SchoolYear.objects.filter(pk=year.id - 1).first()
     next = SchoolYear.objects.filter(pk=year.id + 1).first()
 
-    olympiads = Olympiad.objects.filter(is_open=True).order_by('-school_year_id','name','level')
+    olympiads = Olympiad.objects.filter(is_open=True).order_by('-school_year_id', 'name', 'level')
 
     if id:
         olympiads = olympiads.filter(school_year=year)
@@ -359,6 +359,7 @@ def results_home(request):
 
 
 def olympiad_result_view(request, olympiad_id):
+
     olympiad = Olympiad.objects.filter(id=olympiad_id).first()
     if olympiad.is_active() and not request.user.is_superuser:
         return HttpResponse("Test urgeljilj baina.")
@@ -399,23 +400,25 @@ def olympiad_result_view(request, olympiad_id):
     context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': province}
     return render(request, 'olympiad/olympiad_result_view.html', context=context)
 
+
 def olympiad_result_egmo(request):
     olympiad = {'name': 'EGMO', 'id': 0}
-    ids = [299,300,301,302,303,304,305,306,307,308,309,310]
+    ids = [299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310]
     results = Result.objects.filter(problem_id__in=ids)
     head, sorted_values = format_results(olympiad, results, False, ids)
     context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': False}
     return render(request, 'olympiad/olympiad_result_view.html', context=context)
 
+
 def olympiad_result_imo63_first(request):
     olympiad = {'name': 'IMO-63, I шат', 'id': 0}
-    ids = [345,346,347,348,349,350,351,352,353,354,355,356,410,411,412,413,414,415]
+    ids = [345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356, 410, 411, 412, 413, 414, 415]
     results = Result.objects.filter(problem_id__in=ids)
     head, sorted_values = format_results(olympiad, results, False, ids)
     group = Group.objects.get(pk=10)
     for value in sorted_values:
         if int(value[len(value) - 2]) > 9:
-            user_id = value[len(value)-1]
+            user_id = value[len(value) - 1]
             user = User.objects.get(pk=user_id)
             user.groups.add(group)
             user.save()
@@ -423,15 +426,16 @@ def olympiad_result_imo63_first(request):
     context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': False}
     return render(request, 'olympiad/olympiad_result_view.html', context=context)
 
+
 def olympiad_result_imo63_third(request):
     olympiad = {'name': 'IMO-63, III шат', 'id': 0}
-    ids = [392,393,394,395,396,397,398,399,400,401,402,403,410,411,412,413,414,415]
+    ids = [392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 410, 411, 412, 413, 414, 415]
     results = Result.objects.filter(problem_id__in=ids)
     head, sorted_values = format_results(olympiad, results, False, ids)
     group = Group.objects.get(pk=10)
     for value in sorted_values:
         if int(value[len(value) - 2]) > 9:
-            user_id = value[len(value)-1]
+            user_id = value[len(value) - 1]
             user = User.objects.get(pk=user_id)
             user.groups.add(group)
             user.save()
@@ -442,7 +446,7 @@ def olympiad_result_imo63_third(request):
 
 def olympiad_result_imo63_second(request):
     olympiad = {'name': 'IMO-63, II шат', 'id': 0}
-    ids = [361,362,363,364,365,366,367,368,369]
+    ids = [361, 362, 363, 364, 365, 366, 367, 368, 369]
     results = Result.objects.filter(problem_id__in=ids)
     head, sorted_values = format_results(olympiad, results, False, ids)
 
@@ -452,7 +456,7 @@ def olympiad_result_imo63_second(request):
 
 def olympiad_result_imo62_third(request):
     olympiad = {'name': 'IMO-62, IMO сорил'}
-    ids = [122,123,124,126,127,128,129,130,131,132,133,134]
+    ids = [122, 123, 124, 126, 127, 128, 129, 130, 131, 132, 133, 134]
     results = Result.objects.filter(problem_id__in=ids)
     head, sorted_values = format_results(olympiad, results, False, ids)
 
@@ -462,7 +466,7 @@ def olympiad_result_imo62_third(request):
 
 def olympiad_result_mmo58_second_dund2(request):
     olympiad = {'name': 'ММО-58, Хот, Дунд 2 ангилал'}
-    ids = [374,375,376,383,384,385]
+    ids = [374, 375, 376, 383, 384, 385]
     results = Result.objects.filter(problem_id__in=ids)
     head, sorted_values = format_results(olympiad, results, False, ids)
 
@@ -472,7 +476,7 @@ def olympiad_result_mmo58_second_dund2(request):
 
 def olympiad_result_mmo58_second_ahlah(request):
     olympiad = {'name': 'ММО-58, Хот, Ахлах ангилал'}
-    ids = [377,378,379,386,387,388]
+    ids = [377, 378, 379, 386, 387, 388]
     results = Result.objects.filter(problem_id__in=ids)
     head, sorted_values = format_results(olympiad, results, False, ids)
 
@@ -482,7 +486,7 @@ def olympiad_result_mmo58_second_ahlah(request):
 
 def olympiad_result_mmo58_second_bagsh(request):
     olympiad = {'name': 'ММО-58, Хот, Багшийн ангилал'}
-    ids = [380,381,382,389,390,391]
+    ids = [380, 381, 382, 389, 390, 391]
     results = Result.objects.filter(problem_id__in=ids)
     head, sorted_values = format_results(olympiad, results, False, ids)
 
@@ -497,7 +501,8 @@ def get_contestant_ids(results):
     ids = list(dict.fromkeys(ids))
     return ids
 
-def format_results(olympiad, results, with_province, ids = False):
+
+def format_results(olympiad, results, with_province, ids=False):
     if ids:
         num = len(ids)
         problems_ids = ids
@@ -523,18 +528,21 @@ def format_results(olympiad, results, with_province, ids = False):
         contestant_results = results.filter(contestant_id=contestant_id)
         if with_province:
             try:
-                row = str(contestant.last_name) + ', ' + str(contestant.first_name), contestant.id, '<a href="?p={}">{}</a>'.format(
-                contestant.data.province.id, contestant.data.province.name)
+                row = str(contestant.last_name) + ', ' + str(
+                    contestant.first_name), contestant.id, '<a href="?p={}">{}</a>'.format(
+                    contestant.data.province.id, contestant.data.province.name)
             except:
                 row = str(contestant.last_name) + ', ' + str(contestant.first_name), contestant.id, ''
 
         else:
             try:
-                row = str(contestant.last_name) + ', ' + str(contestant.first_name), contestant.id, contestant.data.province.name + ', ' + contestant.data.school
+                row = str(contestant.last_name) + ', ' + str(
+                    contestant.first_name), contestant.id, contestant.data.province.name + ', ' + contestant.data.school
             except:
-                row = str(contestant.id) + ', ' + str(contestant.first_name), contestant.id, contestant.data.province.name
+                row = str(contestant.id) + ', ' + str(
+                    contestant.first_name), contestant.id, contestant.data.province.name
         try:
-            grade = '<a href="?g={}">{}</a>'.format(contestant.data.grade.id,contestant.data.grade.name)
+            grade = '<a href="?g={}">{}</a>'.format(contestant.data.grade.id, contestant.data.grade.name)
         except:
             grade = ''
         row = (*row, grade)
@@ -548,7 +556,7 @@ def format_results(olympiad, results, with_province, ids = False):
                 else:
                     score = '-'
                 if result.state == 1:
-                    score ='<span class="text-warning">' + str(score) + '</span>'
+                    score = '<span class="text-warning">' + str(score) + '</span>'
                 elif result.state == 3:
                     score = '<span class="text-danger">' + str(score) + '</span>'
                 row = (*row, score)
@@ -561,6 +569,7 @@ def format_results(olympiad, results, with_province, ids = False):
     sorted_values = sorted(rows, key=lambda t: -t[len(t) - 2])
 
     return head, sorted_values
+
 
 @login_required
 def student_result_view(request, olympiad_id, contestant_id):
@@ -616,30 +625,33 @@ def sort_results(sub_li, cutoffs, medal_names=['Алтан медаль', 'Мө�
             sub_li[i]['medal'] = ''
     return sub_li
 
+
 def create_results(olympiad_id):
     olympiad = Olympiad.objects.filter(pk=olympiad_id).first()
     contestants = olympiad.group.user_set.all()
     problems = olympiad.problem_set.all()
     for contestant in contestants:
         for problem in problems:
-            create = Result.objects.get_or_create(olympiad=olympiad,problem=problem,contestant=contestant)
+            create = Result.objects.get_or_create(olympiad=olympiad, problem=problem, contestant=contestant)
             if create[1]:
                 result = create[0]
                 result.grader_comment = 'Системд материалаа оруулаагүй. Системээс үүсгэсэн.'
                 result.save()
 
-#duureg
+
+# duureg
 def import_results():
     file = '/home/deploy/khanuul.csv'
     # file = '/Users/baysa/Documents/igo-elem-results.csv'
     with open(file) as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
-            i = i+1
+            i = i + 1
             try:
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=int(row[1]),problem_id=int(row[2]))
-                if result.score is None or result.score==0:
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=int(row[1]),
+                                                               problem_id=int(row[2]))
+                if result.score is None or result.score == 0:
                     result.score = int(row[3])
                     result.grader_comment = 'Дүнгийн хүснэгтээс хуулав.'
                     result.state = 2
@@ -648,31 +660,36 @@ def import_results():
                 print(row, i)
     return True
 
-#dund1
+
+# dund1
 def import_results_2():
     file = '/home/deploy/hotd1.csv'
     # file = '/Users/baysa/Documents/hotd1.csv'
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             try:
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=68,problem_id=370)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=68,
+                                                               problem_id=370)
                 result.score = int(row[1])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=68,problem_id=371)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=68,
+                                                               problem_id=371)
                 result.score = int(row[2])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=68,problem_id=372)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=68,
+                                                               problem_id=372)
                 result.score = int(row[3])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=68,problem_id=373)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=68,
+                                                               problem_id=373)
                 result.score = int(row[4])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
@@ -682,26 +699,30 @@ def import_results_2():
 
     return True
 
-#ahlah
+
+# ahlah
 def import_results_3():
     file = '/home/deploy/hota2.csv'
     # file = '/Users/baysa/Documents/hota2.csv'
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             try:
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=73,problem_id=386)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=73,
+                                                               problem_id=386)
                 result.score = int(row[1])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=73,problem_id=387)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=73,
+                                                               problem_id=387)
                 result.score = int(row[2])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=73,problem_id=388)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=73,
+                                                               problem_id=388)
                 result.score = int(row[3])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
@@ -711,26 +732,30 @@ def import_results_3():
 
     return True
 
-#bagsh
+
+# bagsh
 def import_results_4():
     file = '/home/deploy/hotb2.csv'
     # file = '/Users/baysa/Documents/hotb2.csv'
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             try:
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=74,problem_id=389)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=74,
+                                                               problem_id=389)
                 result.score = int(row[1])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=74,problem_id=390)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=74,
+                                                               problem_id=390)
                 result.score = int(row[2])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=74,problem_id=391)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=74,
+                                                               problem_id=391)
                 result.score = int(row[3])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
@@ -740,7 +765,8 @@ def import_results_4():
 
     return True
 
-#dund2
+
+# dund2
 def import_results_5():
     file = '/home/deploy/hotd21.csv'
     # file = '/Users/baysa/Documents/hotd21.csv'
@@ -750,17 +776,20 @@ def import_results_5():
         for row in reader:
             i = i + 1
             try:
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=69,problem_id=374)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=69,
+                                                               problem_id=374)
                 result.score = int(row[1])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=69,problem_id=375)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=69,
+                                                               problem_id=375)
                 result.score = int(row[2])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=69,problem_id=376)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=69,
+                                                               problem_id=376)
                 result.score = int(row[3])
                 result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
@@ -770,50 +799,57 @@ def import_results_5():
 
     return True
 
-#dunduls
+
+# dunduls
 def import_uls_1():
     file = '/home/deploy/dunduls.csv'
     # file = '/Users/baysa/dunduls.csv'
     group = Group.objects.get(pk=15)
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             print(row)
             try:
                 user = User.objects.get(pk=int(row[0]))
                 group.user_set.add(user)
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=75,problem_id=404)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=75,
+                                                               problem_id=404)
                 result.score = int(row[1])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=75,problem_id=405)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=75,
+                                                               problem_id=405)
                 result.score = int(row[2])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=75,problem_id=406)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=75,
+                                                               problem_id=406)
                 result.score = int(row[3])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=75,problem_id=407)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=75,
+                                                               problem_id=407)
                 result.score = int(row[4])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=75,problem_id=408)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=75,
+                                                               problem_id=408)
                 result.score = int(row[5])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=75,problem_id=409)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=75,
+                                                               problem_id=409)
                 result.score = int(row[6])
                 if created:
                     result.state = 2
@@ -824,50 +860,57 @@ def import_uls_1():
 
     return True
 
-#ahlauls
+
+# ahlauls
 def import_uls_2():
     file = '/home/deploy/ahlahuls.csv'
-    #file = '/Users/baysa/ahlahuls.csv'
+    # file = '/Users/baysa/ahlahuls.csv'
     group = Group.objects.get(pk=16)
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             print(row)
             try:
                 user = User.objects.get(pk=int(row[0]))
                 group.user_set.add(user)
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=76,problem_id=410)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=76,
+                                                               problem_id=410)
                 result.score = int(row[1])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=76,problem_id=411)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=76,
+                                                               problem_id=411)
                 result.score = int(row[2])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=76,problem_id=412)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=76,
+                                                               problem_id=412)
                 result.score = int(row[3])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=76,problem_id=413)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=76,
+                                                               problem_id=413)
                 result.score = int(row[4])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=76,problem_id=414)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=76,
+                                                               problem_id=414)
                 result.score = int(row[5])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=76,problem_id=415)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=76,
+                                                               problem_id=415)
                 result.score = int(row[6])
                 if created:
                     result.state = 2
@@ -878,50 +921,57 @@ def import_uls_2():
 
     return True
 
-#bagshuls
+
+# bagshuls
 def import_uls_3():
     file = '/home/deploy/bagshuls.csv'
-    #file = '/Users/baysa/bagshuls.csv'
+    # file = '/Users/baysa/bagshuls.csv'
     group = Group.objects.get(pk=17)
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             print(row)
             try:
                 user = User.objects.get(pk=int(row[0]))
                 group.user_set.add(user)
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=77,problem_id=416)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=77,
+                                                               problem_id=416)
                 result.score = int(row[1])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=77,problem_id=417)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=77,
+                                                               problem_id=417)
                 result.score = int(row[2])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=77,problem_id=418)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=77,
+                                                               problem_id=418)
                 result.score = int(row[3])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=77,problem_id=419)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=77,
+                                                               problem_id=419)
                 result.score = int(row[4])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=77,problem_id=420)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=77,
+                                                               problem_id=420)
                 result.score = int(row[5])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=77,problem_id=421)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=77,
+                                                               problem_id=421)
                 result.score = int(row[6])
                 if created:
                     result.state = 2
@@ -933,44 +983,49 @@ def import_uls_3():
     return True
 
 
-#bagshuls
+# bagshuls
 def import_igo_elem():
     file = '/Users/baysa/Documents/igo-elem-results.csv'
     file = '/home/deploy/igo-elem-results.csv'
     group = Group.objects.get(pk=17)
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             print(row)
             try:
                 user = User.objects.get(pk=int(row[0]))
                 group.user_set.add(user)
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=86,problem_id=446)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=86,
+                                                               problem_id=446)
                 result.score = int(row[1])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=86,problem_id=447)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=86,
+                                                               problem_id=447)
                 result.score = int(row[2])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=86,problem_id=448)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=86,
+                                                               problem_id=448)
                 result.score = int(row[3])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=86,problem_id=449)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=86,
+                                                               problem_id=449)
                 result.score = int(row[4])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=86,problem_id=450)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=86,
+                                                               problem_id=450)
                 result.score = int(row[5])
                 if created:
                     result.state = 2
@@ -981,44 +1036,50 @@ def import_igo_elem():
 
     return True
 
-#bagshuls
+
+# bagshuls
 def import_igo_inter():
     file = '/Users/baysa/Documents/igo-inter-results.csv'
     file = '/home/deploy/igo-inter-results.csv'
     group = Group.objects.get(pk=17)
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             print(row)
             try:
                 user = User.objects.get(pk=int(row[0]))
                 group.user_set.add(user)
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=87,problem_id=451)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=87,
+                                                               problem_id=451)
                 result.score = int(row[1])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=87,problem_id=452)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=87,
+                                                               problem_id=452)
                 result.score = int(row[2])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=87,problem_id=453)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=87,
+                                                               problem_id=453)
                 result.score = int(row[3])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=87,problem_id=454)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=87,
+                                                               problem_id=454)
                 result.score = int(row[4])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=87,problem_id=455)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=87,
+                                                               problem_id=455)
                 result.score = int(row[5])
                 if created:
                     result.state = 2
@@ -1030,44 +1091,49 @@ def import_igo_inter():
     return True
 
 
-#bagshuls
+# bagshuls
 def import_igo_advanced():
     file = '/Users/baysa/Documents/igo-advanced-results.csv'
     file = '/home/deploy/igo-advanced-results.csv'
     group = Group.objects.get(pk=17)
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             print(row)
             try:
                 user = User.objects.get(pk=int(row[0]))
                 group.user_set.add(user)
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=88,problem_id=456)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=88,
+                                                               problem_id=456)
                 result.score = int(row[1])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=88,problem_id=457)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=88,
+                                                               problem_id=457)
                 result.score = int(row[2])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=88,problem_id=458)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=88,
+                                                               problem_id=458)
                 result.score = int(row[3])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=88,problem_id=459)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=88,
+                                                               problem_id=459)
                 result.score = int(row[4])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=88,problem_id=460)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=88,
+                                                               problem_id=460)
                 result.score = int(row[5])
                 if created:
                     result.state = 2
@@ -1078,44 +1144,50 @@ def import_igo_advanced():
 
     return True
 
-#bagshuls
+
+# bagshuls
 def import_igo_bagsh():
     file = '/Users/baysa/Documents/igo-advanced-results.csv'
     file = '/home/deploy/igo-bagsh-results.csv'
     group = Group.objects.get(pk=17)
     with open(file, encoding='utf-8-sig') as f:
         reader = csv.reader(f)
-        i=0
+        i = 0
         for row in reader:
             print(row)
             try:
                 user = User.objects.get(pk=int(row[0]))
                 group.user_set.add(user)
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=89,problem_id=463)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=89,
+                                                               problem_id=463)
                 result.score = int(row[1])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=89,problem_id=464)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=89,
+                                                               problem_id=464)
                 result.score = int(row[2])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=89,problem_id=465)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=89,
+                                                               problem_id=465)
                 result.score = int(row[3])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=89,problem_id=466)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=89,
+                                                               problem_id=466)
                 result.score = int(row[4])
                 if created:
                     result.state = 2
                 result.grader_comment = 'Дүнгийн хүснэгт.'
                 result.save()
-                result, created = Result.objects.get_or_create(contestant_id=int(row[0]),olympiad_id=89,problem_id=467)
+                result, created = Result.objects.get_or_create(contestant_id=int(row[0]), olympiad_id=89,
+                                                               problem_id=467)
                 result.score = int(row[5])
                 if created:
                     result.state = 2
@@ -1125,6 +1197,7 @@ def import_igo_bagsh():
                 print(row, i)
 
     return True
+
 
 def firstRoundResults(request):
     if os.path.isdir('/Users/baysa/Downloads/2223'):
@@ -1139,28 +1212,28 @@ def firstRoundResults(request):
         name = dir + '/' + f
         print(name)
         filename, file_extension = os.path.splitext(name)
-        if file_extension.lower() in ['.xls','.xlsx']:
+        if file_extension.lower() in ['.xls', '.xlsx']:
             try:
                 print('5-6')
                 df1 = pd.read_excel(name, '5-6', engine='openpyxl')
                 num = num + importResultsOrg(df1, 90, f)
             except:
                 pass
-            
+
             try:
                 print('7-8')
                 df2 = pd.read_excel(name, '7-8', engine='openpyxl')
                 num = num + importResultsOrg(df2, 91, f)
             except:
                 pass
-            
+
             try:
                 print('9-10')
                 df3 = pd.read_excel(name, '9-10', engine='openpyxl')
                 num = num + importResultsOrg(df3, 92, f)
             except:
                 pass
-            
+
             try:
                 print('11-12')
                 df4 = pd.read_excel(name, '11-12', engine='openpyxl')
@@ -1169,6 +1242,7 @@ def firstRoundResults(request):
                 pass
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
+
 
 def importResultsOrg(df, oid, name):
     if Olympiad.objects.filter(pk=oid).exists():
@@ -1244,6 +1318,7 @@ def importResultsOrg(df, oid, name):
 
     return len(df)
 
+
 def secondRoundResults(request):
     if os.path.isdir('/Users/baysa/Downloads/2223'):
         dir = '/Users/baysa/Downloads/2223'
@@ -1303,6 +1378,7 @@ def secondRoundResults(request):
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
 
+
 def secondRoundResults2(request):
     if os.path.isdir('/Users/baysa/Downloads/2223'):
         dir = '/Users/baysa/Downloads/2223'
@@ -1356,6 +1432,7 @@ def secondRoundResults2(request):
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
 
+
 def thirdRoundResults(request):
     dir = '/home/deploy/results/2023-III-dun'
 
@@ -1391,6 +1468,7 @@ def thirdRoundResults(request):
                 pass
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
+
 
 def igo10Results(request):
     dir = '/home/deploy/results/2023-igo'
@@ -1434,6 +1512,7 @@ def igo10Results(request):
                 pass
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
+
 
 def getResults(request):
     dir = '/home/deploy/results'
@@ -1524,7 +1603,8 @@ def getResults(request):
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
 
-def importResults(df,oid,name):
+
+def importResults(df, oid, name):
     try:
         olympiad = Olympiad.objects.get(pk=oid)
     except:
@@ -1533,7 +1613,7 @@ def importResults(df,oid,name):
 
     problems = olympiad.problem_set.all()
 
-    size = len(problems) #bodlogiin too
+    size = len(problems)  # bodlogiin too
 
     for item in df.iterrows():
         ind, row = item
@@ -1569,14 +1649,14 @@ def importResults(df,oid,name):
                 user.first_name = str(row[row.keys()[3]]) + '-system'
                 user.save()
 
-            i=0
+            i = 0
             for problem in problems:
                 # print(i)
-                value = row[row.keys()[i+7]]
+                value = row[row.keys()[i + 7]]
                 try:
                     answer, created = Result.objects.get_or_create(problem_id=problem.id,
-                                                                  olympiad_id=oid,
-                                                                  contestant_id=user.id)
+                                                                   olympiad_id=oid,
+                                                                   contestant_id=user.id)
 
                     try:
                         floatval = float(value)
@@ -1595,7 +1675,8 @@ def importResults(df,oid,name):
 
     return len(df)
 
-def createCertificate(request,quiz_id,contestant_id):
+
+def createCertificate(request, quiz_id, contestant_id):
     if quiz_id == 102:
         template = '1.png'
     elif quiz_id == 100:
@@ -1614,15 +1695,15 @@ def createCertificate(request,quiz_id,contestant_id):
         total = 0
         for result in results:
             total = total + int(result.score)
-             # if total == 0:
-                # return HttpResponse("Оролцоогүй эсвэл оноо аваагүй.")
+            # if total == 0:
+            # return HttpResponse("Оролцоогүй эсвэл оноо аваагүй.")
     except:
         return HttpResponse("contestant or results")
 
     TEX_ROOT = "/home/deploy/django/latex"
     xelatex = '/usr/bin/xelatex'
     os.chdir(TEX_ROOT)
-    name='{}-{}'.format(quiz_id,contestant_id)
+    name = '{}-{}'.format(quiz_id, contestant_id)
     context = {
         'lastname': contestant.last_name,
         'firstname': contestant.first_name,
@@ -1635,4 +1716,130 @@ def createCertificate(request,quiz_id,contestant_id):
     os.system('{} -synctex=1 -interaction=nonstopmode {}.tex'.format(xelatex, name))
     os.system('{} {}.tex'.format(xelatex, name))
 
-    return FileResponse(open('{}.pdf'.format(name),'rb'))
+    return FileResponse(open('{}.pdf'.format(name), 'rb'))
+
+
+def result_view(request, olympiad_id):
+    pid = int(request.GET.get('p', 0))
+    zid = int(request.GET.get('z', 0))
+
+    try:
+        olympiad = Olympiad.objects.get(pk=olympiad_id)
+    except:
+        return render(request, 'olympiad/results/no_olympiad.html')
+    results = Result.objects.filter(olympiad_id=olympiad_id).order_by('contestant_id', 'problem__order')
+
+    if not results.exists():
+        return render(request, 'olympiad/results/no_results.html')
+
+    rows = list()
+    for result in results:
+        rows.append((result.contestant_id, result.problem_id, result.score))
+    data = pd.DataFrame(rows)
+    results_df = pd.pivot_table(data, index=[0], columns=[1], values=[2], aggfunc='sum')
+
+    cols = list()
+    for col in results_df.columns.values:
+        try:
+            problem = Problem.objects.get(pk=col[1])
+            cols.append('№' + adjusted_int_name(problem.order))
+        except:
+            cols.append('not a problem!')
+    results_df.columns = cols
+    cols = sorted(cols)
+    results_df = results_df[cols]
+    results_df["Дүн"] = results_df.sum(axis=1)
+    results_df[results_df.columns] = results_df[results_df.columns].applymap('{:.1f}'.format)
+    contestant_ids = list(results_df.index)
+    contestants = User.objects.filter(pk__in=contestant_ids)
+    awards = Award.objects.filter(olympiad_id=olympiad_id)
+    if awards.exists():
+        awards_df = read_frame(awards, fieldnames=['place', 'contestant_id'], verbose=False)
+        result_awards_df = pd.merge(results_df, awards_df, left_index=True, right_on='contestant_id', how='left')
+
+    users = list()
+    for contestant in contestants:
+        try:
+            if pid and contestant.data.province_id == pid:
+                users.append((contestant.id,
+                              contestant.last_name,
+                              contestant.first_name,
+                              contestant.data.province.name,
+                              contestant.data.school))
+            elif zid and contestant.data.province.zone_id == zid:
+                users.append((contestant.id,
+                              contestant.last_name,
+                              contestant.first_name,
+                              contestant.data.province.name,
+                              contestant.data.school))
+            elif pid == 0 and zid == 0:
+                users.append((contestant.id,
+                              contestant.last_name,
+                              contestant.first_name,
+                              contestant.data.province.name,
+                              contestant.data.school))
+        except:
+            print('datagui {}, {}'.format(contestant.id, contestant.first_name))
+    if len(users) == 0:
+        return render(request,'olympiad/results/no_results.html')
+    user_df = pd.DataFrame(users)
+    user_df.columns = ['ID', 'Овог', 'Нэр', 'Аймаг/Дүүрэг', 'Сургууль']
+
+    if awards.exists():
+        user_results_df = pd.merge(user_df, result_awards_df, left_on='ID', right_on='contestant_id', how='left')
+        user_results_df['place'] = user_results_df['place'].fillna('')
+        user_results_df.drop(['contestant_id'], axis=1, inplace=True)
+        user_results_df.rename(columns={'place': 'Шагнал'},inplace=True)
+    else:
+        user_results_df = pd.merge(user_df, results_df, left_on='ID', right_index=True, how='left')
+
+    user_results_df['Дүн'] = pd.to_numeric(user_results_df['Дүн'], errors='coerce')
+    sorted_df = user_results_df.sort_values(by=['Дүн','ID'], ascending=[False,True])
+    sorted_df[['Дүн']] = sorted_df[['Дүн']].applymap('{:.1f}'.format)
+    sorted_df.index = np.arange(1, sorted_df.__len__() + 1)
+
+    sorted_df["<i class='fas fa-expand-wide'></i>"] = sorted_df['ID'].apply(lambda x: "<a href='/olympiads/result/{}/{}'> \
+                                        <i class='fas fa-expand-wide'></i></a>".format(str(olympiad_id), str(x)))
+
+
+    pd.options.display.float_format = '{:.2f}'.format
+    styled_df = (sorted_df.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
+        {
+            'selector': 'th',
+            'props': [('text-align', 'center')],
+        },
+        {
+            'selector': 'td, th',
+            'props': [('border', '1px solid #ccc')],
+        },
+        {
+            'selector': 'td, th',
+            'props': [('padding', '3px 5px 3px 5px')],
+        },
+    ]))
+
+    # last hack
+    content = styled_df.to_html()
+    pattern = r'&nbsp;</th>'
+    replacement = r'№</th>'
+    content = re.sub(pattern, replacement, content)
+
+    name = "{}, {} ангилал, {} хичээлийн жил".format(olympiad.name, olympiad.level.name, olympiad.school_year.name)
+    try:
+        province = Province.objects.get(pk=pid)
+        name = name + ', ' + province.name
+    except:
+        pass
+    try:
+        zone = Zone.objects.get(pk=zid)
+        name = name + ', ' + zone.name
+    except:
+        pass
+
+    context = {
+        'title': olympiad.name,
+        'name': name,
+        'data': content
+    }
+
+    return render(request, 'olympiad/results/results.html', context)

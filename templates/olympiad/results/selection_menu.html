@@ -1,0 +1,92 @@
+{% block menu %}
+    <div>
+        <label for="provinces">Аймаг, Дүүрэг сонгох:</label>
+        <select onchange="reloadPage(this.value,'p')">
+            <option>------</option>
+
+            <option value="1">Архангай аймаг</option>
+
+            <option value="2">Баян-Өлгий аймаг</option>
+
+            <option value="3">Баянхонгор аймаг</option>
+
+            <option value="4">Булган аймаг</option>
+
+            <option value="5">Говь-Алтай аймаг</option>
+
+            <option value="6">Говьсүмбэр аймаг</option>
+
+            <option value="7">Дархан-Уул аймаг</option>
+
+            <option value="8">Дорноговь аймаг</option>
+
+            <option value="9">Дорнод аймаг</option>
+
+            <option value="10">Дундговь аймаг</option>
+
+            <option value="11">Завхан аймаг</option>
+
+            <option value="12">Орхон аймаг</option>
+
+            <option value="13">Өвөрхангай аймаг</option>
+
+            <option value="14">Өмнөговь аймаг</option>
+
+            <option value="15">Сүхбаатар аймаг</option>
+
+            <option value="16">Сэлэнгэ аймаг</option>
+
+            <option value="17">Төв аймаг</option>
+
+            <option value="18">Увс аймаг</option>
+
+            <option value="19">Ховд аймаг</option>
+
+            <option value="20">Хөвсгөл аймаг</option>
+
+            <option value="21">Хэнтий аймаг</option>
+
+            <option value="22">Багануур дүүрэг</option>
+
+            <option value="23">Багахангай дүүрэг</option>
+
+            <option value="24">Баянгол дүүрэг</option>
+
+            <option value="25">Баянзүрх дүүрэг</option>
+
+            <option value="26">Налайх дүүрэг</option>
+
+            <option value="27">Сонгинохайрхан дүүрэг</option>
+
+            <option value="28">Сүхбаатар дүүрэг</option>
+
+            <option value="29">Хан-Уул дүүрэг</option>
+
+            <option value="30">Чингэлтэй дүүрэг</option>
+
+        </select>
+        
+        &nbsp;&nbsp;&nbsp;<label for="provinces">Бүс:</label>
+        <select onchange="reloadPage(this.value,'z')">
+            <option>------</option>
+
+            <option value="1">Баруун бүс</option>
+
+            <option value="2">Говийн бүр</option>
+
+            <option value="3">Төвийн бүс</option>
+
+            <option value="4">Зүүн бүс</option>
+
+            <option value="5">Гурван дүүрэг</option>
+            
+        </select>
+
+        <script>
+            function reloadPage(i,n) {
+                window.location.replace('?' + n + '=' + i)
+            }
+        </script>
+
+    </div>
+{% endblock %}

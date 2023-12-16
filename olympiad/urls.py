@@ -34,7 +34,7 @@ urlpatterns = [
     path('results/', results.results_home, name='olympiad_results_home'),
     path('result/<int:olympiad_id>/<int:contestant_id>/', results.student_result_view,
          name='olympiad_student_result'),
-    # path('results/<int:olympiad_id>/', results.olympiad_result_view, name='olympiad_result_view'),
+    path('results/<int:olympiad_id>/', results.result_view, name='olympiad_result_view'),
     path('results/<int:olympiad_id>/', results.pandasView3, name='olympiad_result_view'),
     path('results/new/<int:olympiad_id>/', results.newResultView, name='olympiad_result_data_view'),
     path('results/data/<int:olympiad_id>/', results.getJSONResults, name='olympiad_get_json_results'),
@@ -50,4 +50,5 @@ urlpatterns = [
     path('results/import/', results.firstRoundResults, name='olympiad_import_first_round'),
     path('certificate/<int:quiz_id>/<int:contestant_id>/', results.createCertificate, name='olympiad_certificate'),
     path('beltgel2023/', beltgel2023.index, name='beltgel_2023'),
+    # path('r/<int:olympiad_id>/', results.result_view, name='result_view')
 ]
