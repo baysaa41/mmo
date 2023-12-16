@@ -357,7 +357,6 @@ def results_home(request):
     }
     return render(request, 'olympiad/results_home.html', context=context)
 
-
 def olympiad_result_view(request, olympiad_id):
 
     olympiad = Olympiad.objects.filter(id=olympiad_id).first()
@@ -398,15 +397,6 @@ def olympiad_result_view(request, olympiad_id):
     head, sorted_values = format_results(olympiad, results, with_province)
 
     context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': province}
-    return render(request, 'olympiad/olympiad_result_view.html', context=context)
-
-
-def olympiad_result_egmo(request):
-    olympiad = {'name': 'EGMO', 'id': 0}
-    ids = [299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310]
-    results = Result.objects.filter(problem_id__in=ids)
-    head, sorted_values = format_results(olympiad, results, False, ids)
-    context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': False}
     return render(request, 'olympiad/olympiad_result_view.html', context=context)
 
 

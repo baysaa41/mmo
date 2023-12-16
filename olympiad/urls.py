@@ -38,7 +38,6 @@ urlpatterns = [
     path('results/<int:olympiad_id>/', results.pandasView3, name='olympiad_result_view'),
     path('results/new/<int:olympiad_id>/', results.newResultView, name='olympiad_result_data_view'),
     path('results/data/<int:olympiad_id>/', results.getJSONResults, name='olympiad_get_json_results'),
-    path('results/egmo/', results.olympiad_result_egmo, name='olympiad_result_egmo'),
     path('results/imo/62/third/', results.olympiad_result_imo62_third, name='olympiad_result_imo63_third'),
     path('results/imo/63/first/', results.olympiad_result_imo63_first, name='olympiad_result_imo63_first'),
     path('results/imo/63/second/', results.olympiad_result_imo63_second, name='olympiad_result_imo63_second'),
