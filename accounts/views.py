@@ -1035,34 +1035,32 @@ def import_file(request):
 
 @login_required(login_url='/accounts/login/')
 def send_email_with_attachments(request):
-    if not request.user.is_staff:
-        return HttpResponse("")
     if request.method == 'POST':
         form = EmailForm(request.POST, request.FILES)
         if form.is_valid():
-            # group_name = 'single'  # Replace with your group name
-            group = Group.objects.get(pk=34)
+            group_name = 'my_group'  # Replace with your group name
+            group = get_object_or_404(Group, name=group_name)
             users_in_group = group.user_set.all()
 
             subject = form.cleaned_data['subject']
             message = form.cleaned_data['message']
-            from_email = 'ММОХ <no-replay@mmo.mn>'
-            recipient_list = [user.email for user in users_in_group]
+            from_email = 'your_email@example.com'
 
-            email = EmailMessage(subject, message, from_email, recipient_list)
-            email.content_subtype = "html"
+            # Batch recipients and send emails
+            recipients = [user.email for user in users_in_group]
+            batch_size = 50  # Adjust as needed
+            for i in range(0, len(recipients), batch_size):
+                batch_recipients = recipients[i:i+batch_size]
 
-            # Attach files
-            attachments = request.FILES.getlist('attachments')
-            for attachment in attachments:
-                email.attach(attachment.name, attachment.read(), attachment.content_type)
+                email = EmailMessage(subject, message, from_email, batch_recipients)
+                email.content_subtype = "html"
 
-            # Send the email
-            email.send()
+                # Attach files
+                attachments = request.FILES.getlist('attachments')
+                for attachment in attachments:
+                    email.attach(attachment.name, attachment.read(), attachment.content_type)
 
-            return render(request, 'accounts/success.html', {'message': 'Email sent successfully.'})
+                # Send the email
+                email.send()
 
-    else:
-        form = EmailForm()
-
-    return render(request, 'accounts/send_email.html', {'form': form})
+            return render(request, 'success.html', {'message': 'Email sent successfully.'})
