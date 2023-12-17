@@ -1058,6 +1058,7 @@ def send_email_with_attachments(request):
                 # Attach files
                 attachments = request.FILES.getlist('attachments')
                 for attachment in attachments:
+                    attachment.seek(0)
                     email.attach(attachment.name, attachment.read(), attachment.content_type)
 
                 # Send the email
