@@ -1040,13 +1040,13 @@ def send_email_with_attachments(request):
     if request.method == 'POST':
         form = EmailForm(request.POST, request.FILES)
         if form.is_valid():
-            group_name = 'single'  # Replace with your group name
-            group = Group.objects.get(name=group_name)
+            # group_name = 'single'  # Replace with your group name
+            group = Group.objects.get(pk=34)
             users_in_group = group.user_set.all()
 
             subject = form.cleaned_data['subject']
             message = form.cleaned_data['message']
-            from_email = 'no-replay@mmo.mn'
+            from_email = 'ММОХ <no-replay@mmo.mn>'
             recipient_list = [user.email for user in users_in_group]
 
             email = EmailMessage(subject, message, from_email, recipient_list)
