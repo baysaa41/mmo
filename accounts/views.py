@@ -1038,8 +1038,8 @@ def send_email_with_attachments(request):
     if request.method == 'POST':
         form = EmailForm(request.POST, request.FILES)
         if form.is_valid():
-            group_name = 'my_group'  # Replace with your group name
-            group = get_object_or_404(Group, name=group_name)
+            # group_name = 'my_group'  # Replace with your group name
+            group = Group.objects.get(pk=34)
             users_in_group = group.user_set.all()
 
             subject = form.cleaned_data['subject']
@@ -1063,4 +1063,9 @@ def send_email_with_attachments(request):
                 # Send the email
                 email.send()
 
-            return render(request, 'success.html', {'message': 'Email sent successfully.'})
+            return render(request, 'accounts/success.html', {'message': 'Email sent successfully.'})
+
+    else:
+        form = EmailForm()
+
+    return render(request, 'accounts/send_email.html', {'form': form})
