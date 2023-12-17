@@ -17,15 +17,12 @@ class CustomPasswordResetForm(PasswordResetForm):
         widget=forms.TextInput(attrs={"autocomplete": "username"}),
     )
     def get_users(self, email):
-        if User.objects.filter(username=email).exists():
-            print(email + '1')
-            return User.objects.filter(username=email, is_active=True)
-        print(email)
         """
         Given an email, return matching user(s) who should receive a reset.
         """
         # We're overriding this method to use the username or email
-        return User.objects.filter(email=email, is_active=True)
+        users = User.objects.filter(username=email, is_active=True) | User.objects.filter(email=email, is_active=True)
+        return users
 
     def send_mail(
         self,

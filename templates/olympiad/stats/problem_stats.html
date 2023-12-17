@@ -1,0 +1,18 @@
+<!-- problem_stats.html -->
+
+{% extends 'base.html' %}
+
+{% load latex_filter %}
+
+{% block content %}
+  <h2>Math Problem Statistics</h2>
+
+  <!-- Display statistics -->
+  <h3>Statistics</h3>
+  {{ stats_html|safe }}
+
+  <!-- Display correlations -->
+  <h3>Correlations</h3>
+  {{ correlations_html|safe }}
+
+{% endblock %}

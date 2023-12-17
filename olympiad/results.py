@@ -1727,6 +1727,7 @@ def result_view(request, olympiad_id):
         rows.append((result.contestant_id, result.problem_id, result.score))
     data = pd.DataFrame(rows)
     results_df = pd.pivot_table(data, index=[0], columns=[1], values=[2], aggfunc='sum')
+    # results_df.fillna(0, inplace=True)
 
     cols = list()
     for col in results_df.columns.values:
@@ -1813,6 +1814,7 @@ def result_view(request, olympiad_id):
     pattern = r'&nbsp;</th>'
     replacement = r'№</th>'
     content = re.sub(pattern, replacement, content)
+    content = re.sub('>nan</td>', '>--</td>', content)
 
     name = "{}, {} ангилал, {} хичээлийн жил".format(olympiad.name, olympiad.level.name, olympiad.school_year.name)
     try:
@@ -1833,3 +1835,37 @@ def result_view(request, olympiad_id):
     }
 
     return render(request, 'olympiad/results/results.html', context)
+
+
+@login_required
+def problem_stats(request, olympiad_id):
+    # Get all problems
+    problems = Problem.objects.filter(olympiad_id=olympiad_id)
+
+    # Get user answers for all problems
+    user_answers = Result.objects.filter(problem__in=problems).select_related('problem', 'contestant')
+
+    # Create a DataFrame with user answers
+    data = {'user_id': [], 'problem_id': [], 'answer': []}
+    for answer in user_answers:
+        data['user_id'].append(answer.contestant.id)
+        data['problem_id'].append(answer.problem.id)
+        data['answer'].append(answer.score)
+
+    df = pd.DataFrame(data)
+
+    # Calculate statistics and correlations (customize based on your needs)
+    stats = df.groupby('problem_id').agg({'answer': ['mean', 'std']})
+    correlations = df.corr()
+
+    # Convert DataFrames to HTML for rendering in the template
+    stats_html = stats.to_html()
+    correlations_html = correlations.to_html()
+
+    context = {
+        'problems': problems,
+        'stats_html': stats_html,
+        'correlations_html': correlations_html,
+    }
+
+    return render(request, 'olympiad/stats/problem_stats.html', context)

@@ -1,7 +1,11 @@
 {% extends 'base-fluid.html' %}
 
+{% block title %}
+    {{ title }}
+{% endblock %}
+
 {% block content %}
     <h3>{{ name }}</h3>
-    {% include 'olympiad/results/../../selection_menu.html' %}
+    {% include 'selection_menu.html' %}
     {{ data | safe }}
 {% endblock %}
