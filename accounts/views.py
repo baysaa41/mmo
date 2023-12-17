@@ -1044,7 +1044,7 @@ def send_email_with_attachments(request):
 
             subject = form.cleaned_data['subject']
             message = form.cleaned_data['message']
-            from_email = 'your_email@example.com'
+            from_email = 'MMO <no-reply@mmo.mn>'
 
             # Batch recipients and send emails
             recipients = [user.email for user in users_in_group]
