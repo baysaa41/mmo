@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body style="margin-top: 30px;margin-left: 30px;">
+<p><a href="https://www.mmo.mn/static/I-davaa-2023-2024.xlsx">Хариултын нэгтгэлийн файл татах</a></p>
 <form action="{% url "upload_file" %}" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="file"
