@@ -585,6 +585,7 @@ def set_answer(olympiad_id, excel_data):
     olympiad = Olympiad.objects.get(pk=olympiad_id)
     problems = olympiad.problem_set.all()
     for row in excel_data[1:]:
+        print(row)
         for i in range(len(row[7:-1])):
             problem = problems.filter(order=i + 1).first()
             if row[1] == '' and (row[2] != '' or row[3] != ''):
@@ -617,7 +618,7 @@ def set_answer(olympiad_id, excel_data):
     return True
 
 
-# @staff_member_required
+@staff_member_required
 def upload_file(request):
     if "GET" == request.method:
         context = {'error': 0}
