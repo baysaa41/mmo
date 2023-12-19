@@ -1836,8 +1836,10 @@ def result_view(request, olympiad_id):
 
     return render(request, 'olympiad/results/results.html', context)
 
-
+@login_required()
 def answers_view(request, olympiad_id):
+    if not request.user.groups.filter(pk=34).exists() and not request.user.is_staff:
+        return render(request, 'accounts/noaccess.html')
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))
 
@@ -1904,7 +1906,7 @@ def answers_view(request, olympiad_id):
 
     user_results_df = pd.merge(user_df, results_df, left_on='ID', right_index=True, how='left')
 
-    sorted_df = user_results_df.sort_values(by=['Аймаг/Дүүрэг', 'Сургууль', '№01', '№02', '№03', '№04', '№05', '№06'])
+    sorted_df = user_results_df.sort_values(by=['Аймаг/Дүүрэг', 'Сургууль', '№01', '№02', '№03'])
     sorted_df.index = np.arange(1, sorted_df.__len__() + 1)
 
     sorted_df["<i class='fas fa-expand-wide'></i>"] = sorted_df['ID'].apply(lambda x: "<a href='/olympiads/result/{}/{}'> \
