@@ -1837,6 +1837,124 @@ def result_view(request, olympiad_id):
     return render(request, 'olympiad/results/results.html', context)
 
 
+def answers_view(request, olympiad_id):
+    pid = int(request.GET.get('p', 0))
+    zid = int(request.GET.get('z', 0))
+
+    try:
+        olympiad = Olympiad.objects.get(pk=olympiad_id)
+    except:
+        return render(request, 'olympiad/results/no_olympiad.html')
+    results = Result.objects.filter(olympiad_id=olympiad_id).order_by('contestant_id', 'problem__order')
+
+    if not results.exists():
+        return render(request, 'olympiad/results/no_results.html')
+
+    rows = list()
+    for result in results:
+        rows.append((result.contestant_id, result.problem_id, result.answer))
+    data = pd.DataFrame(rows)
+    results_df = pd.pivot_table(data, index=[0], columns=[1], values=[2], aggfunc=np.sum, fill_value=0).astype(int)
+
+    cols = list()
+    for col in results_df.columns.values:
+        try:
+            problem = Problem.objects.get(pk=col[1])
+            cols.append('№' + adjusted_int_name(problem.order))
+        except:
+            cols.append('not a problem!')
+    results_df.columns = cols
+    cols = sorted(cols)
+    results_df = results_df[cols]
+    results_df[results_df.columns] = results_df[results_df.columns].applymap('{:.0f}'.format)
+    contestant_ids = list(results_df.index)
+    contestants = User.objects.filter(pk__in=contestant_ids)
+    awards = Award.objects.filter(olympiad_id=olympiad_id)
+    if awards.exists():
+        awards_df = read_frame(awards, fieldnames=['place', 'contestant_id'], verbose=False)
+        result_awards_df = pd.merge(results_df, awards_df, left_index=True, right_on='contestant_id', how='left')
+
+    users = list()
+    for contestant in contestants:
+        try:
+            if pid and contestant.data.province_id == pid:
+                users.append((contestant.id,
+                              contestant.last_name,
+                              contestant.first_name,
+                              contestant.data.province.name,
+                              contestant.data.school))
+            elif zid and contestant.data.province.zone_id == zid:
+                users.append((contestant.id,
+                              contestant.last_name,
+                              contestant.first_name,
+                              contestant.data.province.name,
+                              contestant.data.school))
+            elif pid == 0 and zid == 0:
+                users.append((contestant.id,
+                              contestant.last_name,
+                              contestant.first_name,
+                              contestant.data.province.name,
+                              contestant.data.school))
+        except:
+            print('datagui {}, {}'.format(contestant.id, contestant.first_name))
+    if len(users) == 0:
+        return render(request,'olympiad/results/no_results.html')
+    user_df = pd.DataFrame(users)
+    user_df.columns = ['ID', 'Овог', 'Нэр', 'Аймаг/Дүүрэг', 'Сургууль']
+
+    user_results_df = pd.merge(user_df, results_df, left_on='ID', right_index=True, how='left')
+
+    sorted_df = user_results_df.sort_values(by=['Аймаг/Дүүрэг', 'Сургууль', '№01', '№02', '№03', '№04', '№05', '№06'])
+    sorted_df.index = np.arange(1, sorted_df.__len__() + 1)
+
+    sorted_df["<i class='fas fa-expand-wide'></i>"] = sorted_df['ID'].apply(lambda x: "<a href='/olympiads/result/{}/{}'> \
+                                        <i class='fas fa-expand-wide'></i></a>".format(str(olympiad_id), str(x)))
+
+
+    pd.options.display.float_format = '{:.2f}'.format
+    styled_df = (sorted_df.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
+        {
+            'selector': 'th',
+            'props': [('text-align', 'center')],
+        },
+        {
+            'selector': 'td, th',
+            'props': [('border', '1px solid #ccc')],
+        },
+        {
+            'selector': 'td, th',
+            'props': [('padding', '3px 5px 3px 5px')],
+        },
+    ]))
+
+    # last hack
+    content = styled_df.to_html()
+    pattern = r'&nbsp;</th>'
+    replacement = r'№</th>'
+    content = re.sub(pattern, replacement, content)
+    content = re.sub('>nan</td>', '>--</td>', content)
+
+    name = "{}, {} ангилал, {} хичээлийн жил".format(olympiad.name, olympiad.level.name, olympiad.school_year.name)
+    try:
+        province = Province.objects.get(pk=pid)
+        name = name + ', ' + province.name
+    except:
+        pass
+    try:
+        zone = Zone.objects.get(pk=zid)
+        name = name + ', ' + zone.name
+    except:
+        pass
+
+    context = {
+        'title': olympiad.name,
+        'name': name,
+        'data': content
+    }
+
+    return render(request, 'olympiad/results/results.html', context)
+
+
 @login_required
 def problem_stats(request, olympiad_id):
     # Get all problems
