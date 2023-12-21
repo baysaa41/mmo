@@ -1,7 +1,7 @@
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from olympiad.models import Olympiad, Result, SchoolYear, Award, Problem
+from olympiad.models import Olympiad, Result, SchoolYear, Award, Problem, OlympiadGroup
 from accounts.models import Province, Zone, UserMeta
 from django.forms import modelformset_factory
 from .forms import ResultsForm
@@ -22,7 +22,7 @@ from django_tex.core import render_template_with_context
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
 
-
+# nuhuh testiin hariug shinechileh
 def update_results(request, olympiad_id):
     # create_results(olympiad_id)
     # return HttpResponse('Edit update')
@@ -35,8 +35,6 @@ def update_results(request, olympiad_id):
     else:
         return HttpResponse("Olympiad doesn't exist.")
     return HttpResponse('Results are updated.')
-
-    return HttpResponse('.')
 
 
 def pandasView(request, quiz_id):
@@ -57,8 +55,8 @@ def pandasView(request, quiz_id):
     print(pivot)
     results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='right')
     results.sort_values(by='Дүн', ascending=False, inplace=True)
-    results["link"] = results["id"]
-    results["link"] = results["link"].apply(
+    # results["link"] = results["id"]
+    results["link"] = results["id"].apply(
         lambda x: "<a href='/olympiads/result/{0}/{1}'>ХАРИУЛТ</a>".format(quiz_id, x))
     results.rename(columns={
         'id': 'ID',
@@ -240,7 +238,7 @@ def getJSONResults(request, olympiad_id):
 
 
 def newResultView(request, olympiad_id):
-    return render(request, "olympiad/javascript_pivot.html", {'olympiad', olympiad_id})
+    return render(request, "olympiad/javascript_pivot.html", {'olympiad': olympiad_id})
 
 
 def pandasIMO64(request):
@@ -291,6 +289,64 @@ def pandasIMO64(request):
         'pivot': results.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
         'quiz': {
             'name': 'IMO-64 сорилго',
+        },
+        'title': title,
+    }
+    return render(request, 'olympiad/pandas3.html', context)
+
+
+def olympiad_group_result_view(request,group_id):
+    try:
+        olympiad_group = OlympiadGroup.objects.get(pk=group_id)
+    except OlympiadGroup.DoesNotExist:
+        return render(request,'olympiad/results/no_olympiad.html')
+    except Exception as e:
+        return render(request, 'errors/error.html', {'message': str(e)})
+    olympiads = olympiad_group.olympiads.all()
+    answers = Result.objects.filter(olympiad__in=olympiads)
+    title = 'Нэгдсэн дүн'
+
+    if answers.count() == 0:
+        context = {
+            'df': '',
+            'pivot': '',
+            'quiz': '',
+            'title': 'Оролцсон сурагч байхгүй.',
+        }
+        return render(request, 'olympiad/pandas3.html', context)
+
+    users = User.objects.filter(groups__name='IMO-64 сорилго')
+    answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
+    users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id', 'data__school'], verbose=False)
+    answers_df['score'] = answers_df['score'].fillna(0)
+    pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
+    pivot["Дүн"] = pivot.sum(axis=1)
+    results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='inner')
+    results.sort_values(by='Дүн', ascending=False, inplace=True)
+    results['id'].fillna(0).astype(int)
+    results['id'] = results['id'].apply(lambda x: "{id:.0f}".format(id=x))
+    results.rename(columns={
+        'id': 'ID',
+        'first_name': 'Нэр',
+        'last_name': 'Овог',
+        'data__school': 'Cургууль',
+        'link': '<i class="fas fa-expand-wide"></i>',
+    }, inplace=True)
+    results.index = np.arange(1, results.__len__() + 1)
+
+    pd.set_option('colheader_justify', 'center')
+
+    num = 0
+    for olympiad in olympiads:
+        num = num + 1
+        for item in olympiad.problem_set.all().order_by('order'):
+            results = results.rename(columns={item.id: '№' + str(num) + '.' + str(item.order)})
+
+    context = {
+        'df': results.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
+        'pivot': results.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
+        'quiz': {
+            'name': olympiad_group.name,
         },
         'title': title,
     }
@@ -1836,10 +1892,7 @@ def result_view(request, olympiad_id):
 
     return render(request, 'olympiad/results/results.html', context)
 
-@login_required()
 def answers_view(request, olympiad_id):
-    if not request.user.groups.filter(pk=34).exists() and not request.user.is_staff:
-        return render(request, 'accounts/noaccess.html')
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))
 

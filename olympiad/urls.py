@@ -44,6 +44,7 @@ urlpatterns = [
     path('results/imo/63/second/', results.olympiad_result_imo63_second, name='olympiad_result_imo63_second'),
     path('results/imo/63/third/', results.olympiad_result_imo63_third, name='olympiad_result_imo63_third'),
     path('results/imo/64/', results.pandasIMO64, name='olympiad_result_imo64'),
+    path('results/g/<int:group_id>/', results.olympiad_group_result_view, name='olympiad_group_result_view'),
     path('results/mmo/58/second/dund2/', results.olympiad_result_mmo58_second_dund2, name='olympiad_result_mmo58_second_dund2'),
     path('results/mmo/58/second/ahlah/', results.olympiad_result_mmo58_second_ahlah, name='olympiad_result_mmo58_second_ahlah'),
     path('results/mmo/58/second/bagsh/', results.olympiad_result_mmo58_second_bagsh, name='olympiad_result_mmo58_second_bagsh'),

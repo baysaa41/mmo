@@ -1,6 +1,5 @@
-from django.http import HttpResponse, JsonResponse, FileResponse
+# 2023 оны бэлтгэл давааны багийн дүн гаргах
 from django.shortcuts import render, redirect, reverse
-import pandas as pd
 from django.db import connection
 from django.contrib.admin.views.decorators import staff_member_required
 
