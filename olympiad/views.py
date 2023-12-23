@@ -449,32 +449,8 @@ def view_result(request):
         return HttpResponse("Ийм хариулт олдсонгүй.")
 
 
-def pdf(request, result_id):
-    DOC_ROOT = '/home/deploy/django/mmo/media/static/pdf/'
-    pdflatex = '/usr/local/texlive/2021/bin/x86_64-linux/xelatex'
-    name = 'result' + str(result_id)
-    result = Result.objects.get(pk=result_id)
-    context = {'result': result}
-    content = render_to_string('olympiad/result.tex', context)
-    os.chdir(DOC_ROOT)
-    with open(name + '.tex', 'w') as static_file:
-        static_file.write(content)
-        os.system('{} -synctex=1 -interaction=nonstopmode {}.tex'.format(pdflatex, name))
-
-    return FileResponse(open('{}.pdf'.format(name)))
-
-
 def problem_exam_materials_view(request):
     return None
-
-
-def is_imo(user):
-    return (user.groups.filter(name='IMO-62').exists() or user.is_staff)
-
-
-def is_mmo(user):
-    return (user.groups.filter(pk=3).exists() or user.is_staff)
-
 
 def supplements_view(request):
     uploads = Upload.objects.filter(is_official=False).order_by('result__contestant_id')
