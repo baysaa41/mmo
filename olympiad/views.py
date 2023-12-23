@@ -39,9 +39,6 @@ def supplement_home(request):
     return render(request, 'olympiad/supplement_home.html', {'olympiads': olympiads})
 
 
-def mmo57(request):
-    return render(request, 'olympiad/mmo57.html')
-
 
 @login_required
 def quiz_view(request, quiz_id):
@@ -567,7 +564,8 @@ def read_worksheet(worksheet,problems):
                 tailbar.append('ID буруу')
             except TypeError as e:
                 if str(row[2].value) != 'None' or str(row[3].value) != 'None':
-                    tailbar.append('Шинээр хэрэглэгч үүсгэнэ. Засах шаардлагагүй.')
+                    print(row)
+                    # tailbar.append('Шинээр хэрэглэгч үүсгэнэ. Засах шаардлагагүй.')
                 else:
                     tailbar.append('Мэдээлэл дутуу')
                     aldaa = True

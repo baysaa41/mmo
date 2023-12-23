@@ -75,6 +75,22 @@ def pandasView(request, quiz_id):
     return render(request, 'olympiad/pandas3.html', context)
 
 
+def to_json(request, olympiad_id):
+    pd.options.display.float_format = '{:,.2f}'.format
+    try:
+        object = Olympiad.objects.get(pk=olympiad_id)
+    except Olympiad.DoesNotExist:
+        return redirect('/')
+
+    answers = Result.objects.filter(olympiad_id=olympiad_id)
+    selected_fields = ['contestant__first_name','contestant_id','problem_id','score']
+    json_data = JsonResponse(list(answers.values(*selected_fields)),safe=False)
+    return json_data
+
+def json_view(request, olympiad_id):
+    return render(request, 'olympiad/results/json_results.html')
+
+
 def pandasView3(request, olympiad_id):
     provinces = Province.objects.all()
     pd.options.display.float_format = '{:,.1f}'.format

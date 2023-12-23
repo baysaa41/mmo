@@ -3,13 +3,14 @@ from . import views, results, beltgel2023
 
 urlpatterns = [
     path('', views.list_upcomming_olympiads, name='olympiad_home'),
+    path('jsonview/<int:olympiad_id>/', results.json_view, name='jsonview'),
+    path('json/<int:olympiad_id>/', results.to_json, name='olympiad_json'),
     path('excel/', views.upload_file, name='upload_file'),
     path('supplements/', views.supplement_home, name='olympiad_supplement_home'),
     path('supplements/admin/', views.supplements_view, name='supplements_view'),
     path('supplements/approve/', views.approve_supplement, name='approve_supplement'),
     path('supplements/remove/', views.remove_supplement, name='remove_supplement'),
     path('supplements/<int:olympiad_id>/', views.student_supplement_view, name='student_supplement_view'),
-    path('mmo57/', views.mmo57, name='mmo57'), # olympiadiin huvaari
     path('quiz/<int:quiz_id>/', views.quiz_view, name='olympiad_quiz'),
     path('end/<int:quiz_id>/', views.quiz_end, name='olympiad_quiz_end'),
     path('exam/<int:olympiad_id>/', views.exam_student_view, name='olympiad_exam'),
