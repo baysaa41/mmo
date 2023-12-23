@@ -29,7 +29,7 @@ urlpatterns = [
     path('problems/<int:olympiad_id>/', views.problems_view, name='olympiad_problems_view'),
     path('problems/', views.problems_home, name='olympiad_problems_home'),
     # results
-    path('update/<int:olympiad_id>/', result_views.update_results, name='update_result_views.),
+    path('update/<int:olympiad_id>/', result_views.update_results, name='update_result_views'),
     path('pandas/<int:quiz_id>/', result_views.pandasView, name='olympiad_pandas_results'),
     path('results/', result_views.results_home, name='olympiad_results_home'),
     path('result/<int:olympiad_id>/<int:contestant_id>/', result_views.student_result_view, name='olympiad_student_result'),
