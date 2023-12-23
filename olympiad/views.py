@@ -155,40 +155,6 @@ def problems_view(request, olympiad_id):
 
     return render(request, 'olympiad/problems.html', {'olympiad': olympiad, 'problems': problems})
 
-
-def pandasView(request, quiz_id):
-    pd.options.display.float_format = '{:,.2f}'.format
-
-    with connection.cursor() as cursor:
-        cursor.execute("select u.username, p.`order`, r.score, r.answer from olympiad_result r join auth_user u \
-                        on r.`contestant_id`=u.id join olympiad_problem p on r.`problem_id`=p.id where r.olympiad_id=%s",
-                       [quiz_id])
-        results = cursor.fetchall()
-    data = pd.DataFrame(results)
-    if data.empty:
-        pivot = 'Өгөгдөл олдсонгүй!'
-        describe = pivot
-    else:
-        pivot = data.pivot_table(index=[0], columns=[1], values=[2], fill_value=0)
-        pivot = pivot.reindex(sorted(pivot.columns), axis=1)
-        pivot['Дүн'] = pivot.sum(axis=1)
-        pivot = pivot.sort_values(by='Дүн', ascending=False)
-        pivot.loc['Дундаж'] = pivot.mean()
-        corr = pivot.corr()
-        dun = 100 * corr.iloc[[-1]]
-        dun = dun.rename(index={'Дүн': 'ЯЧИ'})
-        pivot = pivot.append(dun)
-        pivot = pivot.to_html(index_names=False)
-        describe = data.describe().to_html()
-
-    context = {
-        'df': data.to_html(index=False),
-        'describe': describe,
-        'pivot': pivot
-    }
-    return render(request, 'olympiad/pandas.html', context)
-
-
 @login_required
 def student_result_view(request, olympiad_id, contestant_id):
     results = Result.objects.filter(contestant_id=contestant_id, olympiad_id=olympiad_id).order_by('problem__order')
