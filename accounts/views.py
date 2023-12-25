@@ -152,7 +152,7 @@ def staff(request):
     return render(request, 'accounts/staff.html', {'users': users})
 
 
-def group_users2(request, group_id):
+def group_users(request, group_id):
     try:
         group = Group.objects.get(pk=group_id)
     except:

@@ -4,7 +4,7 @@ from . import views, views_old
 
 urlpatterns = [
     path('users/', views.users, name='account_users'),
-    path('users/<int:group_id>/', views.group_users2, name='group_users'),
+    path('users/<int:group_id>/', views.group_users, name='group_users'),
     path('staff/', views.staff, name='account_staff'),
     path('profile/', views.profile, name='user_profile'),
     path('profile/done/', views.profile_ready, name='user_profile_done'),
