@@ -486,37 +486,6 @@ def olympiad_result_imo62_third(request):
     context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': False}
     return render(request, 'olympiad/olympiad_result_view.html', context=context)
 
-
-def olympiad_result_mmo58_second_dund2(request):
-    olympiad = {'name': 'ММО-58, Хот, Дунд 2 ангилал'}
-    ids = [374, 375, 376, 383, 384, 385]
-    results = Result.objects.filter(problem_id__in=ids)
-    head, sorted_values = format_results(olympiad, results, False, ids)
-
-    context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': False}
-    return render(request, 'olympiad/olympiad_result_view.html', context=context)
-
-
-def olympiad_result_mmo58_second_ahlah(request):
-    olympiad = {'name': 'ММО-58, Хот, Ахлах ангилал'}
-    ids = [377, 378, 379, 386, 387, 388]
-    results = Result.objects.filter(problem_id__in=ids)
-    head, sorted_values = format_results(olympiad, results, False, ids)
-
-    context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': False}
-    return render(request, 'olympiad/olympiad_result_view.html', context=context)
-
-
-def olympiad_result_mmo58_second_bagsh(request):
-    olympiad = {'name': 'ММО-58, Хот, Багшийн ангилал'}
-    ids = [380, 381, 382, 389, 390, 391]
-    results = Result.objects.filter(problem_id__in=ids)
-    head, sorted_values = format_results(olympiad, results, False, ids)
-
-    context = {'olympiad': olympiad, 'head': head, 'values': sorted_values, 'province': False}
-    return render(request, 'olympiad/olympiad_result_view.html', context=context)
-
-
 def get_contestant_ids(results):
     ids = []
     for result in results:

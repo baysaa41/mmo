@@ -142,5 +142,10 @@ class Upload(models.Model):
     file = models.ImageField(upload_to=file_to)
     uploaded = models.DateTimeField(auto_created=True, auto_now_add=True)
 
+    def delete(self, *args, **kwargs):
+        # Delete the associated file when the model instance is deleted
+        storage, path = self.file_field.storage, self.file_field.path
+        super(YourModel, self).delete(*args, **kwargs)
+        storage.delete(path)
     def __str__(self):
         return '{}, {}, {}'.format(self.result.student.username, self.result.problem.quiz.name, self.result.problem.order)

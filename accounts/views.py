@@ -153,104 +153,107 @@ def staff(request):
 
 
 def group_users2(request, group_id):
-        group = Group.objects.filter(pk=group_id).first()
-        pd.options.display.float_format = '{:,.0f}'.format
+    try:
+        group = Group.objects.get(pk=group_id)
+    except:
+        return render(request, 'errors/error.html', {'message': 'Ийм бүлэг байхгүй.'})
+    pd.options.display.float_format = '{:,.0f}'.format
 
-        pid = int(request.GET.get('p', 0))
-        zid = int(request.GET.get('z', 0))
+    pid = int(request.GET.get('p', 0))
+    zid = int(request.GET.get('z', 0))
 
-        users = group.user_set.all()
-        if pid:
-            users = users.filter(data__province__id=pid)
-        elif zid:
-            users =users.filter(data__province__zone__id=zid)
+    users = group.user_set.all()
+    if pid:
+        users = users.filter(data__province__id=pid)
+    elif zid:
+        users =users.filter(data__province__zone__id=zid)
 
-        users = group.user_set.all().order_by('data__province__zone', 'data__province', 'data__school')
+    users = group.user_set.all().order_by('data__province__zone', 'data__province', 'data__school')
 
-        z_id = request.GET.get('z', False)
-        if z_id:
-            try:
-                zone = Zone.objects.filter(pk=z_id).first()
-                title = group.name + ', ' + zone.name
-                users = users.filter(data__province__zone_id=z_id)
-            except Exception as e:
-                print(str(e))
+    z_id = request.GET.get('z', False)
+    if z_id:
+        try:
+            zone = Zone.objects.filter(pk=z_id).first()
+            title = group.name + ', ' + zone.name
+            users = users.filter(data__province__zone_id=z_id)
+        except Exception as e:
+            print(str(e))
 
-        p_id = request.GET.get('p', False)
-        if p_id:
-            try:
-                province = Province.objects.filter(pk=p_id).first()
-                title = group.name + ', ' + province.name
-                users = users.filter(data__province_id=p_id)
-            except Exception as e:
-                print(str(e))
+    p_id = request.GET.get('p', False)
+    if p_id:
+        try:
+            province = Province.objects.filter(pk=p_id).first()
+            title = group.name + ', ' + province.name
+            users = users.filter(data__province_id=p_id)
+        except Exception as e:
+            print(str(e))
 
-        g_id = request.GET.get('g', False)
-        if g_id:
-            try:
-                grade = Grade.objects.filter(pk=g_id).first()
-                title = title + ', ' + grade.name
-                users = users.filter(data__grade_id=g_id)
-            except Exception as e:
-                print(str(e))
-        if request.user.is_staff:
-            users_df = read_frame(users,
-                                  fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
-                                              'data__school', 'data__grade__name', 'data__mobile', 'email'],
-                                  verbose=False)
-            users_df['data__mobile'] = users_df['data__mobile'].astype(pd.Int64Dtype())
-            users_df.rename(columns={
-                'id': 'ID',
-                'first_name': 'Нэр',
-                'last_name': 'Овог',
-                'username': 'Хэрэглэгчийн нэр',
-                'data__province__name': 'Аймаг/Дүүрэг',
-                'data__school': 'Cургууль',
-                'data__grade__name': 'Анги',
-                'data__mobile': 'Гар утас',
-                'email': 'И-мэйл'
-            }, inplace=True)
-        else:
-            users_df = read_frame(users,
-                                  fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
-                                              'data__school', 'data__grade__name'],
-                                  verbose=False)
+    g_id = request.GET.get('g', False)
+    if g_id:
+        try:
+            grade = Grade.objects.filter(pk=g_id).first()
+            title = title + ', ' + grade.name
+            users = users.filter(data__grade_id=g_id)
+        except Exception as e:
+            print(str(e))
+    if request.user.is_staff:
+        users_df = read_frame(users,
+                              fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
+                                          'data__school', 'data__grade__name', 'data__mobile', 'email'],
+                              verbose=False)
+        users_df['data__mobile'] = users_df['data__mobile'].astype(pd.Int64Dtype())
+        users_df.rename(columns={
+            'id': 'ID',
+            'first_name': 'Нэр',
+            'last_name': 'Овог',
+            'username': 'Хэрэглэгчийн нэр',
+            'data__province__name': 'Аймаг/Дүүрэг',
+            'data__school': 'Cургууль',
+            'data__grade__name': 'Анги',
+            'data__mobile': 'Гар утас',
+            'email': 'И-мэйл'
+        }, inplace=True)
+    else:
+        users_df = read_frame(users,
+                              fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
+                                          'data__school', 'data__grade__name'],
+                              verbose=False)
 
-            users_df.rename(columns={
-                'id': 'ID',
-                'first_name': 'Нэр',
-                'last_name': 'Овог',
-                'username': 'Хэрэглэгчийн нэр',
-                'data__province__name': 'Аймаг/Дүүрэг',
-                'data__school': 'Cургууль',
-                'data__grade__name': 'Анги'
-            }, inplace=True)
+        users_df.rename(columns={
+            'id': 'ID',
+            'first_name': 'Нэр',
+            'last_name': 'Овог',
+            'username': 'Хэрэглэгчийн нэр',
+            'data__province__name': 'Аймаг/Дүүрэг',
+            'data__school': 'Cургууль',
+            'data__grade__name': 'Анги'
+        }, inplace=True)
 
-        users_df.index = np.arange(1, users_df.__len__() + 1)
+    users_df.index = np.arange(1, users_df.__len__() + 1)
 
-        styled_df = (users_df.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
-            {
-                'selector': 'th',
-                'props': [('text-align', 'center')],
-            },
-            {
-                'selector': 'td, th',
-                'props': [('border', '1px solid #ccc')],
-            },
-            {
-                'selector': 'td, th',
-                'props': [('padding', '3px 5px 3px 5px')],
-            },
-        ]))
+    styled_df = (users_df.style.set_table_attributes('classes="table table-bordered table-hover"').set_table_styles([
+        {
+            'selector': 'th',
+            'props': [('text-align', 'center')],
+        },
+        {
+            'selector': 'td, th',
+            'props': [('border', '1px solid #ccc')],
+        },
+        {
+            'selector': 'td, th',
+            'props': [('padding', '3px 5px 3px 5px')],
+        },
+    ]))
 
-        last_hack = styled_df.to_html(classes='table table-bordered table-hover',na_rep="",escape=False)
-        last_hack = re.sub('<th class="blank level0" >&nbsp;</th>','<th class="blank level0" >№</th>', last_hack)
+    last_hack = styled_df.to_html(classes='table table-bordered table-hover',na_rep="",escape=False)
+    last_hack = re.sub('<th class="blank level0" >&nbsp;</th>','<th class="blank level0" >№</th>', last_hack)
 
-        context = {
-            'title': group.name,
-            'pivot': last_hack,
-        }
-        return render(request, 'accounts/pd-users.html', context)
+    context = {
+        'title': group.name,
+        'pivot': last_hack,
+    }
+    return render(request, 'accounts/pd-users.html', context)
 
 def get_active_emails():
     with connection.cursor() as cursor:
