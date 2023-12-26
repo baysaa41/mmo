@@ -30,8 +30,12 @@ def update_results(request, olympiad_id):
     if olympiad:
         with connection.cursor() as cursor:
             cursor.execute("update olympiad_result set score=0, state=5 where olympiad_id=%s", [olympiad_id])
-            cursor.execute("update olympiad_result r join olympiad_problem p on r.problem_id=p.id and \
-                r.answer=p.numerical_answer set r.score=p.max_score where p.olympiad_id=%s", [olympiad_id])
+            cursor.execute("UPDATE olympiad_result r \
+                            SET score = p.max_score \
+                            FROM olympiad_problem p \
+                            WHERE r.problem_id = p.id \
+                              AND r.answer = p.numerical_answer \
+                              AND p.olympiad_id = %s", [olympiad_id])
     else:
         return HttpResponse("Olympiad doesn't exist.")
     return HttpResponse('Results are updated.')
