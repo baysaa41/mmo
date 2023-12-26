@@ -600,10 +600,10 @@ def upload_file(request):
         aldaa = aldaa or c or d or e or f
 
         if not aldaa:
-            set_answer(137,excel_data_c)
-            set_answer(138,excel_data_d)
-            set_answer(139,excel_data_e)
-            set_answer(140,excel_data_f)
+            set_answer(133,excel_data_c)
+            set_answer(134,excel_data_d)
+            set_answer(135,excel_data_e)
+            set_answer(136,excel_data_f)
             error = 1
         else:
             error = 2
