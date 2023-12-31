@@ -29,13 +29,13 @@ def update_results(request, olympiad_id):
     olympiad = Olympiad.objects.filter(pk=olympiad_id, type=1).first()
     if olympiad:
         with connection.cursor() as cursor:
-            cursor.execute("update olympiad_result set score=0, state=5 where olympiad_id=%s", [olympiad_id])
+            cursor.execute("UPDATE olympiad_result SET score=0, state=5 WHERE olympiad_id=%s", [olympiad_id])
             cursor.execute("UPDATE olympiad_result r \
                             SET score = p.max_score \
                             FROM olympiad_problem p \
                             WHERE r.problem_id = p.id \
-                              AND r.answer = p.numerical_answer \
-                              AND p.olympiad_id = %s", [olympiad_id])
+                                AND r.answer = p.numerical_answer \
+                                AND p.olympiad_id = %s", [olympiad_id])
     else:
         return HttpResponse("Olympiad doesn't exist.")
     return HttpResponse('Results are updated.')

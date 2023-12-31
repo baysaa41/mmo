@@ -36,7 +36,7 @@ class Olympiad(models.Model):
     num = models.IntegerField(default=1)
     level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, blank=True)
     host = models.ForeignKey(Province, on_delete=models.SET_NULL, null=True, blank=True)
-
+    json_results = models.TextField(null=True, blank=True)
     def __str__(self):
         return '{}'.format(self.name)
 
