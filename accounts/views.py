@@ -1042,7 +1042,8 @@ def send_email_with_attachments(request):
         form = EmailForm(request.POST, request.FILES)
         if form.is_valid():
             # group_name = 'my_group'  # Replace with your group name
-            group = Group.objects.get(pk=34)
+            # group = Group.objects.get(pk=34)
+            group = Group.objects.get(pk=35)
             users_in_group = group.user_set.all()
 
             subject = form.cleaned_data['subject']
