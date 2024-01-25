@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pivot-Like Table Example with Tabulator</title>
+    <title>Олимпиадын дүн</title>
 
     <!-- Include Tabulator CSS -->
     <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@latest/dist/css/tabulator.min.css">
@@ -12,16 +12,16 @@
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@latest/dist/js/tabulator.min.js"></script>
 </head>
 <body>
-
+<h3>{{ olympiad.name }}, {{ olympiad.level.name }} ангилал</h3>
 <!-- Table container -->
-<div id="pivot-container"></div>
+<div id="pivot-container">Түр хүлээнэ үү!</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Sample data
     var tableData = [];
 
-    fetch('/olympiads/json/133/')
+    fetch('/olympiads/json/{{olympiad.id}}/')
         .then(response => response.json())
         .then(data => {
             tableData=data
@@ -47,23 +47,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 columns: [
                     { title: "ID", field: "contestant_id"},
                     { title: "Нэр", field: "name"},
-                    { title: "№1", field: "813"},
-                    { title: "№2", field: "814"},
-                    { title: "№3", field: "815"},
-                    { title: "№4", field: "816"},
-                    { title: "№5", field: "817"},
-                    { title: "№6", field: "818"},
-                    { title: "№7", field: "819"},
-                    { title: "№8", field: "820"},
-                    { title: "№9", field: "821"},
-                    { title: "№10", field: "822"}
+                {% for problem in olympiad.problem_set.all %}
+                    { title: "№{{problem.order}}", field: "{{problem.id}}"},
+                {% endfor %}
                 ],
                 rowClick: function (e, row) {
                     console.log(e)
                 }
             });
         })
-    console.log(tableData)
 });
 </script>
 
