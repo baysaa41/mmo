@@ -1314,7 +1314,8 @@ def importResultsOrg(df, oid, name):
                         answer.answer = intval
                         answer.source_file = name
                         answer.save()
-                    except:
+                    except Exception as e:
+                        print(str(e))
                         pass
 
                 except:
@@ -1439,6 +1440,71 @@ def secondRoundResults2(request):
                 pass
 
     return HttpResponse("<p>{} хариулт орууллаа.</p>".format(num))
+
+
+def secondRoundResults3():
+    dir = '/home/deploy/results/2024-II-I-dun'
+
+    list = os.listdir(dir)
+    print(list)
+    num = 0
+    for f in list:
+        name = dir + '/' + f
+        print(name)
+        filename, file_extension = os.path.splitext(name)
+        print(file_extension)
+        if file_extension.lower() in ['.xls', '.xlsx']:
+
+            try:
+                print('C')
+                df2 = pd.read_excel(name, 'C (5-6)', engine='openpyxl')
+                num = num + importResults(df2, 142, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+            try:
+                print('D')
+                df2 = pd.read_excel(name, 'D (7-8)', engine='openpyxl')
+                num = num + importResults(df2, 143, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            try:
+                print('E')
+                df3 = pd.read_excel(name, 'E (9-10)', engine='openpyxl')
+                num = num + importResults(df3, 144, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            try:
+                print('F')
+                df4 = pd.read_excel(name, 'F (11-12)', engine='openpyxl')
+                num = num + importResults(df4, 145, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            try:
+                print('S')
+                df5 = pd.read_excel(name, 'S (ББ)', engine='openpyxl')
+                num = num + importResults(df5, 146, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            try:
+                print('T')
+                df6 = pd.read_excel(name, 'T (ДБ)', engine='openpyxl')
+                num = num + importResults(df6, 147, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            os.rename(name, '/home/deploy/results/2024-II-I-dun/processed/' + f)
+
+    return "{} хариулт орууллаа.</p>".format(num)
 
 
 def thirdRoundResults(request):
@@ -1619,12 +1685,13 @@ def importResults(df, oid, name):
         print('No Olympiad')
         return 0
 
-    problems = olympiad.problem_set.all()
+    problems = olympiad.problem_set.all().order_by('order')
 
     size = len(problems)  # bodlogiin too
 
     for item in df.iterrows():
         ind, row = item
+        print(row.keys)
         try:
             id = int(row[row.keys()[1]])
             user = User.objects.get(pk=id)
@@ -1642,7 +1709,7 @@ def importResults(df, oid, name):
                 if created:
                     print(username)
                     user.username = username
-                    user.email = 'dm2020baysa@gmail.com'
+                    user.email = 'mmo60official@gmail.com'
                     user.last_name = str(row[row.keys()[2]]) + '-' + str(oid)
                     user.first_name = str(row[row.keys()[3]]) + '-' + str(oid)
                     user.save()
@@ -1668,7 +1735,7 @@ def importResults(df, oid, name):
 
                     try:
                         floatval = float(value)
-                        answer.score = floatval
+                        answer.score = np.floor(floatval)
                         answer.source_file = name
                         answer.save()
                     except:
