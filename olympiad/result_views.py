@@ -1504,7 +1504,30 @@ def secondRoundResults3():
 
             os.rename(name, '/home/deploy/results/2024-II-I-dun/processed/' + f)
 
-    return "{} хариулт орууллаа.</p>".format(num)
+    return "<p>{} хариулт орууллаа.</p>".format(num)
+
+
+def fixID():
+    dir = '/home/deploy/results/fixes'
+
+    list = os.listdir(dir)
+    print(list)
+    num = 0
+    for f in list:
+        name = dir + '/' + f
+        print(name)
+        filename, file_extension = os.path.splitext(name)
+        print(file_extension)
+        if file_extension.lower() in ['.xls', '.xlsx']:
+            df = pd.read_excel(name, 'fixes', engine='openpyxl')
+            for item in df.iterrows():
+                ind, row = item
+                results = Result.objects.filter(contestant_id=row['OLD'],olympiad_id=row['OLYMPIAD'])
+                for result in results:
+                    result.contestant_id = row['NEW']
+                    result.save()
+
+    return "<p>{} хариулт орууллаа.</p>".format(num)
 
 
 def thirdRoundResults(request):
@@ -1691,7 +1714,7 @@ def importResults(df, oid, name):
 
     for item in df.iterrows():
         ind, row = item
-        print(row.keys)
+        print(row)
         try:
             id = int(row[row.keys()[1]])
             user = User.objects.get(pk=id)
@@ -1707,7 +1730,6 @@ def importResults(df, oid, name):
                 username = 'user-' + str(row[row.keys()[4]]) + '-' + str(oid) + '-' + str(row[row.keys()[0]])
                 user, created = User.objects.get_or_create(username=username)
                 if created:
-                    print(username)
                     user.username = username
                     user.email = 'mmo60official@gmail.com'
                     user.last_name = str(row[row.keys()[2]]) + '-' + str(oid)
