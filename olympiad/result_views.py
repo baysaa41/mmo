@@ -374,6 +374,14 @@ def olympiad_group_result_view(request,group_id):
         for item in olympiad.problem_set.all().order_by('order'):
             results = results.rename(columns={item.id: '№' + str(num) + '.' + str(item.order)})
 
+    # print(results.columns)
+    columns1 = list(results.columns[:4])
+    columns2 = sorted(results.columns[4:-1])
+    columns3 = list(results.columns[-1:])
+    # columns1.update(columns2)
+    # print(columns1, columns2, columns3)
+    results = results.reindex(columns1 + columns2 + columns3,axis=1)
+
     context = {
         'df': results.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
         'pivot': results.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
