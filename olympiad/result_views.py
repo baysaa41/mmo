@@ -347,7 +347,7 @@ def olympiad_group_result_view(request,group_id):
         }
         return render(request, 'olympiad/pandas3.html', context)
 
-    users = User.objects.filter(groups__name='IMO-64 сорилго')
+    users = User.objects.all()
     answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
     users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id', 'data__school'], verbose=False)
     answers_df['score'] = answers_df['score'].fillna(0)
