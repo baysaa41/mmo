@@ -334,7 +334,7 @@ def olympiad_group_result_view(request,group_id):
         return render(request,'olympiad/results/no_olympiad.html')
     except Exception as e:
         return render(request, 'errors/error.html', {'message': str(e)})
-    olympiads = olympiad_group.olympiads.all()
+    olympiads = olympiad_group.olympiads.all().order_by('id')
     answers = Result.objects.filter(olympiad__in=olympiads)
     title = 'Нэгдсэн дүн'
 
