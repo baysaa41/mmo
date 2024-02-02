@@ -25,7 +25,7 @@
             <th>Засах линк</th>
         </tr>
         {% for olympiad in olympiads %}
-            {% for problem in olympiad.problem_set.all %}
+            {% for problem in olympiad.problem_set.all|dictsort:"order" %}
                 <tr>
                     <td>{{ forloop.parentloop.counter }}.{{ forloop.counter }}</td>
                     <td>{{ problem.olympiad.name }}</td>
