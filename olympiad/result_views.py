@@ -1534,6 +1534,10 @@ def fixID():
                 for result in results:
                     result.contestant_id = row['NEW']
                     result.save()
+                awards = Award.objects.filter(contestant_id=row['OLD'],olympiad_id=row['OLYMPIAD'])
+                for award in awards:
+                    award.contestant_id = row['NEW']
+                    award.save()
 
     return "<p>{} хариулт орууллаа.</p>".format(num)
 
