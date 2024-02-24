@@ -1569,7 +1569,7 @@ def secondRoundResults4():
                 print(e.__str__())
                 pass
 
-            os.rename(name, '/home/deploy/results/2024-II-I-dun/processed/' + f)
+            os.rename(name, '/home/deploy/results/2024-II-II-dun/processed/' + f)
 
     return "<p>{} хариулт орууллаа.</p>".format(num)
 
