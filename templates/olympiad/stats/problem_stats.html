@@ -5,14 +5,13 @@
 {% load latex_filter %}
 
 {% block content %}
-  <h2>Math Problem Statistics</h2>
-
-  <!-- Display statistics -->
-  <h3>Statistics</h3>
-  {{ stats_html|safe }}
-
-  <!-- Display correlations -->
-  <h3>Correlations</h3>
-  {{ correlations_html|safe }}
+    {% autoescape off %}
+    <h3>{{ problem.olympiad.name }}, {{ problem.order }}</h3>
+    <p class="text-danger">{{ problem.statement | latex | linebreaksbr }}</p>
+    <p class="text-info">Бодсон: {{ count }}</p>
+    {% for result in results_grouped %}
+    <p class="text-info">{{ result.score }} оноо: {{ result.score_count }}</p>
+    {% endfor %}
+    {% endautoescape %}
 
 {% endblock %}

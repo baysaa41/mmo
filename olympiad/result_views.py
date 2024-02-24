@@ -19,6 +19,7 @@ import re
 from django.core import serializers
 from django.core.serializers.json import DjangoJSONEncoder
 from django_tex.core import render_template_with_context
+from django.db.models import Count
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
 
@@ -1515,6 +1516,64 @@ def secondRoundResults3():
     return "<p>{} хариулт орууллаа.</p>".format(num)
 
 
+def secondRoundResults4():
+    dir = '/home/deploy/results/2024-II-II-dun'
+
+    list = os.listdir(dir)
+    print(list)
+    num = 0
+    for f in list:
+        name = dir + '/' + f
+        print(name)
+        filename, file_extension = os.path.splitext(name)
+        print(file_extension)
+        if file_extension.lower() in ['.xls', '.xlsx']:
+
+            try:
+                print('D')
+                df2 = pd.read_excel(name, 'D (7-8)', engine='openpyxl')
+                num = num + importResults(df2, 149, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            try:
+                print('E')
+                df3 = pd.read_excel(name, 'E (9-10)', engine='openpyxl')
+                num = num + importResults(df3, 150, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            try:
+                print('F')
+                df4 = pd.read_excel(name, 'F (11-12)', engine='openpyxl')
+                num = num + importResults(df4, 151, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            try:
+                print('S')
+                df5 = pd.read_excel(name, 'S (ББ)', engine='openpyxl')
+                num = num + importResults(df5, 152, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            try:
+                print('T')
+                df6 = pd.read_excel(name, 'T (ДБ)', engine='openpyxl')
+                num = num + importResults(df6, 153, f)
+            except Exception as e:
+                print(e.__str__())
+                pass
+
+            os.rename(name, '/home/deploy/results/2024-II-I-dun/processed/' + f)
+
+    return "<p>{} хариулт орууллаа.</p>".format(num)
+
+
 def fixID():
     dir = '/home/deploy/results/fixes'
 
@@ -2072,36 +2131,24 @@ def answers_view(request, olympiad_id):
 
     return render(request, 'olympiad/results/results.html', context)
 
+def problem_stats_view(request, problem_id):
+    try:
+        problem = Problem.objects.get(pk=problem_id)
+    except:
+        return render(request, 'errors/error.html', {'message': 'Бодлого олдоогүй.'})
 
-@login_required
-def problem_stats(request, olympiad_id):
-    # Get all problems
-    problems = Problem.objects.filter(olympiad_id=olympiad_id)
+    results = problem.get_results()
+    for result in results:
+        print(result.score)
 
-    # Get user answers for all problems
-    user_answers = Result.objects.filter(problem__in=problems).select_related('problem', 'contestant')
-
-    # Create a DataFrame with user answers
-    data = {'user_id': [], 'problem_id': [], 'answer': []}
-    for answer in user_answers:
-        data['user_id'].append(answer.contestant.id)
-        data['problem_id'].append(answer.problem.id)
-        data['answer'].append(answer.score)
-
-    df = pd.DataFrame(data)
-
-    # Calculate statistics and correlations (customize based on your needs)
-    stats = df.groupby('problem_id').agg({'answer': ['mean', 'std']})
-    correlations = df.corr()
-
-    # Convert DataFrames to HTML for rendering in the template
-    stats_html = stats.to_html()
-    correlations_html = correlations.to_html()
+    results_grouped = (Result.objects.filter(problem_id=problem_id,score__isnull=False)
+                       .values('score').annotate(score_count=Count('score')).order_by('-score'))
+    print(results_grouped)
 
     context = {
-        'problems': problems,
-        'stats_html': stats_html,
-        'correlations_html': correlations_html,
+        'problem': problem,
+        'count': results.count(),
+        'results_grouped': results_grouped,
     }
 
     return render(request, 'olympiad/stats/problem_stats.html', context)

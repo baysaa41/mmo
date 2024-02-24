@@ -46,5 +46,5 @@ urlpatterns = [
     path('results/import/', result_views.firstRoundResults, name='olympiad_import_first_round'),
     path('certificate/<int:quiz_id>/<int:contestant_id>/', result_views.createCertificate, name='olympiad_certificate'),
     path('beltgel2023/', beltgel2023.index, name='beltgel_2023'),
-    path('stats/<int:olympiad_id>/', result_views.problem_stats, name='problem_stats'),
+    path('stats/<int:problem_id>/', result_views.problem_stats_view, name='problem_stats'),
 ]

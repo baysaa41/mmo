@@ -164,6 +164,9 @@ class Problem(models.Model):
             ("edit_problem", "Can edit problem"),
         ]
 
+    def get_results(self):
+        return self.result_set.filter().order_by('score')
+
     def get_nongraded(self):
         return self.result_set.filter(state=1).count()
 

@@ -10,7 +10,7 @@
         {% if problems|length > 0 %}
             {% for p in problems %}
                 <div class="border-top">
-                    <p class="bg-light p-2">{% autoescape off %}<b>{{ p.order }}.</b> {{ p.statement|latex|linebreaksbr }}{% endautoescape %}</p>
+                    <p class="bg-light p-2">{% autoescape off %}<b><a href="{% url 'problem_stats' problem_id=p.id %}">{{ p.order }}.</a></b> {{ p.statement|latex|linebreaksbr }}{% endautoescape %}</p>
                 {% if p.numerical_answer is not null %}
                     <p><span class="text-danger">Хариу: {{ p.numerical_answer }}</span></p>{% endif %}
                 {% if p.solution_set %}
