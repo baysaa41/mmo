@@ -41,12 +41,13 @@
                         {{ upload.result.contestant.data.mobile }},<br>
                         {{ upload.result.contestant.data.province.name }},<br>
                         {{ upload.result.contestant.data.school }},<br>
+                        {{ upload.upload_time|date:'Y-m-d H:i' }},<br>
                         UPLOAD&nbsp;ID: {{ upload.id }}
                     </td>
                     <td>{{ upload.result.olympiad.name }}</td>
                     <td>{% autoescape off %}Бодлого №{{ upload.result.problem.order }} ({{ upload.result.problem.id }})<br>
                         {{ upload.result.problem.statement }}{% endautoescape %}</td>
-                    <td><a href="/media/{{ upload.file }}" target="_blank">{{ upload.file }}</a><br>
+                    <td><a href="/media/{{ upload.file }}" target="_blank"><img src="/media/{{ upload.file }}" style="width: 50px; height: 50px"></a><br>
                         <a href="{% url 'olympiad_exam_staff' olympiad_id=upload.result.olympiad.id contestant_id=upload.result.contestant.id %}"
                            target="_blank">Материал үзэх</a><br>
 
