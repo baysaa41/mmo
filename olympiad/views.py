@@ -322,7 +322,7 @@ def grading_home(request):
 def exam_grading_view(request, problem_id):
     problem = Problem.objects.filter(pk=problem_id).first()
     if not request.user.is_staff:
-        return HttpResponse("handah erhgui bna.")
+        return render(request, 'errors/error.html', {message: 'Хандах эрхгүй.'})
 
     results = Result.objects.filter(problem_id=problem_id, contestant__data__province__isnull=False).order_by(
         'score').reverse
