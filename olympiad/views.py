@@ -419,7 +419,7 @@ def problem_exam_materials_view(request):
     return None
 
 def supplements_view(request):
-    uploads = Upload.objects.filter(is_official=False).order_by('result__contestant_id')
+    uploads = Upload.objects.filter(is_official=False).order_by('upload_time')
     return render(request, 'olympiad/supplements.html', {'uploads': uploads})
 
 
