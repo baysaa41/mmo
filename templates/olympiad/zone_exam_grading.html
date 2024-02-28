@@ -30,7 +30,7 @@
                         <td>{{ result.contestant.last_name }}, {{ result.contestant.first_name }}</td>
                         <td>{{ result.contestant.id }}</td>
                         <td><a href="{% url 'zone_olympiad_exam_grading' problem_id=result.problem.id zone_id=zone_id %}">{{ result.contestant.data.province.zone.name }}</a></td>
-                        <td>{{ result.coordinator.username }}</td>
+                        <td>{{ result.coordinator.first_name }}</td>
                         <td>{{ result.grader_comment }}</td>
                         <td>{{ result.score }}</td>
                         <td><button class="btn btn-sm {% if result.state == 3 %}btn-warning{% else %}btn-secondary{% endif %}"
