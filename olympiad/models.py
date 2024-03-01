@@ -324,7 +324,7 @@ class Award(models.Model):
         SECOND = 'II шат', 'II шат'
 
     place = models.CharField(
-        max_length=20,
+        max_length=128,
         choices=Place.choices,
         default=Place.GOLD,
     )
