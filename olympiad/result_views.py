@@ -1935,6 +1935,12 @@ def result_view(request, olympiad_id):
                               contestant.first_name,
                               contestant.data.province.name,
                               contestant.data.school))
+            elif zid == 12 and contestant.data.province.id > 21:
+                users.append((contestant.id,
+                              contestant.last_name,
+                              contestant.first_name,
+                              contestant.data.province.name,
+                              contestant.data.school))
             elif zid and contestant.data.province.zone_id == zid:
                 users.append((contestant.id,
                               contestant.last_name,
