@@ -365,8 +365,10 @@ def send_mass_html_mail(request):
         uemail.save()
     return HttpResponse(connection.send_messages(messages))
 
+#import from sisi
 def import_users():
-    dir = '/home/deploy/2223'
+
+    dir = '/home/deploy/results/students'
 
     list = os.listdir(dir)
     print(list)
