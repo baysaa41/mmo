@@ -199,7 +199,7 @@ def group_users(request, group_id):
     if request.user.is_staff:
         users_df = read_frame(users,
                               fieldnames=['id', 'username', 'last_name', 'first_name', 'data__province__name',
-                                          'data__school', 'data__grade__name', 'data__mobile', 'email'],
+                                          'data__school', 'data__grade__name', 'data__reg_num','data__mobile', 'email'],
                               verbose=False)
         users_df['data__mobile'] = users_df['data__mobile'].astype(pd.Int64Dtype())
         users_df.rename(columns={
@@ -210,6 +210,7 @@ def group_users(request, group_id):
             'data__province__name': 'Аймаг/Дүүрэг',
             'data__school': 'Cургууль',
             'data__grade__name': 'Анги',
+            'data__reg_num': 'Регистрын дугаар',
             'data__mobile': 'Гар утас',
             'email': 'И-мэйл'
         }, inplace=True)
