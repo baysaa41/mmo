@@ -37,6 +37,7 @@
                 <td>{{ user.data.school }}</td>
                 <td>{{ user.data.grade.name }}</td>
                 {% if request.user.is_staff %}
+                    <td>{{ user.data.reg_num }}</td>
                     <td>{{ user.data.mobile }}</td>
                     <td>{{ user.email }}</td>
                 {% endif %}
