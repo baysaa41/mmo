@@ -57,6 +57,36 @@ def index(request):
     prev = SchoolYear.objects.filter(pk=year.id - 1).first()
     next = SchoolYear.objects.filter(pk=year.id + 1).first()
 
+    articles = Article.objects.filter(year_id=year.id, isshow=True).exclude(enddate__lt=now).order_by('-isspec',
+                                                                                                      '-startdate')
+
+    context = {'articles': articles, 'mode': mode, 'year': year, 'prev': prev, 'next': next}
+
+    return render(request, 'accounts/site_home.html', context=context)
+
+def index2(request):
+    # shine hereglegchiin burtgel
+    if request.user.is_authenticated:
+        meta = UserMeta.objects.get_or_create(user=request.user)
+        if not meta[0].is_valid:
+            return redirect('user_profile')
+
+    now = datetime.now(timezone.utc)
+    mode = request.GET.get('mode', 0)
+
+    school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
+    if school_year:
+        id = request.GET.get('year', school_year.id)
+        year = SchoolYear.objects.filter(pk=id).first()
+    else:
+        year = SchoolYear.objects.create()
+        year.id = 0
+        school_year = SchoolYear.objects.create()
+        school_year.id = 0
+
+    prev = SchoolYear.objects.filter(pk=year.id - 1).first()
+    next = SchoolYear.objects.filter(pk=year.id + 1).first()
+
     articles = Article.objects.filter(year_id=year.id, IsShow=True).exclude(EndDate__lt=now).order_by('-IsSpec',
                                                                                                       '-StartDate')
 

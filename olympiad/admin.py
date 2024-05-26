@@ -16,9 +16,9 @@ admin.site.register(Tag)
 class ArticleAdmin(admin.ModelAdmin):
     list_display = ("title","year")
     list_filter = ("year",)
-    raw_id_fields = ("Author",)
-    exclude = ("Intro", "ImageSource", "EmbedCode", "Pictures", "Files", "Tags", "SawCount", "CreateUserId", "Author")
-    search_fields = ["title", "Descr"]
+    raw_id_fields = ("author",)
+    exclude = ("intro", "imagesource", "embedcode", "pictures", "files", "tags", "sawcount", "createuserid", "author")
+    search_fields = ["title", "descr"]
 
     def get_queryset(self, request):
         return Article.objects.all().order_by("year_id","-id")

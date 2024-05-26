@@ -9,6 +9,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.core.mail import EmailMultiAlternatives
 from django.template import loader
+from olympiad.widgets import MultiFileInput
 
 class CustomPasswordResetForm(PasswordResetForm):
     email = forms.CharField(
@@ -146,4 +147,5 @@ class LoginForm(forms.Form):
 class EmailForm(forms.Form):
     subject = forms.CharField(max_length=100)
     message = forms.CharField(widget=forms.Textarea)
-    attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
+    # attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
+    attachments = forms.ImageField(widget=MultiFileInput(attrs={'multiple': True}), required=False)

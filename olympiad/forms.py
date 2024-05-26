@@ -1,6 +1,7 @@
 from django.forms import ModelForm
 from django import forms
 from .models import Result, Upload
+from .widgets import MultiFileInput
 
 
 class ResultsForm(ModelForm):
@@ -24,7 +25,9 @@ class ResultsGraderForm(ModelForm):
 
 
 class UploadForm(ModelForm):
-    file = forms.ImageField(widget=forms.ClearableFileInput(attrs={'multiple': True}),label='Бодолтын зураг:')
+    # file = forms.ImageField(widget=forms.ClearableFileInput(attrs={'multiple': True}),label='Бодолтын зураг:')
+    file = forms.ImageField(widget=MultiFileInput(attrs={'multiple': True}), label='Бодолтын зураг:')
+
     class Meta:
         model = Upload
         fields = ('result',)
