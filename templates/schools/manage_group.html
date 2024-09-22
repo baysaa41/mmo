@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Group: {{ group.name }}</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <h1>Manage Group: {{ group.name }}</h1>
+
+    <h2>Users in this group:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th> <!-- Row Number -->
+                <th>User ID</th> <!-- User ID -->
+                <th>Last Name</th>
+                <th>First Name</th>
+                <th>School</th>
+                <th>Email</th>
+                <th>Mobile</th>
+                <th>Registration Number</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users_in_group %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.last_name }}</td>
+                    <td>{{ user.first_name }}</td>
+                    <td>{{ user.data.school }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.data.mobile }}</td>
+                    <td>{{ user.data.reg_num }}</td>
+                    <td>
+                        <form method="POST" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                            <button type="submit" name="remove_user">Remove from Group</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="9">No users in this group yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Search for users to add to this group</h2>
+    <form method="POST">
+        {% csrf_token %}
+        {{ search_form.as_p }}
+        <button type="submit" name="search_users">Search</button>
+    </form>
+
+    {% if search_results %}
+        <h3>Search Results:</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th> <!-- Row Number -->
+                    <th>User ID</th>
+                    <th>Last Name</th>
+                    <th>First Name</th>
+                    <th>School</th>
+                    <th>Email</th>
+                    <th>Mobile</th>
+                    <th>Registration Number</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in search_results %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.last_name }}</td>
+                        <td>{{ user.first_name }}</td>
+                        <td>{{ user.data.school }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.data.mobile }}</td>
+                        <td>{{ user.data.reg_num }}</td>
+                        <td>
+                            <form method="POST" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <button type="submit" name="add_existing_user">Add to Group</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="9">No users found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <hr>
+
+    <h2>Add a new user to this group</h2>
+    <form method="POST">
+        {% csrf_token %}
+        {{ add_user_form.as_table }}
+        <button type="submit" name="add_user">Add New User</button>
+    </form>
+
+</body>
+</html>

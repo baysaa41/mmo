@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Search Users and Add to Group</h2>
+  
+  <!-- Search Form -->
+  <form method="POST">
+    {% csrf_token %}
+    {{ search_form.as_p }}
+    <button type="submit" name="search" class="btn btn-primary">Search Users</button>
+  </form>
+
+  <!-- Display Search Results and Allow Selection -->
+  {% if add_form.fields.users.queryset.exists %}
+    <form method="POST">
+      {% csrf_token %}
+      {{ add_form.as_p }}
+      <button type="submit" name="add_users" class="btn btn-success">Add Selected Users to Group</button>
+    </form>
+  {% endif %}
+{% endblock %}
