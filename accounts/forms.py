@@ -1,5 +1,5 @@
 from django.forms import ModelForm
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from .models import UserMeta
 from django import forms
 from django.contrib.auth.forms import PasswordResetForm
@@ -9,6 +9,24 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.core.mail import EmailMultiAlternatives
 from django.template import loader
+from olympiad.widgets import MultiFileInput
+from django_select2.forms import ModelSelect2MultipleWidget
+
+class AddRemoveUsersToGroupForm(forms.Form):
+    users = forms.ModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        widget=ModelSelect2MultipleWidget(
+            model=User,
+            search_fields=['username__icontains', 'email__icontains']
+        ),
+        label='Search and select users'
+    )
+    group = forms.ModelChoiceField(queryset=Group.objects.all(), label='Select a group')
+    action = forms.ChoiceField(
+        choices=[('add', 'Add to Group'), ('remove', 'Remove from Group')],
+        widget=forms.RadioSelect,
+        label='Action'
+    )
 
 class CustomPasswordResetForm(PasswordResetForm):
     email = forms.CharField(
@@ -146,4 +164,5 @@ class LoginForm(forms.Form):
 class EmailForm(forms.Form):
     subject = forms.CharField(max_length=100)
     message = forms.CharField(widget=forms.Textarea)
-    attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
+    # attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
+    attachments = forms.ImageField(widget=MultiFileInput(attrs={'multiple': True}), required=False)

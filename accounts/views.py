@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.core.mail import send_mass_mail
 from olympiad.models import Article, SchoolYear, Result
 from datetime import datetime, timezone
+from .forms import AddRemoveUsersToGroupForm
 
 
 
@@ -35,6 +36,36 @@ import openpyxl
 # Create your views here.
 
 def index(request):
+    # shine hereglegchiin burtgel
+    if request.user.is_authenticated:
+        meta = UserMeta.objects.get_or_create(user=request.user)
+        if not meta[0].is_valid:
+            return redirect('user_profile')
+
+    now = datetime.now(timezone.utc)
+    mode = request.GET.get('mode', 0)
+
+    school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
+    if school_year:
+        id = request.GET.get('year', school_year.id)
+        year = SchoolYear.objects.filter(pk=id).first()
+    else:
+        year = SchoolYear.objects.create()
+        year.id = 0
+        school_year = SchoolYear.objects.create()
+        school_year.id = 0
+
+    prev = SchoolYear.objects.filter(pk=year.id - 1).first()
+    next = SchoolYear.objects.filter(pk=year.id + 1).first()
+
+    articles = Article.objects.filter(year_id=year.id, isshow=True).exclude(enddate__lt=now).order_by('-isspec',
+                                                                                                      '-startdate')
+
+    context = {'articles': articles, 'mode': mode, 'year': year, 'prev': prev, 'next': next}
+
+    return render(request, 'accounts/site_home.html', context=context)
+
+def index2(request):
     # shine hereglegchiin burtgel
     if request.user.is_authenticated:
         meta = UserMeta.objects.get_or_create(user=request.user)
@@ -1077,3 +1108,27 @@ def send_email_with_attachments(request):
         form = EmailForm()
 
     return render(request, 'accounts/send_email.html', {'form': form})
+
+
+def add_remove_users_to_group(request):
+    if request.method == 'POST':
+        form = AddRemoveUsersToGroupForm(request.POST)
+        if form.is_valid():
+            users = form.cleaned_data['users']
+            group = form.cleaned_data['group']
+            action = form.cleaned_data['action']
+
+            if action == 'add':
+                for user in users:
+                    group.user_set.add(user)
+                messages.success(request, f'{len(users)} users have been added to {group.name}')
+            elif action == 'remove':
+                for user in users:
+                    group.user_set.remove(user)
+                messages.success(request, f'{len(users)} users have been removed from {group.name}')
+
+            return redirect('add_remove_users_to_group')
+    else:
+        form = AddRemoveUsersToGroupForm()
+
+    return render(request, 'schools/add_remove_users_to_group.html', {'form': form})
