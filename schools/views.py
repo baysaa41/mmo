@@ -1,6 +1,7 @@
 import openpyxl
 from django.core.mail import send_mail
 from django.contrib.auth.models import User, Group
+from django.db.backends.dummy.base import ignore
 from django.shortcuts import render, redirect, get_object_or_404
 from accounts.models import UserMeta, Province  # Assuming you have UserMeta model
 from .forms import ExcelUploadForm
@@ -11,6 +12,11 @@ from .forms import UserSearchForm, AddUserForm
 
 import random
 import string
+import re
+
+def clean_string(value):
+    """ Remove surrogate characters from a string. """
+    return re.sub(r'[\ud800-\udfff]', '', value)
 
 def generate_password(length=8):
     characters = string.ascii_letters + string.digits + string.punctuation
@@ -22,46 +28,82 @@ def handle_excel_file(file):
 
     # Start reading from the first row with data (e.g., row 2 if row 1 contains headers)
     for row in sheet.iter_rows(min_row=2, values_only=True):
-        firstname, lastname, email, reg_num, gender, province, school, mobile = row
+        try:
+            num, lastname, firstname, email, reg_num, gender, province, school, mobile = row
+            lastname = re.sub(r'[\ud800-\udfff]', '', str(lastname))
+            firstname = re.sub(r'[\ud800-\udfff]', '', str(firstname))
+            email = re.sub(r'[\ud800-\udfff]', '', str(email))
+            reg_num = re.sub(r'[\ud800-\udfff]', '', str(reg_num))
+            gender = re.sub(r'[\ud800-\udfff]', '', str(gender))
+            province = re.sub(r'[\ud800-\udfff]', '', str(province))
+            school = re.sub(r'[\ud800-\udfff]', '', str(school))
+            mobile = re.sub(r'[\ud800-\udfff]', '', str(mobile))
+        except Exception as e:
+            print(e)
 
         # Create the user
         password = generate_password()
-        user = User.objects.create_user(
-            username='u'.join(random.choice(string.ascii_letters) for i in range(32)),  # Temp, will update later
-            first_name=firstname,
-            last_name=lastname,
-            email=email,
-            password=password
-        )
-        user.username = f'u{user.id}'  # Username like u+user.id
-        user.save()
+        try:
+            user = User.objects.create_user(
+                username='u'.join(random.choice(string.ascii_letters) for i in range(32)),  # Temp, will update later
+                first_name=firstname,
+                last_name=lastname,
+                email=email,
+                password=password
+            )
+            user.username = f'u{user.id}'  # Username like u+user.id
+            user.save()
+        except Exception as e:
+            print(e)
 
-        province = Province.objects.get(id=province)
-        # Create related UserMeta information
-        user_meta = UserMeta.objects.create(
-            user=user,
-            reg_num=reg_num,
-            province=province,
-            school=school,
-            grade_id=14,
-            level_id=7,
-            mobile=mobile,
-            gender=gender[:2],
-        )
+        try:
+            province = Province.objects.get(id=province)
+            # Create related UserMeta information
+            user_meta = UserMeta.objects.create(
+                user=user,
+                reg_num=reg_num,
+                province=province,
+                school=school,
+                grade_id=14,
+                level_id=7,
+                mobile=mobile,
+                gender=gender[:2],
+            )
+        except Exception as e:
+            print(e)
 
-        # Assign to a group (optional, assuming group name is derived from the user somehow)
-        group, created = Group.objects.get_or_create(name=f'{province.name}, {school}')
-        # Assign user as the moderator of the group
-        School.objects.create(user=user, group=group, province=province, name=school)
+        try:
+            # Assign to a group (optional, assuming group name is derived from the user somehow)
+            group, created = Group.objects.get_or_create(name=f'{province.name}, {school}')
+            # Assign user as the moderator of the group
+            School.objects.get_or_create(user=user, group=group, province=province, name=school)
+        except Exception as e:
+            print(e)
 
         # Send an email with the credentials
-        send_mail(
-            'ММОХ, Таны бүртгэлийн мэдээлэл',
-            f'Таны хэрэглэгчийн нэр {user.username}, нууц үг {password}',
-            'baysa.edu@gmail.com',  # Change to your sender email
-            [user.email],
-            fail_silently=False,
-        )
+            # Clean the values
+            subject = clean_string('ММОХ, Таны бүртгэлийн мэдээлэл')
+            message = clean_string(f'Таны хэрэглэгчийн нэр {user.username}, нууц үг {password}')
+            sender_email = clean_string('baysa.edu@gmail.com')
+            recipient_email = clean_string(user.email)
+
+            # Debug prints
+            print(user.username)
+            print(password)
+            print(recipient_email)
+
+            # Send the email
+            send_mail(
+                subject,  # Cleaned subject
+                message,  # Cleaned message
+                sender_email,  # Cleaned sender email
+                [recipient_email],  # Cleaned recipient email
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f'Имэйл алдаа: {e}')
+            import traceback
+            traceback.print_exc()
 
 def user_creation_view(request):
     if request.method == 'POST':
