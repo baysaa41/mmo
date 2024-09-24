@@ -1108,27 +1108,3 @@ def send_email_with_attachments(request):
         form = EmailForm()
 
     return render(request, 'accounts/send_email.html', {'form': form})
-
-
-def add_remove_users_to_group(request):
-    if request.method == 'POST':
-        form = AddRemoveUsersToGroupForm(request.POST)
-        if form.is_valid():
-            users = form.cleaned_data['users']
-            group = form.cleaned_data['group']
-            action = form.cleaned_data['action']
-
-            if action == 'add':
-                for user in users:
-                    group.user_set.add(user)
-                messages.success(request, f'{len(users)} users have been added to {group.name}')
-            elif action == 'remove':
-                for user in users:
-                    group.user_set.remove(user)
-                messages.success(request, f'{len(users)} users have been removed from {group.name}')
-
-            return redirect('add_remove_users_to_group')
-    else:
-        form = AddRemoveUsersToGroupForm()
-
-    return render(request, 'schools/add_remove_users_to_group.html', {'form': form})

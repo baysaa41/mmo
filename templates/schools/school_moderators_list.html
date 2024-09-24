@@ -35,7 +35,7 @@
                 <td>{{ school.user.first_name }}</td>
                 <td>{{ school.province.name }}</td>
                 <td>
-                    <a href="{% url 'manage_group' school.id  %}" class="btn btn-info">Удирдах</a>
+                    <a href="{% url 'manage_school' school.id  %}" class="btn btn-info">Удирдах</a>
                 </td>
             </tr>
             {% endfor %}

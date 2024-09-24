@@ -25,7 +25,6 @@ from django.contrib.auth import views as auth_views
 from accounts.views import CustomPasswordResetView
 
 urlpatterns = [
-    path('add-remove-users-to-group/', views.add_remove_users_to_group, name='add_remove_users_to_group'),
     path('select2/', include('django_select2.urls')),
     path('schools/', include('schools.urls')),
     path('', views.index, name='home'),

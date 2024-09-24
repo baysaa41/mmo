@@ -1,1 +1,2 @@
-/mmo/settings.remote.py
+mmo/settings.py
+mmo/settings.remote.py

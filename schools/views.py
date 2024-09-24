@@ -29,13 +29,13 @@ def handle_excel_file(file):
     # Start reading from the first row with data (e.g., row 2 if row 1 contains headers)
     for row in sheet.iter_rows(min_row=2, values_only=True):
         try:
-            num, lastname, firstname, email, reg_num, gender, province, school, mobile = row
+            num, lastname, firstname, email, reg_num, gender, province_id, school, mobile = row
             lastname = re.sub(r'[\ud800-\udfff]', '', str(lastname))
             firstname = re.sub(r'[\ud800-\udfff]', '', str(firstname))
             email = re.sub(r'[\ud800-\udfff]', '', str(email))
             reg_num = re.sub(r'[\ud800-\udfff]', '', str(reg_num))
             gender = re.sub(r'[\ud800-\udfff]', '', str(gender))
-            province = re.sub(r'[\ud800-\udfff]', '', str(province))
+            province_id = int(re.sub(r'[\ud800-\udfff]', '', str(province_id)))
             school = re.sub(r'[\ud800-\udfff]', '', str(school))
             mobile = re.sub(r'[\ud800-\udfff]', '', str(mobile))
         except Exception as e:
@@ -57,22 +57,23 @@ def handle_excel_file(file):
             print(e)
 
         try:
-            province = Province.objects.get(id=province)
+            province = Province.objects.get(pk=province_id)
             # Create related UserMeta information
             user_meta = UserMeta.objects.create(
                 user=user,
                 reg_num=reg_num,
-                province=province,
+                province_id=province_id,
                 school=school,
                 grade_id=14,
                 level_id=7,
                 mobile=mobile,
-                gender=gender[:2],
+                gender=gender[:2].upper(),
             )
         except Exception as e:
             print(e)
 
         try:
+
             # Assign to a group (optional, assuming group name is derived from the user somehow)
             group, created = Group.objects.get_or_create(name=f'{province.name}, {school}')
             # Assign user as the moderator of the group
@@ -86,11 +87,6 @@ def handle_excel_file(file):
             message = clean_string(f'Таны хэрэглэгчийн нэр {user.username}, нууц үг {password}')
             sender_email = clean_string('baysa.edu@gmail.com')
             recipient_email = clean_string(user.email)
-
-            # Debug prints
-            print(user.username)
-            print(password)
-            print(recipient_email)
 
             # Send the email
             send_mail(
@@ -125,8 +121,9 @@ from .forms import UserSearchForm, AddUserForm
 from accounts.models import UserMeta  # Assuming UserMeta model for additional data
 
 @login_required
-def manage_group(request, group_id):
-    group = get_object_or_404(Group, id=group_id)
+def manage_school(request, school_id):
+    school = get_object_or_404(School, id=school_id)
+    group = school.group
 
     # List of users in the group
     users_in_group = group.user_set.all()
@@ -171,7 +168,7 @@ def manage_group(request, group_id):
             user_id = request.POST.get('user_id')
             user = User.objects.get(id=user_id)
             group.user_set.add(user)
-            return redirect('manage_group', group_id=group.id)
+            return redirect('manage_school', school_id=school.id)
 
         elif 'add_user' in request.POST:
             # Add a new user and assign them to the group
@@ -191,21 +188,21 @@ def manage_group(request, group_id):
 
                 # Optional: Send email with credentials
                 send_mail(
-                    'Account Created',
-                    f'Username: {new_user.username}\nPassword: {password}',
+                    'ММОХ бүртгэл',
+                    f'Хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}',
                     'baysa.edu@gmail.com',  # Your sender email
                     [new_user.email],
                     fail_silently=False,
                 )
 
-                return redirect('manage_group', group_id=group.id)
+                return redirect('manage_school', school_id=school.id)
 
         elif 'remove_user' in request.POST:
             # Remove a user from the group
             user_id = request.POST.get('user_id')
             user = User.objects.get(id=user_id)
             group.user_set.remove(user)
-            return redirect('manage_group', group_id=group.id)
+            return redirect('manage_school', school_id=school.id)
 
     context = {
         'group': group,
@@ -215,4 +212,4 @@ def manage_group(request, group_id):
         'search_results': search_results,
     }
 
-    return render(request, 'schools/manage_group.html', context)
+    return render(request, 'schools/manage_school.html', context)
