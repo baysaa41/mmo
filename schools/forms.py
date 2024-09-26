@@ -1,12 +1,22 @@
 from django import forms
 from django.contrib.auth.models import User, Group
 from django.db.models import Q
+from accounts.models import UserMeta
+
+class UserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']  # Fields to be edited for User
+
+
+class UserMetaForm(forms.ModelForm):
+    class Meta:
+        model = UserMeta
+        fields = ['photo', 'reg_num', 'province', 'school', 'grade', 'level', 'gender', 'mobile', 'is_valid']
+
 
 class ExcelUploadForm(forms.Form):
     file = forms.FileField()
-
-from django import forms
-from django.contrib.auth.models import User
 
 # Form to search users
 class UserSearchForm(forms.Form):

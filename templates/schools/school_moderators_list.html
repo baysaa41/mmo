@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Schools and Moderators</title>
+    <title>Сургуулиуд ба Хариусан багш нар</title>
     <style>
         table {
             width: 100%;
@@ -18,13 +18,13 @@
     </style>
 </head>
 <body>
-    <h1>Schools and Moderators</h1>
+    <h1>Сургуулиуд ба Хариусан багш нар</h1>
     <table class="table table-bordered">
         <thead>
             <tr>
                 <th>Сургуулийн нэр</th>
-                <th>Хариусан багш</th>
                 <th>Дүүрэг</th>
+                <th>Хариусан багш</th>
                 <th>Удирдах</th>
             </tr>
         </thead>
@@ -32,8 +32,8 @@
             {% for school in schools %}
             <tr>
                 <td>{{ school.name }}</td>
-                <td>{{ school.user.first_name }}</td>
                 <td>{{ school.province.name }}</td>
+                <td>{{ school.user.first_name }}</td>
                 <td>
                     <a href="{% url 'manage_school' school.id  %}" class="btn btn-info">Удирдах</a>
                 </td>

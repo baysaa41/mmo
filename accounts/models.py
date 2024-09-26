@@ -1,11 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import User
+import os
+from django.utils.text import slugify
+from django.conf import settings
 
-
-# Create your models here.
 
 def user_directory_path(instance, filename):
-    return 'static/{0}/{1}'.format(instance.user.username, escape(filename))
+    # Get file extension
+    ext = filename.split('.')[-1]
+
+    # Sanitize filename and create new filename with username
+    filename = f'{slugify(instance.user.username)}_{slugify(filename)}.{ext}'
+
+    # Return the path relative to MEDIA_ROOT
+    return os.path.join('user_uploads', instance.user.username, filename)
 
 
 class Author(models.Model):

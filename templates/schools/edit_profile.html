@@ -1,0 +1,21 @@
+<!-- templates/edit_profile.html -->
+<h2>Профайлыг засах</h2>
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <h3>Хэрэглэгчийн мэдээлэл</h3>
+    {{ user_form.as_p }}
+
+    <h3>Профайлын мэдээлэл</h3>
+    {{ user_meta_form.as_p }}
+
+    <button type="submit">Өөрчлөлтийг хадгалах</button>
+</form>
+
+{% if messages %}
+    <ul>
+        {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}

@@ -1,14 +1,15 @@
 import openpyxl
 from django.core.mail import send_mail
 from django.contrib.auth.models import User, Group
-from django.db.backends.dummy.base import ignore
 from django.shortcuts import render, redirect, get_object_or_404
 from accounts.models import UserMeta, Province  # Assuming you have UserMeta model
 from .forms import ExcelUploadForm
 from .models import School
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from .forms import UserSearchForm, AddUserForm
+from django.contrib.auth.decorators import login_required
+from .forms import UserForm, UserMetaForm
+from django.contrib import messages
 
 import random
 import string
@@ -184,16 +185,35 @@ def manage_school(request, school_id):
                     # Log the error for debugging, or take appropriate action
                     print(f"Error updating username: {e}")
 
+                try:
+                    meta = UserMeta.objects.create(user=new_user)
+                    meta.school = request.user.data.school
+                    meta.province = request.user.data.province
+                    meta
+                    meta.save()
+                except Exception as e:
+                    # Log the error for debugging, or take appropriate action
+                    print(f"Meta data creating: {e}")
+
                 new_user.groups.add(group)  # Add new user to group
 
                 # Optional: Send email with credentials
-                send_mail(
-                    'ММОХ бүртгэл',
-                    f'Хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}',
-                    'baysa.edu@gmail.com',  # Your sender email
-                    [new_user.email],
-                    fail_silently=False,
-                )
+                try:
+                    subject = 'ММОХ бүртгэл'.encode('utf-8', errors='ignore').decode('utf-8')
+                    message = f'Хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}'.encode('utf-8',
+                                            errors='ignore').decode('utf-8')
+
+                    send_mail(
+                        subject,  # Subject
+                        message,  # Message body
+                        'baysa.edu@gmail.com',  # Sender email
+                        [new_user.email],  # Recipient email(s)
+                        fail_silently=False,
+                    )
+                except UnicodeEncodeError as e:
+                    print(f'Encoding error: {e}')
+                except Exception as e:
+                    print(f'Error: {e}')
 
                 return redirect('manage_school', school_id=school.id)
 
@@ -213,3 +233,81 @@ def manage_school(request, school_id):
     }
 
     return render(request, 'schools/manage_school.html', context)
+
+
+@login_required
+def edit_profile(request):
+    user = request.user
+    try:
+        user_meta = user.data  # Accessing the UserMeta object via the related_name 'data'
+    except UserMeta.DoesNotExist:
+        user_meta = UserMeta(user=user)  # Create UserMeta if it doesn't exist
+
+    if request.method == 'POST':
+        user_form = UserForm(request.POST, instance=user)
+        user_meta_form = UserMetaForm(request.POST, request.FILES, instance=user_meta)
+
+        if user_form.is_valid() and user_meta_form.is_valid():
+            user_form.save()
+            user_meta_form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('edit_profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        user_form = UserForm(instance=user)
+        user_meta_form = UserMetaForm(instance=user_meta)
+
+    context = {
+        'user_form': user_form,
+        'user_meta_form': user_meta_form,
+    }
+    return render(request, 'schools/edit_profile.html', context)
+
+
+@login_required
+def edit_user_in_group(request, user_id):
+    # Get the logged-in user's groups
+    current_user = request.user
+
+    schools = current_user.moderating.all()
+
+    target_user = get_object_or_404(User, id=user_id)
+
+    is_my_student = False
+    for school in schools:
+        print(target_user, school.id)
+        print(school.group.user_set.all())
+        if target_user in school.group.user_set.all():
+            is_my_student = True
+
+    if not is_my_student:
+        return render(request, 'error.html', {'error': 'Та энэ хэрэглэгчийг засварлах эрхгүй.'})
+
+    try:
+        user_meta = target_user.data  # Access UserMeta object via related_name 'data'
+    except UserMeta.DoesNotExist:
+        user_meta = UserMeta(user=target_user)
+
+    if request.method == 'POST':
+        user_form = UserForm(request.POST, instance=target_user)
+        user_meta_form = UserMetaForm(request.POST, request.FILES, instance=user_meta)
+
+        if user_form.is_valid() and user_meta_form.is_valid():
+            user_form.save()
+            user_meta_form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('edit_user_in_group', user_id=user_id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+
+    else:
+        user_form = UserForm(instance=target_user)
+        user_meta_form = UserMetaForm(instance=user_meta)
+
+    context = {
+        'user_form': user_form,
+        'user_meta_form': user_meta_form,
+        'target_user': target_user,
+    }
+    return render(request, 'schools/edit_user_in_group.html', context)
