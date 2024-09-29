@@ -16,7 +16,7 @@
             <a href="/admin/olympiad/article/{{ article.id }}/change/" target="_blank">Засах</a>
         {% endif %}
         {% autoescape off %}{{ article.descr }} {% endautoescape %}
-        <p>Нийтэлсэн: {{ article.start_date | date:'Y-m-d' }}, Сүүлийн
-            засвар: {{ article.create_date | date:'Y-m-d' }}</p>
+        <p>Нийтэлсэн: {{ article.startdate | date:'Y-m-d' }}, Сүүлийн
+            засвар: {{ article.createdate | date:'Y-m-d' }}</p>
     </div>
 {% endblock %}
