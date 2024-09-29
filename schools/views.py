@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from accounts.models import UserMeta, Province  # Assuming you have UserMeta model
 from .forms import ExcelUploadForm
 from .models import School
-from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from .forms import UserForm, UserMetaForm
@@ -150,7 +150,7 @@ def manage_school(request, school_id):
                         user_with_id = User.objects.get(id=user_id)
                         search_results.append(user_with_id)  # Add this user first
                     except ObjectDoesNotExist:
-                        user_with_id = None  # User ID not found, set to None
+                        pass
 
                 # Now search for other users based on the query
                 other_results = User.objects.filter(
@@ -276,8 +276,6 @@ def edit_user_in_group(request, user_id):
 
     is_my_student = False
     for school in schools:
-        print(target_user, school.id)
-        print(school.group.user_set.all())
         if target_user in school.group.user_set.all():
             is_my_student = True
 
@@ -309,5 +307,6 @@ def edit_user_in_group(request, user_id):
         'user_form': user_form,
         'user_meta_form': user_meta_form,
         'target_user': target_user,
+        'school_groups': Group.objects.filter(users=target_user).exclude(moderating__isnull=True),
     }
     return render(request, 'schools/edit_user_in_group.html', context)

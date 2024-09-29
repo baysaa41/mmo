@@ -15,8 +15,8 @@
         {% if request.user.is_staff and mode %}
             <a href="/admin/olympiad/article/{{ article.id }}/change/" target="_blank">Засах</a>
         {% endif %}
-        {% autoescape off %}{{ article.Descr }} {% endautoescape %}
-        <p>Нийтэлсэн: {{ article.StartDate | date:'Y-m-d' }}, Сүүлийн
-            засвар: {{ article.CreateDate | date:'Y-m-d' }}</p>
+        {% autoescape off %}{{ article.descr }} {% endautoescape %}
+        <p>Нийтэлсэн: {{ article.start_date | date:'Y-m-d' }}, Сүүлийн
+            засвар: {{ article.create_date | date:'Y-m-d' }}</p>
     </div>
 {% endblock %}
