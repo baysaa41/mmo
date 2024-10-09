@@ -124,6 +124,7 @@ from accounts.models import UserMeta  # Assuming UserMeta model for additional d
 
 @login_required
 def manage_school(request, school_id):
+    return render(request, 'error.html', {'error': 'Удахгүй бэлэн болно.'})
     school = get_object_or_404(School, id=school_id)
     group = school.group
 
