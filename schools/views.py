@@ -82,7 +82,8 @@ def handle_excel_file(file):
         except Exception as e:
             print(e)
 
-        # Send an email with the credentials
+        try:
+            # Send an email with the credentials
             # Clean the values
             subject = clean_string('ММОХ, Таны бүртгэлийн мэдээлэл')
             message = clean_string(f'Таны хэрэглэгчийн нэр {user.username}, нууц үг {password}')
