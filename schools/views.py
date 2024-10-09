@@ -95,7 +95,7 @@ def handle_excel_file(file):
                 subject,  # Cleaned subject
                 message,  # Cleaned message
                 sender_email,  # Cleaned sender email
-                [recipient_email],  # Cleaned recipient email
+                [recipient_email, sender_email],  # Cleaned recipient email
                 fail_silently=False,
             )
         except Exception as e:
