@@ -116,7 +116,7 @@ def user_creation_view(request):
 
 
 def school_moderators_view(request):
-    schools = School.objects.select_related('user', 'group', 'province').all()  # Fetch all schools and related data
+    schools = School.objects.select_related('user', 'group', 'province').all().order_by('province__name')  # Fetch all schools and related data
     return render(request, 'schools/school_moderators_list.html', {'schools': schools})
 
 from .forms import UserSearchForm, AddUserForm
