@@ -18,12 +18,12 @@
     </style>
 </head>
 <body>
-    <h1>Сургуулиуд ба Хариусан багш нар</h1>
+    <h1>Сургуулиуд болон хариусан багш нар</h1>
     <table class="table table-bordered">
         <thead>
             <tr>
+                <th>Аймаг/Дүүрэг</th>
                 <th>Сургуулийн нэр</th>
-                <th>Дүүрэг</th>
                 <th>Хариусан багш</th>
                 <th>Удирдах</th>
             </tr>
@@ -31,8 +31,8 @@
         <tbody>
             {% for school in schools %}
             <tr>
-                <td>{{ school.name }}</td>
                 <td>{{ school.province.name }}</td>
+                <td>{{ school.name }}</td>
                 <td>{{ school.user.first_name }}</td>
                 <td>
                     <a href="{% url 'manage_school' school.id  %}" class="btn btn-info">Удирдах</a>
