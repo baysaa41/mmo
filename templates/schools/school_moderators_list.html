@@ -38,7 +38,7 @@
         <tbody>
             {% for school in schools %}
             <tr>
-                <td>{{ loop.index }}</td>
+                <td>{{ forloop.counter }}</td>
                 <td>{{ school.province.name }}</td>
                 <td>{{ school.name }}</td>
                 <td>{{ school.user.last_name }}, {{ school.user.first_name }}</td>
