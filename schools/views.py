@@ -116,7 +116,14 @@ def user_creation_view(request):
 
 
 def school_moderators_view(request):
-    schools = School.objects.select_related('user', 'group', 'province').all().order_by('province__name')  # Fetch all schools and related data
+    pid = request.GET.get('p', default=0)
+    zid = request.GET.get('z', default=0)
+    if pid:
+        schools = School.objects.select_related('user', 'group', 'province').filter(province_id=pid).order_by('province__name','user__data__school')
+    elif zid:
+        schools = School.objects.select_related('user', 'group', 'province').filter(province__zone_id=zid).order_by('province__name','user__data__school')
+    else:
+        schools = School.objects.select_related('user', 'group', 'province').all().order_by('province__name','user__data__school')  # Fetch all schools and related data
     return render(request, 'schools/school_moderators_list.html', {'schools': schools})
 
 from .forms import UserSearchForm, AddUserForm

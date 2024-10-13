@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <div class="container mt-4 mb-3">
+    <div class="container-fluid mt-4 mb-3">
         <h1 class="mb-4">Сургууль: {{ group.name }}</h1>
 
         <h2>Энэ сургуульд байгаа хэрэглэгчид:</h2>
@@ -29,7 +29,8 @@
                 <thead>
                     <tr>
                         <th>#</th> <!-- Дарааллын дугаар -->
-                        <th>mmo ID, Хэрэглэгчийн нэр</th> <!-- Хэрэглэгчийн ID -->
+                        <th>mmo ID</th><!-- Хэрэглэгчийн ID -->
+                        <th>Хэрэглэгчийн нэр</th> 
                         <th>Овог</th>
                         <th>Нэр</th>
                         <th>Сургууль</th>
@@ -44,7 +45,8 @@
                     {% for user in users_in_group %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ user.id }}, {{ user.username }}</td>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.username }}</td>
                             <td>{{ user.last_name }}</td>
                             <td>{{ user.first_name }}</td>
                             <td>{{ user.data.province.name }}, {{ user.data.school }}</td>
@@ -62,7 +64,7 @@
                                 <form method="POST" class="d-inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="user_id" value="{{ user.id }}">
-                                    <button type="submit" name="remove_user" class="btn btn-danger btn-sm">Сургуулиас хасах</button>
+                                    <button type="submit" name="remove_user" class="btn btn-danger btn-sm">Хасах</button>
                                 </form>
                             </td>
                         </tr>
@@ -110,10 +112,9 @@
                                 <td>{{ user.last_name }}</td>
                                 <td>{{ user.first_name }}</td>
                                 <td>{{ user.data.province.name }}, {{ user.data.school }}</td>
-                            <td>{{ user.data.grade.name }}</td>
-                            <td>{{ user.data.level.name }}</td>
+                                <td>{{ user.data.grade.name }}</td>
+                                <td>{{ user.data.level.name }}</td>
                                 <td>{{ user.email }}</td>
-                                <td>{{ user.data.mobile }}</td>
                                 <td>
                                     <form method="POST" class="d-inline">
                                         {% csrf_token %}
