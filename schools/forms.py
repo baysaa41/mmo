@@ -24,21 +24,21 @@ class UserForm(forms.ModelForm):
 class UserMetaForm(forms.ModelForm):
     class Meta:
         model = UserMeta
-        fields = ['photo', 'reg_num', 'province', 'school', 'grade', 'level', 'gender', 'mobile', 'is_valid']
+        fields = ['photo', 'province', 'school', 'grade', 'level', 'gender', 'mobile', 'is_valid']
         widgets = {
-            'reg_num': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Регистрийн дугаар'}),
+            # 'reg_num': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Регистрийн дугаар'}),
             'province': forms.Select(attrs={'class': 'form-control'}),
             'school': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Сургууль'}),
             'mobile': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Гар утас'}),
             'is_valid': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         help_texts = {
-            'reg_num': 'Регистрийн дугаараа оруулна уу.',
+            # 'reg_num': 'Регистрийн дугаараа оруулна уу.',
             'mobile': 'Гар утасны дугаар оруулна уу.',
         }
         labels = {
             'photo': 'Зураг',
-            'reg_num': 'Регистрийн дугаар',
+             # 'reg_num': 'Регистрийн дугаар',
             'province': 'Аймаг',
             'school': 'Сургууль',
             'grade': 'Анги',
@@ -54,15 +54,19 @@ class ExcelUploadForm(forms.Form):
 
 # Form to search users
 class UserSearchForm(forms.Form):
-    query = forms.CharField(label='Search Users', max_length=100, required=False)
+    query = forms.CharField(label='Хэрэглэгч хайх', max_length=100, required=False)
 
     def search_users(self):
         query = self.cleaned_data.get('query')
         return User.objects.filter(
             Q(username__icontains=query) |
+            Q(firstname__icontains=query) |
+            Q(lastname__icontains=query) |
             Q(email__icontains=query) |
-            Q(id__icontains=query) |
-            Q(data__reg_num__icontains=query)
+            Q(id__icontains=query)  |
+            Q(data__school__icontains=query) |
+            Q(data__reg_num__icontains=query) |
+            Q(data__mobile__icontains=query)
         )
 
 

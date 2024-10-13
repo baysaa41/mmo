@@ -29,10 +29,12 @@
                 <thead>
                     <tr>
                         <th>#</th> <!-- Дарааллын дугаар -->
-                        <th>mmo ID</th> <!-- Хэрэглэгчийн ID -->
+                        <th>mmo ID, Хэрэглэгчийн нэр</th> <!-- Хэрэглэгчийн ID -->
                         <th>Овог</th>
                         <th>Нэр</th>
                         <th>Сургууль</th>
+                        <th>Анги</th>
+                        <th>Оролцох ангилал</th>
                         <th>Имэйл</th>
                         <th>Гар утас</th>
                         <th>Регистрийн дугаар</th>
@@ -43,10 +45,12 @@
                     {% for user in users_in_group %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ user.id }}</td>
+                            <td>{{ user.id }}, {{ user.username }}</td>
                             <td>{{ user.last_name }}</td>
                             <td>{{ user.first_name }}</td>
-                            <td>{{ user.data.school }}</td>
+                            <td>{{ user.data.province.name }}, {{ user.data.school }}</td>
+                            <td>{{ user.data.grade.name }}</td>
+                            <td>{{ user.data.level.name }}</td>
                             <td>{{ user.email }}</td>
                             <td>{{ user.data.mobile }}</td>
                             <td>
@@ -67,7 +71,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="9" class="text-center">Энэ сургуульд хэрэглэгч алга байна.</td>
+                            <td colspan="11" class="text-center">Энэ сургуульд хэрэглэгч алга байна.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -77,6 +81,7 @@
         <hr>
 
         <h2>Хэрэглэгч хайж, сургуульд нэмэх</h2>
+        <p>Бүртгэлтэй хэрэглэгчдээс mmo ID, хэрэглэгчийн нэр, овог, нэр, регистрийн дугаар, утасны дугаараар хайх.</p>
         <form method="POST" class="mb-4">
             {% csrf_token %}
             {{ search_form.as_p }}
@@ -90,10 +95,12 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>mmo ID</th>
+                            <th>mmo ID, Хэрэглэгчийн нэр</th>
                             <th>Овог</th>
                             <th>Нэр</th>
                             <th>Сургууль</th>
+                            <th>Анги</th>
+                            <th>Оролцох ангилал</th>
                             <th>Имэйл</th>
                             <th>Гар утас</th>
                             <th>Регистрийн дугаар</th>
@@ -104,10 +111,12 @@
                         {% for user in search_results %}
                             <tr>
                                 <td>{{ forloop.counter }}</td>
-                                <td>{{ user.id }}</td>
+                                <td>{{ user.id }}, {{ user.username }}</td>
                                 <td>{{ user.last_name }}</td>
                                 <td>{{ user.first_name }}</td>
-                                <td>{{ user.data.school }}</td>
+                                <td>{{ user.data.province.name }}, {{ user.data.school }}</td>
+                            <td>{{ user.data.grade.name }}</td>
+                            <td>{{ user.data.level.name }}</td>
                                 <td>{{ user.email }}</td>
                                 <td>{{ user.data.mobile }}</td>
                                 <td>
@@ -128,7 +137,7 @@
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="9" class="text-center">Хэрэглэгч олдсонгүй.</td>
+                                <td colspan="11" class="text-center">Хэрэглэгч олдсонгүй.</td>
                             </tr>
                         {% endfor %}
                     </tbody>

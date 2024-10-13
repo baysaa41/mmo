@@ -124,7 +124,17 @@ from accounts.models import UserMeta  # Assuming UserMeta model for additional d
 
 @login_required
 def manage_school(request, school_id):
-    return render(request, 'error.html', {'error': 'Удахгүй бэлэн болно.'})
+        # Get the logged-in user's groups
+    current_user = request.user
+
+    schools = current_user.moderating.all()
+    is_my_school = False
+    for school in schools:
+        if school.id == school_id:
+            is_my_school = True
+
+    if not is_my_school and not request.user.is_staff:
+        return render(request, 'error.html', {'error': 'Та энэ сургуулийг удирдах эрхгүй.'})
     school = get_object_or_404(School, id=school_id)
     group = school.group
 
@@ -281,7 +291,7 @@ def edit_user_in_group(request, user_id):
         if target_user in school.group.user_set.all():
             is_my_student = True
 
-    if not is_my_student:
+    if not is_my_student and not request.user.is_staff:
         return render(request, 'error.html', {'error': 'Та энэ хэрэглэгчийг засварлах эрхгүй.'})
 
     try:
@@ -309,6 +319,6 @@ def edit_user_in_group(request, user_id):
         'user_form': user_form,
         'user_meta_form': user_meta_form,
         'target_user': target_user,
-        'school_groups': Group.objects.filter(users=target_user).exclude(moderating__isnull=True),
+        # 'school_groups': Group.objects.filter(user=target_user).exclude(moderating__isnull=True),
     }
     return render(request, 'schools/edit_user_in_group.html', context)
