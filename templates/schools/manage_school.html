@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <div class="container mt-4">
+    <div class="container mt-4 mb-3">
         <h1 class="mb-4">Сургуулийг удирдах: {{ group.name }}</h1>
 
         <h2>Энэ сургуульд байгаа хэрэглэгчид:</h2>
@@ -37,7 +37,6 @@
                         <th>Оролцох ангилал</th>
                         <th>Имэйл</th>
                         <th>Гар утас</th>
-                        <th>Регистрийн дугаар</th>
                         <th>Үйлдэл</th>
                     </tr>
                 </thead>
@@ -52,14 +51,12 @@
                             <td>{{ user.data.grade.name }}</td>
                             <td>{{ user.data.level.name }}</td>
                             <td>{{ user.email }}</td>
-                            <td>{{ user.data.mobile }}</td>
                             <td>
-                                {% if user.data.reg_num %}
+                                {% if user.data.mobile %}
                                     ********
                                 {% else %}
                                     <em>Оруулаагүй</em>
-                                {% endif %}
-                            </td>
+                                {% endif %}</td>
                             <td>
                                 <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-primary btn-sm">Засах</a>
                                 <form method="POST" class="d-inline">
@@ -102,8 +99,6 @@
                             <th>Анги</th>
                             <th>Оролцох ангилал</th>
                             <th>Имэйл</th>
-                            <th>Гар утас</th>
-                            <th>Регистрийн дугаар</th>
                             <th>Үйлдэл</th>
                         </tr>
                     </thead>
@@ -120,18 +115,10 @@
                                 <td>{{ user.email }}</td>
                                 <td>{{ user.data.mobile }}</td>
                                 <td>
-                                    {% if user.data.reg_num %}
-                                        ********
-                                    {% else %}
-                                        <em>Оруулаагүй</em>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-primary btn-sm">Засах</a>
                                     <form method="POST" class="d-inline">
                                         {% csrf_token %}
                                         <input type="hidden" name="user_id" value="{{ user.id }}">
-                                        <button type="submit" name="add_existing_user" class="btn btn-success btn-sm">Сургуульд нэмэх</button>
+                                        <button type="submit" name="add_existing_user" class="btn btn-success btn-sm">Нэмэх</button>
                                     </form>
                                 </td>
                             </tr>
@@ -155,6 +142,7 @@
             </div>
             <button type="submit" name="add_user" class="btn btn-primary">Шинэ хэрэглэгч нэмэх</button>
         </form>
+    
     </div>
 
     <!-- Bootstrap JS and dependencies (Popper.js) -->
