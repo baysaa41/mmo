@@ -1,5 +1,6 @@
 from django import forms
-from django.contrib.auth.models import User, Group
+from django.contrib.auth import get_user_model
+User = get_user_model()
 from django.db.models import Q
 from accounts.models import UserMeta
 
@@ -58,16 +59,26 @@ class UserSearchForm(forms.Form):
 
     def search_users(self):
         query = self.cleaned_data.get('query')
-        return User.objects.filter(
+        if not query:
+            return User.objects.none()
+
+        filters = (
             Q(username__icontains=query) |
             Q(firstname__icontains=query) |
             Q(lastname__icontains=query) |
             Q(email__icontains=query) |
-            Q(id__icontains=query)  |
             Q(data__school__icontains=query) |
             Q(data__reg_num__icontains=query) |
             Q(data__mobile__icontains=query)
         )
+        # Attempt to parse the query as an integer for the `id` field
+        try:
+            query_int = int(query)
+            filters |= Q(id=query_int)
+        except ValueError:
+            pass  # If conversion fails, ignore the `id` filter
+
+        return User.objects.filter(filters)
 
 
 # Form to add a new user

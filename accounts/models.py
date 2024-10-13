@@ -46,6 +46,14 @@ class UserMeta(models.Model):
     mobile = models.IntegerField(null=True)
     is_valid = models.BooleanField(default=False)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['school']),
+            models.Index(fields=['reg_num']),
+            models.Index(fields=['mobile']),
+            # Add more indexes as needed
+        ]
+
     def __str__(self):
         return '{}'.format(self.user.username)
 

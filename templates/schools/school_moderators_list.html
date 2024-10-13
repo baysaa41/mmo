@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Сургуулиудын хариусан багш нар</title>
+    <title>Сургуулиудын бүртгэлийн ажилтнууд</title>
     <style>
         table {
             width: 100%;
@@ -18,14 +18,15 @@
     </style>
 </head>
 <body>
-    <h1>Сургуулиудын хариусан багш нар</h1>
+    <h1>Сургуулиудын бүртгэлийн ажилтнууд</h1>
     {% include 'selection_menu.html' %}
+    <p class="mt-3 mb-3">Зөвхөн тухайн сургуулийн бүртгэлийн ажилтан сургуулиа удирдах боломжтой.</p>
     <table class="table table-bordered">
         <thead>
             <tr>
                 <th>Аймаг/Дүүрэг</th>
                 <th>Сургуулийн нэр</th>
-                <th>Хариусан багш</th>
+                <th>Бүртгэлийн ажилтан</th>
                 <th>Удирдах</th>
             </tr>
         </thead>
@@ -34,7 +35,7 @@
             <tr>
                 <td>{{ school.province.name }}</td>
                 <td>{{ school.name }}</td>
-                <td>{{ school.user.first_name }}</td>
+                <td>{{ school.user.last_name }}, {{ school.user.first_name }}</td>
                 <td>
                     <a href="{% url 'manage_school' school.id  %}" class="btn btn-info">Удирдах</a>
                 </td>
