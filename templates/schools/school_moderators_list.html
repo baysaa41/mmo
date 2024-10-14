@@ -29,6 +29,7 @@
                 <th>#</th>
                 <th>Аймаг/Дүүрэг</th>
                 <th>Сургуулийн нэр</th>
+                <th>Сурагчдын тоо</th>
                 <th>Бүртгэлийн ажилтан</th>
                 <th>Имэйл хаяг</th>
                 <th>Нэвтрэх нэр</th>
@@ -41,6 +42,7 @@
                 <td>{{ forloop.counter }}</td>
                 <td>{{ school.province.name }}</td>
                 <td>{{ school.name }}</td>
+                <td>{{ school.group.user_set.count }}</td>
                 <td>{{ school.user.last_name }}, {{ school.user.first_name }}</td>
                 <td>{{ school.user.email }}</td>
                 <td>{{ school.user.username }}</td>
