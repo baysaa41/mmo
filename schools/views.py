@@ -141,7 +141,7 @@ def manage_school(request, school_id):
             is_my_school = True
 
     if not is_my_school and not request.user.is_staff:
-        return render(request, 'error.html', {'error': 'Та энэ сургуулийг удирдах эрхгүй.'})
+        return render(request, 'error.html', {'error': 'Та энэ сургуулийг удирдах эрхгүй. Таны нэвтэрсэн нэр {}'.format(request.user.username)})
     school = get_object_or_404(School, id=school_id)
     group = school.group
 
