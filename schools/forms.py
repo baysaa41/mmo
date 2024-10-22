@@ -7,18 +7,18 @@ from accounts.models import UserMeta
 class UserForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email']
+        fields = ['last_name', 'first_name', 'email']
         widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Овог'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Нэр'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Овог'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Нэр'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Имэйл'}),
         }
         help_texts = {
             'email': 'Итгэмжлэгдсэн имэйл хаягаа оруулна уу.',
         }
         labels = {
-            'first_name': 'Овог',
-            'last_name': 'Нэр',
+            'last_name': 'Овог',
+            'first_name': 'Нэр',
             'email': 'Имэйл',
         }
 
