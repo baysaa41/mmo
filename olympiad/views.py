@@ -41,7 +41,6 @@ def supplement_home(request):
     return render(request, 'olympiad/supplement_home.html', {'olympiads': olympiads})
 
 
-
 @login_required
 def quiz_view(request, quiz_id):
     contestant = request.user
@@ -156,6 +155,7 @@ def problems_view(request, olympiad_id):
         problems = []
 
     return render(request, 'olympiad/problems.html', {'olympiad': olympiad, 'problems': problems})
+
 
 @login_required
 def student_result_view(request, olympiad_id, contestant_id):
@@ -291,16 +291,17 @@ def exam_staff_view(request, olympiad_id, contestant_id):
     else:
         return HttpResponse("handah erhgui bna.")
 
+
 @login_required
 def quiz_staff_view(request, quiz_id, contestant_id):
     staff = request.user
-    contestant = User.objects.get(pk=contestant_id)
+    #contestant = User.objects.get(pk=contestant_id)
 
-    school=staff.moderating.all().first()
-    group=school.group
+    #school = staff.moderating.all().first()
+    #group = school.group
 
-    if not contestant.groups.filter(pk=group.id).exists():
-        return render(request, 'error.html', {'error' : 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
+    #if not contestant.groups.filter(pk=group.id).exists():
+    #    return render(request, 'error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
 
     olympiad = Olympiad.objects.filter(pk=quiz_id).first()
 
@@ -323,15 +324,15 @@ def quiz_staff_view(request, quiz_id, contestant_id):
                                                                      'olympiad': olympiad, 'contestant': contestant})
     else:
         form = ResultsFormSet(
-                queryset=Result.objects.filter(contestant=user, olympiad_id=quiz_id).order_by('problem__order'))
+            queryset=Result.objects.filter(contestant=user, olympiad_id=quiz_id).order_by('problem__order'))
     return render(request, 'olympiad/quiz.html', {'items': items, 'form': form, 'olympiad': olympiad})
 
 
 def quiz_list_view(request, school_id):
     school = School.objects.get(pk=school_id)
-    quizzes = Olympiad.objects.filter(is_open=True,is_grading=True)
-    return render(request,'schools/olympiad_list.html', {'contestants': school.group.user_set.all(),
-                                                         'quizzes': quizzes})
+    quizzes = Olympiad.objects.filter(is_open=True, is_grading=True)
+    return render(request, 'schools/olympiad_list.html', {'contestants': school.group.user_set.all(),
+                                                          'quizzes': quizzes})
 
 
 def get_result_form(request):
@@ -462,6 +463,7 @@ def view_result(request):
 def problem_exam_materials_view(request):
     return None
 
+
 def supplements_view(request):
     uploads = Upload.objects.filter(is_official=False).order_by('upload_time')
     return render(request, 'olympiad/supplements.html', {'uploads': uploads})
@@ -499,7 +501,7 @@ def list_upcomming_olympiads(request):
     return render(request, 'olympiad/index.html', {'olympiads': olympiads, 'now': now})
 
 
-def read_worksheet(worksheet,problems):
+def read_worksheet(worksheet, problems):
     aldaa = False
     excel_data = list()
 
@@ -529,7 +531,7 @@ def read_worksheet(worksheet,problems):
                     row_data.append('')
                 else:
                     row_data.append(str(cell.value))
-            for cell in row[7:problems+7]:
+            for cell in row[7:problems + 7]:
                 if str(cell.value) == 'None':
                     row_data.append('')
                 else:
@@ -565,6 +567,7 @@ def read_worksheet(worksheet,problems):
 
     return excel_data, aldaa
 
+
 def set_answer(olympiad_id, excel_data):
     olympiad = Olympiad.objects.get(pk=olympiad_id)
     problems = olympiad.problem_set.all()
@@ -574,12 +577,12 @@ def set_answer(olympiad_id, excel_data):
             problem = problems.filter(order=i + 1).first()
             if row[1] == '' and (row[2] != '' or row[3] != ''):
                 user, c = User.objects.get_or_create(username=random_salt(8),
-                                                     first_name=row[3]+'-system',
-                                                     last_name=row[2]+'-system',
+                                                     first_name=row[3] + '-system',
+                                                     last_name=row[2] + '-system',
                                                      email='mmo60official@gmail.com',
                                                      is_active=True)
                 if c:
-                    user.username='u'+str(user.id)
+                    user.username = 'u' + str(user.id)
                     user.save()
                 UserMeta.objects.get_or_create(user=user, province_id=row[4], school=row[5], grade_id=row[6])
                 row[1] = user.id
@@ -616,10 +619,10 @@ def upload_file(request):
         wb = openpyxl.load_workbook(excel_file)
 
         try:
-           worksheet = wb["C (5-6)"]
+            worksheet = wb["C (5-6)"]
         except:
             worksheet = wb["5-6"]
-        excel_data_c, c = read_worksheet(worksheet,10)
+        excel_data_c, c = read_worksheet(worksheet, 10)
 
         # getting a particular sheet by name out of many sheets
         try:
@@ -632,7 +635,7 @@ def upload_file(request):
             worksheet = wb["E (9-10)"]
         except:
             worksheet = wb["9-10"]
-        excel_data_e, e = read_worksheet(worksheet,12)
+        excel_data_e, e = read_worksheet(worksheet, 12)
 
         # getting a particular sheet by name out of many sheets
         try:
@@ -644,15 +647,15 @@ def upload_file(request):
         aldaa = aldaa or c or d or e or f
 
         if not aldaa:
-            set_answer(137,excel_data_c)
-            set_answer(138,excel_data_d)
-            set_answer(139,excel_data_e)
-            set_answer(140,excel_data_f)
+            set_answer(137, excel_data_c)
+            set_answer(138, excel_data_d)
+            set_answer(139, excel_data_e)
+            set_answer(140, excel_data_f)
             error = 1
         else:
             error = 2
 
         context = {"excel_data_c": excel_data_c, "excel_data_d": excel_data_d, "excel_data_e": excel_data_e,
-                "excel_data_f": excel_data_f, 'error': error}
+                   "excel_data_f": excel_data_f, 'error': error}
 
         return render(request, 'olympiad/upload_file.html', context)
