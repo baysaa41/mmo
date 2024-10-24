@@ -18,6 +18,8 @@ import os
 import openpyxl
 from accounts.views import random_salt
 
+from schools.models import School
+
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
 
 
@@ -288,6 +290,48 @@ def exam_staff_view(request, olympiad_id, contestant_id):
                       {'results': results, 'olympiad': olympiad, 'contestant': contestant})
     else:
         return HttpResponse("handah erhgui bna.")
+
+@login_required
+def quiz_staff_view(request, quiz_id, contestant_id):
+    staff = request.user
+    contestant = User.objects.get(pk=contestant_id)
+
+    school=staff.moderating.all().first()
+    group=school.group
+
+    if not contestant.groups.filter(pk=group.id).exists():
+        return render(request, 'error.html', {'error' : 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
+
+    olympiad = Olympiad.objects.filter(pk=quiz_id).first()
+
+    problems = olympiad.problem_set.order_by('order')
+    user = request.user
+    if not problems or not user.is_authenticated:
+        return HttpResponse("Ops, something went wrong.")
+
+    for problem in problems:
+        result = Result.objects.get_or_create(contestant=contestant, olympiad_id=quiz_id, problem=problem)
+
+    items = Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order')
+
+    if request.method == 'POST':
+        form = ResultsFormSet(request.POST)
+        if form.is_valid():
+            form.save()
+            results = Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order')
+            return render(request, 'olympiad/confirm_teacher.html', {'results': results,
+                                                                     'olympiad': olympiad, 'contestant': contestant})
+    else:
+        form = ResultsFormSet(
+                queryset=Result.objects.filter(contestant=user, olympiad_id=quiz_id).order_by('problem__order'))
+    return render(request, 'olympiad/quiz.html', {'items': items, 'form': form, 'olympiad': olympiad})
+
+
+def quiz_list_view(request, school_id):
+    school = School.objects.get(pk=school_id)
+    quizzes = Olympiad.objects.filter(is_open=True,is_grading=True)
+    return render(request,'schools/olympiad_list.html', {'contestants': school.group.user_set.all(),
+                                                         'quizzes': quizzes})
 
 
 def get_result_form(request):

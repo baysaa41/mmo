@@ -16,6 +16,7 @@ urlpatterns = [
     path('exam/<int:olympiad_id>/', views.exam_student_view, name='olympiad_exam'),
     path('supplements/<int:olympiad_id>/', views.student_supplement_view, name='olympiad_supplements'),
     path('exam/staff/<int:olympiad_id>/<int:contestant_id>/', views.exam_staff_view, name='olympiad_exam_staff'),
+    path('quiz/staff/<int:quiz_id>/<int:contestant_id>/', views.quiz_staff_view, name='olympiad_quiz_staff'),
     path('viewer/', views.result_viewer, name='olympiad_result_viewer'),
     path('upload/', views.get_result_form, name='olympiad_get_result_form'),
     path('grading/<int:problem_id>/', views.exam_grading_view, name='olympiad_exam_grading'),
@@ -47,4 +48,5 @@ urlpatterns = [
     path('certificate/<int:quiz_id>/<int:contestant_id>/', result_views.createCertificate, name='olympiad_certificate'),
     path('beltgel2023/', beltgel2023.index, name='beltgel_2023'),
     path('stats/<int:problem_id>/', result_views.problem_stats_view, name='problem_stats'),
+    path('quizzes/list/<int:school_id>', views.quiz_list_view, name='quiz_list_view'),
 ]
