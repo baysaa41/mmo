@@ -295,7 +295,7 @@ def exam_staff_view(request, olympiad_id, contestant_id):
 @login_required
 def quiz_staff_view(request, quiz_id, contestant_id):
     staff = request.user
-    #contestant = User.objects.get(pk=contestant_id)
+    contestant = User.objects.get(pk=contestant_id)
 
     #school = staff.moderating.all().first()
     #group = school.group
