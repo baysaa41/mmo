@@ -48,6 +48,7 @@
                 <th>Имэйл хаяг</th>
                 <th>Нэвтрэх нэр</th>
                 <th>Удирдах</th>
+                <th>Олимпиад</th>
             </tr>
         </thead>
         <tbody>
@@ -62,6 +63,9 @@
                 <td>{{ school.user.username }}</td>
                 <td>
                     <a href="{% url 'manage_school' school.id  %}" class="btn btn-info">Удирдах</a>
+                </td>
+                <td>
+                    <a href="{% url 'quiz_list_view' school.id  %}" class="btn btn-primary">Хариулт оруулах</a>
                 </td>
             </tr>
             {% endfor %}
