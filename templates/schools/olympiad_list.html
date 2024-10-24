@@ -3,16 +3,16 @@
 {% for quiz in quizzes %}
     <h3>{{ quiz.name }}, {{ quiz.description }}</h3>
     <table class="table table-striped">
-        <tr>
         {% for contestant in contestants %}
+        <tr>
         {% if quiz.level == contestant.data.level %}
             <td>{{ forloop.counter }}</td>
             <td>{{ contestant.last_name }}</td>
             <td>{{ contestant.first_name }}</td>
             <td><a href="{% url 'olympiad_quiz_staff' quiz_id=quiz.id contestant_id=contestant.id %}">Хариулт оруулах</a></td>
         {% endif %}
-        {% endfor %}
         </tr>
+        {% endfor %}
     </table>
 {% endfor %}
 {% endblock %}
