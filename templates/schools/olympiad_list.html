@@ -6,7 +6,7 @@
 </head>
 <body>
 {% for quiz in quizzes %}
-    <h3>{{ quiz.name }}</h3>
+    <h3>{{ quiz.name }}, {{ quiz.description }}</h3>
     <table class="table table-striped">
         <tr>
         {% for contestant in contestants %}
