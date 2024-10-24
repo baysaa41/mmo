@@ -5,17 +5,15 @@
     <table class="table table-striped">
         <thead>
             <tr>
-                <th style="width: 10%;">#</th>
-                <th style="width: 30%;">Овог</th>
-                <th style="width: 30%;">Нэр</th>
-                <th style="width: 30%;">Хариулт оруулах</th>
+                <th style="width: 33%;">Овог</th>
+                <th style="width: 33%;">Нэр</th>
+                <th style="width: 34%;">Хариулт оруулах</th>
             </tr>
         </thead>
         <tbody>
             {% for contestant in contestants %}
             {% if quiz.level == contestant.data.level %}
             <tr>
-                <td>{{ forloop.counter }}</td>
                 <td>{{ contestant.last_name }}</td>
                 <td>{{ contestant.first_name }}</td>
                 <td><a href="{% url 'olympiad_quiz_staff' quiz_id=quiz.id contestant_id=contestant.id %}">Хариулт оруулах</a></td>
