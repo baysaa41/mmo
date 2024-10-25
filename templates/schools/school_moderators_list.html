@@ -45,6 +45,9 @@
                 <th>Сургуулийн нэр</th>
                 <th>Сурагчдын тоо</th>
                 <th>Бүртгэлийн ажилтан</th>
+                {% if request.user.is_staff %}
+                    <th>Холбогдох утас</th>
+                {% endif %}
                 <th>Имэйл хаяг</th>
                 <th>Нэвтрэх нэр</th>
                 <th>Удирдах</th>
@@ -59,14 +62,17 @@
                 <td>{{ school.name }}</td>
                 <td>{{ school.group.user_set.count }}</td>
                 <td>{{ school.user.last_name }}, {{ school.user.first_name }}</td>
+                {% if request.user.is_staff %}
+                    <td>{{ school.user.data.mobile }}</td>
+                {% endif %}
                 <td>{{ school.user.email }}</td>
                 <td>{{ school.user.username }}</td>
                 <td>
                     <a href="{% url 'manage_school' school.id  %}" class="btn btn-info">Удирдах</a>
                 </td>
-                <!-- td>
+                <td>
                     <a href="{% url 'quiz_list_view' school.id  %}" class="btn btn-primary">Хариулт оруулах</a>
-                </td -->
+                </td>
             </tr>
             {% endfor %}
         </tbody>
