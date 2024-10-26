@@ -1119,7 +1119,7 @@ def send_email_to_schools(request):
             attachments = request.FILES.getlist('attachments')
 
             # Fetch all users in the specified group
-            schools = School.objects.all()
+            schools = School.objects.filter(is_sent_confirmation=False)
 
             for school in schools:
                 email = EmailMessage(
@@ -1134,7 +1134,9 @@ def send_email_to_schools(request):
                     email.attach(attachment.name, attachment.read(), attachment.content_type)
 
                 # Send the email
-                email.send()
+                if email.send():
+                    school.is_sent_confirmation = True
+                    school.save()
 
             # Redirect or show success message
             return redirect('school_moderators_list')  # Replace 'success_page' with your actual success URL or template
