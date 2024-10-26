@@ -14,6 +14,10 @@ from olympiad.models import Article, SchoolYear, Result
 from datetime import datetime, timezone
 from .forms import AddRemoveUsersToGroupForm
 
+from schools.models import School
+from django.contrib.auth.models import Group
+from .forms import EmailForm
+
 
 
 from django.db import connection
@@ -1075,17 +1079,11 @@ def send_email_with_attachments(request):
     if request.method == 'POST':
         form = EmailForm(request.POST, request.FILES)
         if form.is_valid():
-            # group_name = 'my_group'  # Replace with your group name
-            # group = Group.objects.get(pk=34)
-            group = Group.objects.get(pk=35)
-            users_in_group = group.user_set.all()
-
+            schools = School.objects.all()
             subject = form.cleaned_data['subject']
             message = form.cleaned_data['message']
             from_email = 'MMO <no-reply@mmo.mn>'
-
-            # Batch recipients and send emails
-            recipients = [user.email for user in users_in_group]
+            recipients = [school.user.email for school in schools]
             batch_size = 50  # Adjust as needed
             for i in range(0, len(recipients), batch_size):
                 batch_recipients = recipients[i:i+batch_size]
@@ -1101,10 +1099,46 @@ def send_email_with_attachments(request):
 
                 # Send the email
                 email.send()
+                # print(email)
 
             return render(request, 'accounts/success.html', {'message': 'Email sent successfully.'})
 
     else:
         form = EmailForm()
 
+    return render(request, 'accounts/send_email.html', {'form': form})
+
+
+@login_required(login_url='/accounts/login/')
+def send_email_to_schools(request):
+    if request.method == "POST":
+        form = EmailForm(request.POST, request.FILES)
+        if form.is_valid():
+            subject = form.cleaned_data['subject']
+            message = form.cleaned_data['message']
+            attachments = request.FILES.getlist('attachments')
+
+            # Fetch all users in the specified group
+            schools = School.objects.all()
+
+            for school in schools:
+                email = EmailMessage(
+                    subject=subject,
+                    body=message,
+                    from_email='no-reply@mmo.mn',
+                    to=[school.user.email],
+                )
+
+                # Attach each file
+                for attachment in attachments:
+                    email.attach(attachment.name, attachment.read(), attachment.content_type)
+
+                # Send the email
+                email.send()
+
+            # Redirect or show success message
+            return redirect('school_moderators_list')  # Replace 'success_page' with your actual success URL or template
+
+    else:
+        form = EmailForm()
     return render(request, 'accounts/send_email.html', {'form': form})

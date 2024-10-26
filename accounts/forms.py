@@ -164,5 +164,4 @@ class LoginForm(forms.Form):
 class EmailForm(forms.Form):
     subject = forms.CharField(max_length=100)
     message = forms.CharField(widget=forms.Textarea)
-    # attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
-    attachments = forms.ImageField(widget=MultiFileInput(attrs={'multiple': True}), required=False)
+    attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
