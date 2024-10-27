@@ -54,11 +54,12 @@
         <th>Бүртгэлийн ажилтан</th>
         {% if request.user.is_staff %}
             <th>Холбогдох утас</th>
+            <th>Сүүлийн нэвтрэл</th>
+            <th>Имэйл хаяг</th>
         {% endif %}
-        <th>Имэйл хаяг</th>
         <th>Нэвтрэх нэр</th>
         <th>Удирдах</th>
-        <!--th>Олимпиад</th-->
+        <th>Олимпиад</th>
     </tr>
     </thead>
     <tbody>
@@ -71,15 +72,16 @@
             <td>{{ school.user.last_name }}, {{ school.user.first_name }}</td>
             {% if request.user.is_staff %}
                 <td>{{ school.user.data.mobile }}</td>
+                <td>{{ school.user.last_login|date:"Y.m.d h:i A" }}</td>
+                <td>{{ school.user.email }}</td>
             {% endif %}
-            <td>{{ school.user.email }}</td>
             <td>{{ school.user.username }}</td>
             <td>
                 <a href="{% url 'manage_school' school.id %}" class="btn btn-sm btn-info">Удирдах</a>
             </td>
-            <!--td>
-                    <a href="{% url 'quiz_list_view' school.id  %}" class="btn btn-sm btn-danger">Хариулт</a>
-                </td-->
+            <td>
+                <a href="{% url 'quiz_list_view' school.id  %}" class="btn btn-sm btn-danger">Хариулт</a>
+            </td>
         </tr>
     {% endfor %}
     </tbody>

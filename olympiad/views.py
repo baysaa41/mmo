@@ -324,8 +324,9 @@ def quiz_staff_view(request, quiz_id, contestant_id):
                                                                      'olympiad': olympiad, 'contestant': contestant})
     else:
         form = ResultsFormSet(
-            queryset=Result.objects.filter(contestant=user, olympiad_id=quiz_id).order_by('problem__order'))
-    return render(request, 'olympiad/quiz.html', {'items': items, 'form': form, 'olympiad': olympiad})
+            queryset=Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order'))
+    return render(request, 'olympiad/quiz.html', {'items': items, 'form': form,
+                                                  'olympiad': olympiad, 'contestant': contestant})
 
 
 def quiz_list_view(request, school_id):
