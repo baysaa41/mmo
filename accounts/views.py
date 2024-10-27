@@ -1144,3 +1144,42 @@ def send_email_to_schools(request):
     else:
         form = EmailForm()
     return render(request, 'accounts/send_email.html', {'form': form})
+
+
+def track_email_open(request, token):
+    # Get the email by tracking token
+    uemail = get_object_or_404(UserMails, tracking_token=token)
+
+    # Mark as opened
+    uemail.is_opened = True
+    uemail.save()
+
+    # Optionally, redirect the user somewhere (e.g., your website homepage)
+    return HttpResponse("Thank you for confirming this email.")
+
+def send_mass_html_mail(request):
+    connection = get_connection(fail_silently=False)
+    messages = []
+    uemails = UserMails.objects.filter(is_sent=False)[:50]
+
+    for uemail in uemails:
+        # Generate the tracking link URL
+        tracking_url = request.build_absolute_uri(
+            reverse('track_email_open', args=[uemail.tracking_token])
+        )
+        # Add the tracking link to the HTML message content
+        message_html = f"{uemail.text_html}<br><br> <a href='{tracking_url}'>Энд</a> товшиж баталгаажуул."
+
+        # Create the email message
+        message = EmailMultiAlternatives(
+            uemail.subject, uemail.text, uemail.from_email, [uemail.to_email]
+        )
+        message.attach_alternative(message_html, 'text/html')
+        messages.append(message)
+
+        # Update as sent
+        uemail.is_sent = True
+        uemail.save()
+
+    sent_count = connection.send_messages(messages)
+    return HttpResponse(f"{sent_count} emails sent successfully.")

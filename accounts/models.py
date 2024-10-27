@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 import os
 from django.utils.text import slugify
 from django.conf import settings
+import uuid
 
 
 def user_directory_path(instance, filename):
@@ -21,6 +22,14 @@ class Author(models.Model):
 
     def __str__(self):
         return "{}, {}".format(self.user.first_name,self.user.last_name)
+
+class UploadedFile(models.Model):
+    file = models.FileField(upload_to='attachments/')  # Files will be saved in MEDIA_ROOT/uploads/
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)  # To link the file to a user (optional)
+
+    def __str__(self):
+        return self.file.name
 
 
 class UserMeta(models.Model):
@@ -130,7 +139,8 @@ class UserMails(models.Model):
     replyto_email = models.EmailField(default="baysa.edu@gmail.com")
     bcc = models.TextField(blank=True,null=True)
     is_sent = models.BooleanField(default=False)
+    is_opened = models.BooleanField(default=False)  # New field to track if opened
+    tracking_token = models.UUIDField(default=uuid.uuid4, unique=True)  # Unique tracking token
 
     def __str__(self):
-        return  '{}, {}'.format(self.subject,self.to_email)
-
+        return f"Email to {self.to_email}"

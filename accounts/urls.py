@@ -14,5 +14,6 @@ urlpatterns = [
     path('sendmails/',views.send_mass_html_mail,name='user_sendmails'),
     path('login/', views.login_view, name='user_login'),
     path('logout/', views.logout_view, name='user_logout'),
-    path('addusers/', views.import_file, name='add_users')
+    path('addusers/', views.import_file, name='add_users'),
+    path('track-email/<uuid:token>/', views.track_email_open, name='track_email_open'),
 ]

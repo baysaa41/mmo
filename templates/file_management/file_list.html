@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Заавар</h2>
+    <p class="alert alert-info">Энд зөвхөн сургуулийн олимпиад зохион байгуулах ажилтнууд нэвтэрч татаж авч болох файлууд байгаа тул нууцлалыг 
+        чанд хадгална уу!</p>
+  <h2>Файлууд</h2>
+  <table class="table table-bordered">
+      <tr>
+          <th>Тайлбар</th>
+          <th>Татах линк</th>
+          <th>Оруулсан</th>
+          <th>Цаг</th>
+      </tr>
+    {% for file in files %}
+      <tr>
+          <td>{{ file.description }}</td>
+          <td><a href="{% url 'download_file' file.id %}" class="btn btn-sm btn-primary">Татах</a></td>
+          <td>{{ file.uploader }}</td>
+          <td>{{ file.uploaded_at | date:"l, F j, Y g:i A" }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock %}

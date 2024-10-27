@@ -27,6 +27,7 @@ from accounts.views import CustomPasswordResetView
 urlpatterns = ([
     path('select2/', include('django_select2.urls')),
     path('schools/', include('schools.urls')),
+    path('files/', include('file_management.urls')),
     path('', views.index, name='home'),
     path('admin/clearcache/', include('clearcache.urls')),
     path('post/', olympiad.views.post, name='post_view'),
