@@ -7,11 +7,13 @@
             width: 100%;
             border-collapse: collapse;
         }
+
         th, td {
             padding: 8px 12px;
             border: 1px solid #ccc;
             text-align: left;
         }
+
         th {
             background-color: #f4f4f4;
         }
@@ -19,67 +21,68 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
+<div class="user">
+    {% block userlogin %}
+        {% if user.is_authenticated %}
+            <p>Сайн уу, <a href="{% url 'user_profile' %}">{{ user.username }}</a> /
+                <a href="{% url 'user_logout' %}">Гарах</a>
+            </p>
+        {% else %}
+            <p>
+                <a href="{% url 'django_registration_register' %}" class="btn btn-dark text-white">Бүртгүүлэх</a>
+                <a href="{% url 'user_login' %}" class="btn btn-warning text-dark">Нэвтрэх</a>
+            </p>
+        {% endif %}
+    {% endblock %}
+</div>
+
 <div class="files">
     <h1>Олимпиадын заавар</h1>
     <p>ММО-61-ийн дүрэм журам болон бусад файлууд <a href="{% url 'file_list' %}">эндээс</a> татаж аваарай.</p>
 </div>
-            <div class="user">
-                {% block userlogin %}
-                    {% if user.is_authenticated %}
-                        <p>Сайн уу, <a href="{% url 'user_profile' %}">{{ user.username }}</a> /
-                            <a href="{% url 'user_logout' %}">Гарах</a>
-                        </p>
-                    {% else %}
-                        <p>
-                            <a href="{% url 'django_registration_register' %}" class="btn btn-dark text-white">Бүртгүүлэх</a>
-                            <a href="{% url 'user_login' %}" class="btn btn-warning text-dark">Нэвтрэх</a>
-                        </p>
-                    {% endif %}
-                {% endblock %}
-            </div>
-    <h1>Сургуулиудын бүртгэлийн ажилтнууд</h1>
-    {% include 'selection_menu.html' %}
-    <p class="mt-3 mb-3">Зөвхөн тухайн сургуулийн бүртгэлийн ажилтан сургуулиа удирдах боломжтой. Имэйл хаяг буруу 
-        бичигдсэн эсвэл нэвтрэх нэр, нууц үг хүлээн аваагүй бол baysa.edu@gmail.com хаягаар яаралтай холбогдоорой!</p>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Аймаг/Дүүрэг</th>
-                <th>Сургуулийн нэр</th>
-                <th>Сурагчдын тоо</th>
-                <th>Бүртгэлийн ажилтан</th>
-                {% if request.user.is_staff %}
-                    <th>Холбогдох утас</th>
-                {% endif %}
-                <th>Имэйл хаяг</th>
-                <th>Нэвтрэх нэр</th>
-                <th>Удирдах</th>
-                <!--th>Олимпиад</th-->
-            </tr>
-        </thead>
-        <tbody>
-            {% for school in schools %}
-            <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{{ school.province.name }}</td>
-                <td>{{ school.name }}</td>
-                <td>{{ school.group.user_set.count }}</td>
-                <td>{{ school.user.last_name }}, {{ school.user.first_name }}</td>
-                {% if request.user.is_staff %}
-                    <td>{{ school.user.data.mobile }}</td>
-                {% endif %}
-                <td>{{ school.user.email }}</td>
-                <td>{{ school.user.username }}</td>
-                <td>
-                    <a href="{% url 'manage_school' school.id  %}" class="btn btn-sm btn-info">Удирдах</a>
-                </td>
-                <!--td>
+<h1>Сургуулиудын бүртгэлийн ажилтнууд</h1>
+{% include 'selection_menu.html' %}
+<p class="mt-3 mb-3">Зөвхөн тухайн сургуулийн бүртгэлийн ажилтан сургуулиа удирдах боломжтой. Имэйл хаяг буруу
+    бичигдсэн эсвэл нэвтрэх нэр, нууц үг хүлээн аваагүй бол baysa.edu@gmail.com хаягаар яаралтай холбогдоорой!</p>
+<table class="table table-bordered">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Аймаг/Дүүрэг</th>
+        <th>Сургуулийн нэр</th>
+        <th>Сурагчдын тоо</th>
+        <th>Бүртгэлийн ажилтан</th>
+        {% if request.user.is_staff %}
+            <th>Холбогдох утас</th>
+        {% endif %}
+        <th>Имэйл хаяг</th>
+        <th>Нэвтрэх нэр</th>
+        <th>Удирдах</th>
+        <!--th>Олимпиад</th-->
+    </tr>
+    </thead>
+    <tbody>
+    {% for school in schools %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ school.province.name }}</td>
+            <td>{{ school.name }}</td>
+            <td>{{ school.group.user_set.count }}</td>
+            <td>{{ school.user.last_name }}, {{ school.user.first_name }}</td>
+            {% if request.user.is_staff %}
+                <td>{{ school.user.data.mobile }}</td>
+            {% endif %}
+            <td>{{ school.user.email }}</td>
+            <td>{{ school.user.username }}</td>
+            <td>
+                <a href="{% url 'manage_school' school.id %}" class="btn btn-sm btn-info">Удирдах</a>
+            </td>
+            <!--td>
                     <a href="{% url 'quiz_list_view' school.id  %}" class="btn btn-sm btn-danger">Хариулт</a>
                 </td-->
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
 </body>
 </html>
