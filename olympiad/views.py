@@ -350,7 +350,9 @@ def quiz_staff_view2(request, quiz_id, contestant_id):
         for problem in problems:
             id = int(problem[1:])
             result = Result.objects.get(pk=id)
-            if request.POST[problem] != 'None':
+            if request.POST[problem] == '':
+                result.answer = None
+            elif request.POST[problem] != 'None':
                 result.answer = int(request.POST[problem])
             result.save()
 

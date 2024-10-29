@@ -2,6 +2,7 @@ from django.http import HttpResponse, JsonResponse, FileResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from olympiad.models import Olympiad, Result, SchoolYear, Award, Problem, OlympiadGroup
+from schools.models import School
 from accounts.models import Province, Zone, UserMeta
 from django.forms import modelformset_factory
 from .forms import ResultsForm
@@ -2024,6 +2025,7 @@ def result_view(request, olympiad_id):
 def answers_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))
+    sid = int(request.GET.get('s', 0))
 
     try:
         olympiad = Olympiad.objects.get(pk=olympiad_id)
@@ -2073,7 +2075,18 @@ def answers_view(request, olympiad_id):
                               contestant.first_name,
                               contestant.data.province.name,
                               contestant.data.school))
-            elif pid == 0 and zid == 0:
+            elif sid:
+                try:
+                    school = School.objects.get(pk=sid)
+                    if contestant.groups.filter(pk=school.group.id).exists():
+                        users.append((contestant.id,
+                              contestant.last_name,
+                              contestant.first_name,
+                              contestant.data.province.name,
+                              contestant.data.school))
+                except:
+                    return render(request, 'error.html', {'error': 'Сургууль олдоогүй'})
+            elif pid == 0 and zid == 0 and sid == 0:
                 users.append((contestant.id,
                               contestant.last_name,
                               contestant.first_name,
