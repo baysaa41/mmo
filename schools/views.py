@@ -3,6 +3,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import User, Group
 from django.shortcuts import render, redirect, get_object_or_404
 from accounts.models import UserMeta, Province  # Assuming you have UserMeta model
+from olympiad.models import Olympiad
 from .forms import ExcelUploadForm
 from .models import School
 from django.core.exceptions import ObjectDoesNotExist
@@ -124,7 +125,8 @@ def school_moderators_view(request):
         schools = School.objects.select_related('user', 'group', 'province').filter(province__zone_id=zid).order_by('province__name','user__data__school')
     else:
         schools = School.objects.select_related('user', 'group', 'province').all().order_by('province__name','user__data__school')  # Fetch all schools and related data
-    return render(request, 'schools/school_moderators_list.html', {'schools': schools})
+    olympiads = Olympiad.objects.filter(is_grading=True, is_open=True)
+    return render(request, 'schools/school_moderators_list.html', {'schools': schools, 'olympiads': olympiads})
 
 from .forms import UserSearchForm, AddUserForm
 from accounts.models import UserMeta  # Assuming UserMeta model for additional data

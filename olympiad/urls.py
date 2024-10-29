@@ -36,6 +36,7 @@ urlpatterns = [
     path('result/<int:olympiad_id>/<int:contestant_id>/', result_views.student_result_view, name='olympiad_student_result'),
     path('results/<int:olympiad_id>/', result_views.result_view, name='olympiad_result_view'),
     path('answers/<int:olympiad_id>/', result_views.answers_view, name='olympiad_answer_view'),
+    path('answers/<int:olympiad_id>/<int:group_id>/', result_views.answers_view2, name='olympiad_group_answer_view'),
     path('results/new/<int:olympiad_id>/', result_views.newResultView, name='olympiad_result_data_view'),
     path('results/data/<int:olympiad_id>/', result_views.getJSONResults, name='olympiad_get_json_results'),
     path('results/imo/62/third/', result_views.olympiad_result_imo62_third, name='olympiad_result_imo63_third'),

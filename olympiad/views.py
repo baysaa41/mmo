@@ -328,6 +328,14 @@ def quiz_staff_view(request, quiz_id, contestant_id):
     return render(request, 'olympiad/quiz.html', {'items': items, 'form': form,
                                                   'olympiad': olympiad, 'contestant': contestant})
 
+def is_my_student(teacher_id,student_id):
+    try:
+        school = School.objects.get(user_id=teacher_id)
+        if school.group.user_set.filter(id=student_id).exists():
+            return True
+    except:
+        return False
+    return False
 @login_required
 def quiz_staff_view2(request, quiz_id, contestant_id):
     staff = request.user
@@ -341,7 +349,7 @@ def quiz_staff_view2(request, quiz_id, contestant_id):
     school = staff.moderating.all().first()
     group = school.group
 
-    if not contestant.groups.filter(pk=group.id).exists():
+    if not is_my_student(staff.id,contestant_id) and not staff.is_staff:
         return render(request, 'error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
 
     if request.method == 'POST':
