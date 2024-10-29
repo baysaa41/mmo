@@ -330,10 +330,19 @@ def quiz_staff_view(request, quiz_id, contestant_id):
 
 @login_required
 def quiz_staff_view2(request, quiz_id, contestant_id):
+    staff = request.user
+    contestant = User.objects.get(pk=contestant_id)
+
     try:
         olympiad = Olympiad.objects.get(pk=quiz_id)
     except Olympiad.DoesNotExist:
         return HttpResponse("Ops, something went wrong.")
+
+    school = staff.moderating.all().first()
+    group = school.group
+
+    if not contestant.groups.filter(pk=group.id).exists():
+        return render(request, 'error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
 
     if request.method == 'POST':
         keys = request.POST.keys()
