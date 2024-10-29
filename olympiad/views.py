@@ -328,6 +328,40 @@ def quiz_staff_view(request, quiz_id, contestant_id):
     return render(request, 'olympiad/quiz.html', {'items': items, 'form': form,
                                                   'olympiad': olympiad, 'contestant': contestant})
 
+@login_required
+def quiz_staff_view2(request, quiz_id, contestant_id):
+    try:
+        olympiad = Olympiad.objects.get(pk=quiz_id)
+    except Olympiad.DoesNotExist:
+        return HttpResponse("Ops, something went wrong.")
+
+    if request.method == 'POST':
+        keys = request.POST.keys()
+        problems = list(keys)[2:]
+        for problem in problems:
+            id = int(problem[1:])
+            result = Result.objects.get(pk=id)
+            if request.POST[problem] != 'None':
+                result.answer = int(request.POST[problem])
+            result.save()
+
+    staff = request.user
+    contestant = User.objects.get(pk=contestant_id)
+
+    school = staff.moderating.first()
+
+    problems = olympiad.problem_set.order_by('order')
+
+    results = []
+    for problem in problems:
+        result, created = Result.objects.get_or_create(contestant=contestant, olympiad_id=quiz_id, problem=problem)
+        results.append(result)
+
+    return render(request, 'olympiad/quiz2.html', {'school': school,
+                                                   'contestant': contestant,
+                                                   'olympiad': olympiad,
+                                                   'results': results})
+
 
 def quiz_list_view(request, school_id):
     school = School.objects.get(pk=school_id)
