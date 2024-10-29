@@ -86,7 +86,7 @@
                 <a href="{% url 'quiz_list_view' school.id  %}" class="btn btn-sm btn-danger">Хариулт</a>
             </td>
         {% for olympiad in olympiads %}
-            <td><a class="btn btn-warning btn-sm" href="{% url 'olympiad_group_answer_view' olympiad_id=olympiad.id group_id=school.group.id %}">Дүн харах</a></td>
+            <td><a class="btn btn-warning btn-sm" href="{% url 'olympiad_group_answer_view' olympiad_id=olympiad.id group_id=school.group.id %}" target="_blank">Дүн харах</a></td>
         {% endfor %}
         </tr>
     {% endfor %}
