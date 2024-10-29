@@ -2143,6 +2143,11 @@ def answers_view(request, olympiad_id):
     return render(request, 'olympiad/results/results.html', context)
 
 
+def is_my_school_group(user_id, group_id):
+    if School.objects.filter(user_id=user_id,group_id=group_id).exists():
+        return True
+    return False
+
 def answers_view2(request, olympiad_id, group_id):
 
     try:
@@ -2153,7 +2158,8 @@ def answers_view2(request, olympiad_id, group_id):
     except Olympiad.DoesNotExist:
        return render(request, 'error.html', {'error': 'Олимпиад олдоогүй.'})
 
-    if not request.user.moderating.filter(id=group_id).exists() and not request.user.is_staff:
+    print(request.user.id,group.moderator.first().id)
+    if not is_my_school_group(request.user.id,group_id): # and not request.user.is_staff:
         return render(request, 'error.html', {'error': 'Хандах эрхгүй.'})
 
     results = Result.objects.filter(olympiad_id=olympiad_id, contestant__groups=group).order_by('contestant_id', 'problem__order')
