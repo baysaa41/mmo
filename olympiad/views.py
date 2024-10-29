@@ -297,7 +297,7 @@ def quiz_staff_view(request, quiz_id, contestant_id):
     staff = request.user
     contestant = User.objects.get(pk=contestant_id)
 
-    #school = staff.moderating.all().first()
+    school = staff.moderating.all().first()
     #group = school.group
 
     #if not contestant.groups.filter(pk=group.id).exists():
@@ -319,9 +319,9 @@ def quiz_staff_view(request, quiz_id, contestant_id):
         form = ResultsFormSet(request.POST)
         if form.is_valid():
             form.save()
-            results = Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order')
-            return render(request, 'olympiad/confirm_teacher.html', {'results': results,
-                                                                     'olympiad': olympiad, 'contestant': contestant})
+            # results = Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order')
+            return redirect('quiz_list_view', staff.moderating.first().id)
+            # return render(request, 'olympiad/confirm_teacher.html', {'results': results, 'olympiad': olympiad, 'contestant': contestant})
     else:
         form = ResultsFormSet(
             queryset=Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order'))
