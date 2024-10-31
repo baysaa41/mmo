@@ -17,6 +17,7 @@ from .forms import AddRemoveUsersToGroupForm
 from schools.models import School
 from django.contrib.auth.models import Group
 from .forms import EmailForm
+from django.views.decorators.cache import cache_page
 
 
 
@@ -38,7 +39,7 @@ import openpyxl
 
 
 # Create your views here.
-
+@cache_page(60 * 15)
 def index(request):
     # shine hereglegchiin burtgel
     if request.user.is_authenticated:
