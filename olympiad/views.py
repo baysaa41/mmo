@@ -339,6 +339,7 @@ def is_my_student(teacher_id,student_id):
     return False
 @login_required
 def quiz_staff_view2(request, quiz_id, contestant_id):
+    return HttpResponse("Zasvartai")
     staff = request.user
     contestant = User.objects.get(pk=contestant_id)
 
