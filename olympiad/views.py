@@ -294,6 +294,7 @@ def exam_staff_view(request, olympiad_id, contestant_id):
 
 @login_required
 def quiz_staff_view(request, quiz_id, contestant_id):
+    return HttpResponse("Zasvartai")
     staff = request.user
     contestant = User.objects.get(pk=contestant_id)
 
