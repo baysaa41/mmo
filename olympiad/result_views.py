@@ -399,7 +399,7 @@ def olympiad_group_result_view(request,group_id):
     return render(request, 'olympiad/pandas3.html', context)
 
 def results_home(request):
-    return HttpResponse("Zasvartai")
+    # return HttpResponse("Zasvartai")
     now = datetime.now(timezone.utc)
     mode = request.GET.get('mode', 0)
     school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
@@ -422,7 +422,7 @@ def results_home(request):
     return render(request, 'olympiad/results_home.html', context=context)
 
 def olympiad_result_view(request, olympiad_id):
-    return HttpResponse("Zasvartai")
+    # return HttpResponse("Zasvartai")
     olympiad = Olympiad.objects.filter(id=olympiad_id).first()
     if olympiad.is_active() and not request.user.is_superuser:
         return HttpResponse("Test urgeljilj baina.")
