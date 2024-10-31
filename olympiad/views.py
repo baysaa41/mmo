@@ -110,7 +110,7 @@ def post(request):
         article = Article.objects.filter(pk=id).first()
         return render(request, 'accounts/post.html', {'article': article, 'mode': mode})
 
-
+@cache_page(60 * 60)
 def problems_home(request):
     now = datetime.now(timezone.utc)
     mode = request.GET.get('mode', 0)
