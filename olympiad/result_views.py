@@ -41,11 +41,12 @@ def update_results(request, olympiad_id):
                                 AND r.answer = p.numerical_answer \
                                 AND p.olympiad_id = %s", [olympiad_id])
 
-        olympiad.json_results = to_json(olympiad_id)
-        olympiad.save()
+        # olympiad.json_results = to_json(olympiad_id)
+        # olympiad.save()
     else:
         return HttpResponse("Olympiad doesn't exist.")
-    return JsonResponse(olympiad.json_results, safe=False)
+    # return JsonResponse(olympiad.json_results, safe=False)
+    return HttpResponse("Ok.")
 
 def to_json(olympiad_id):
     pd.options.display.float_format = '{:,.2f}'.format
@@ -2054,7 +2055,6 @@ def result_view_org(request, olympiad_id):
     return render(request, 'olympiad/results/results.html', context)
 
 @staff_member_required
-@cache_page(60 * 15)
 def answers_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))
