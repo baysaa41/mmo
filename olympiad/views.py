@@ -1,6 +1,6 @@
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, redirect, reverse
-
+from django.views.decorators.cache import cache_page
 from accounts.models import UserMeta
 from myquiz.models import UserAnswer
 from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article
@@ -133,7 +133,7 @@ def problems_home(request):
     }
     return render(request, 'olympiad/problems_home.html', context=context)
 
-
+@cache_page(60 * 60)
 def problems_view(request, olympiad_id):
     probidden = [16, 17, 18, 19, 24, 25, 26]
 
