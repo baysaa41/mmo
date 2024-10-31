@@ -1921,6 +1921,7 @@ def result_view(request, olympiad_id):
 
     return render(request, 'olympiad/results/results.html', context)
 
+@cache_page(60 * 30)
 def result_view_org(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))
