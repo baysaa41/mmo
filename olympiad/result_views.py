@@ -1892,7 +1892,7 @@ def createCertificate(request, quiz_id, contestant_id):
     return FileResponse(open('{}.pdf'.format(name), 'rb'))
 
 
-@cache_page(60 * 15)
+@cache_page(60 * 30)
 def result_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))
