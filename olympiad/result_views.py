@@ -1,7 +1,7 @@
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from olympiad.models import Olympiad, Result, SchoolYear, Award, Problem, OlympiadGroup
 from schools.models import School
 from accounts.models import Province, Zone, UserMeta
@@ -22,6 +22,7 @@ from django.core import serializers
 from django.core.serializers.json import DjangoJSONEncoder
 from django_tex.core import render_template_with_context
 from django.db.models import Count
+from django.views.decorators.cache import cache_page
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
 
@@ -330,6 +331,7 @@ def pandasIMO64(request):
     return render(request, 'olympiad/pandas3.html', context)
 
 
+@cache_page(60 * 15)
 def olympiad_group_result_view(request,group_id):
     try:
         olympiad_group = OlympiadGroup.objects.get(pk=group_id)
@@ -1890,7 +1892,35 @@ def createCertificate(request, quiz_id, contestant_id):
     return FileResponse(open('{}.pdf'.format(name), 'rb'))
 
 
+@cache_page(60 * 15)
 def result_view(request, olympiad_id):
+    pid = int(request.GET.get('p', 0))
+    zid = int(request.GET.get('z', 0))
+
+    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+    results = Result.objects.filter(olympiad_id=olympiad_id).select_related('contestant', 'problem').order_by('contestant_id', 'problem__order')
+
+    if not results.exists():
+        return render(request, 'olympiad/results/no_results.html')
+
+    # Build DataFrame directly from queryset
+    rows = [(r.contestant_id, r.problem_id, r.score) for r in results]
+    data = pd.DataFrame(rows, columns=['contestant_id', 'problem_id', 'score'])
+    results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='score', fill_value=0)
+
+    # Apply formatting as a single step
+    results_df = results_df.applymap(lambda x: f"{x:.1f}")
+
+    # Context setup for rendering template
+    context = {
+        'title': olympiad.name,
+        'name': f"{olympiad.name}, {olympiad.level.name} - {olympiad.school_year.name}",
+        'data': results_df.to_html(classes="table table-bordered table-hover", na_rep="--")
+    }
+
+    return render(request, 'olympiad/results/results.html', context)
+
+def result_view_org(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))
 
@@ -2024,6 +2054,7 @@ def result_view(request, olympiad_id):
     return render(request, 'olympiad/results/results.html', context)
 
 @staff_member_required
+@cache_page(60 * 15)
 def answers_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))

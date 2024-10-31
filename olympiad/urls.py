@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, result_views, beltgel2023
+from . import views, result_views, beltgel2023, data_views
 
 urlpatterns = [
     path('', views.list_upcomming_olympiads, name='olympiad_home'),
@@ -50,4 +50,6 @@ urlpatterns = [
     path('beltgel2023/', beltgel2023.index, name='beltgel_2023'),
     path('stats/<int:problem_id>/', result_views.problem_stats_view, name='problem_stats'),
     path('quizzes/list/<int:school_id>', views.quiz_list_view, name='quiz_list_view'),
+    path('results/data/<int:olympiad_id>', data_views.olympiad_results_json, name='olympiad_results_json'),
+    path('r/<int:olympiad_id>', data_views.results, name='olympiad_results_data'),
 ]

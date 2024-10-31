@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Olympiad Results</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            fetchResults();
+        });
+
+        function fetchResults() {
+            fetch('/olympiads/results/data/{{ olympiad.id }}')
+                .then(response => response.json())
+                .then(data => renderTable(data))
+                .catch(error => console.error('Error fetching results:', error));
+        }
+
+        function renderTable(data) {
+            console.log(data)
+            const tableBody = document.getElementById('results-body');
+            tableBody.innerHTML = ''; // Clear any existing rows
+
+            data.forEach(user => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${user.username}</td>
+                    <td>${user.school}</td>
+                    <td>${user.province}</td>
+                    ${user.answers.map(a => `<td>${a.score}</td>`).join('')}
+                    <td>${user.total_score}</td>
+                `;
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById("results-table");
+            const rows = Array.from(table.rows).slice(1);
+            let sortedRows = rows.sort((a, b) => {
+                let x = a.cells[columnIndex].innerText;
+                let y = b.cells[columnIndex].innerText;
+
+                if (!isNaN(x) && !isNaN(y)) {
+                    return parseFloat(x) - parseFloat(y);
+                }
+                return x.localeCompare(y);
+            });
+
+            // Re-insert sorted rows
+            sortedRows.forEach(row => table.appendChild(row));
+        }
+    </script>
+</head>
+<body>
+
+<h1>{{ olympiad.name }} олимпиадын дүн</h1>
+<table id="results-table" border="1">
+    <thead>
+        <tr>
+            <th onclick="sortTable(0)">Username</th>
+            <th onclick="sortTable(1)">School</th>
+            <th onclick="sortTable(2)">Province</th>
+            <th onclick="sortTable(3)">Problem 1</th>
+            <th onclick="sortTable(4)">Problem 2</th>
+            <th onclick="sortTable(5)">Total Score</th>
+        </tr>
+    </thead>
+    <tbody id="results-body">
+        <!-- Data will be inserted here by JavaScript -->
+    </tbody>
+</table>
+
+</body>
+</html>
