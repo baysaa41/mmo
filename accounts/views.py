@@ -39,7 +39,6 @@ import openpyxl
 
 
 # Create your views here.
-@cache_page(60 * 15)
 def index(request):
     # shine hereglegchiin burtgel
     if request.user.is_authenticated:
