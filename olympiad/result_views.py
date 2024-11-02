@@ -74,7 +74,7 @@ def json_results(request, olympiad_id):
     except Olympiad.DoesNotExist:
         return JsonResponse({})
 
-# @cache_page(60*3600*24)
+@cache_page(60*3600*24)
 def pandasView(request, olympiad_id):
     p = request.GET.get('p', 0)
     z = request.GET.get('z', 0)
