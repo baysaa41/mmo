@@ -1,4 +1,4 @@
-{% extends 'base-fluid.html' %}
+{% extends 'base-minimal.html' %}
 
 {% load crispy_forms_tags %}
 
@@ -26,7 +26,7 @@
 
 {% block content %}
     <h3>{{ title }}</h3>
-    <h4>{{ quiz.name }}, {{ quiz.level.name }} ангилал</h4>
+    <h4>{{ quiz.name }}, {{ quiz.level.name }} ангиллын дүн</h4>
 <div>
 {% if provinces|length > 0 %}
 <label for="provinces">Аймаг, Дүүрэг сонгох:</label>

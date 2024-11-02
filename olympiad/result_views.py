@@ -74,32 +74,33 @@ def json_results(request, olympiad_id):
     except Olympiad.DoesNotExist:
         return JsonResponse({})
 
-def pandasView(request, quiz_id):
+@cache_page(60*3600*24)
+def pandasView(request, olympiad_id):
     pd.options.display.float_format = '{:,.2f}'.format
     try:
-        quiz = Olympiad.objects.get(pk=quiz_id)
-    except ObjectDoesNotExist:
-        return redirect('/')
+        quiz = Olympiad.objects.get(pk=olympiad_id)
+    except Exception as e:
+        print(str(e))
 
-    answers = Result.objects.filter(olympiad_id=quiz_id)
-    users = User.objects.filter(is_active=True)
+    answers = Result.objects.filter(olympiad_id=olympiad_id)
+    users = User.objects.select_related('data').filter(is_active=True)
     answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
     users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id'], verbose=False)
 
     pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
     pivot["Дүн"] = pivot.sum(axis=1)
     pivot.loc['AVG'] = pivot.mean()
-    print(pivot)
+    # print(pivot)
     results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='right')
     results.sort_values(by='Дүн', ascending=False, inplace=True)
     # results["link"] = results["id"]
     results["link"] = results["id"].apply(
-        lambda x: "<a href='/olympiads/result/{0}/{1}'>ХАРИУЛТ</a>".format(quiz_id, x))
+        lambda x: "<a href='/olympiads/result/{0}/{1}'>Хариултууд</a>".format(olympiad_id, x))
     results.rename(columns={
         'id': 'ID',
         'first_name': 'Нэр',
         'last_name': 'Овог',
-        'link': 'ХАРИУЛТ',
+        'link': 'Хариултууд',
     }, inplace=True)
     results.index = np.arange(1, results.__len__() + 1)
 
@@ -173,7 +174,7 @@ def pandasView3(request, olympiad_id):
         'last_name': 'Овог',
         'data__province__name': 'Аймаг/Дүүрэг',
         'data__school': 'Cургууль',
-        'place': 'Медал',
+        'place': 'Медаль',
         'link': '<i class="fas fa-expand-wide"></i>',
     }, inplace=True)
     results.index = np.arange(1, results.__len__() + 1)
@@ -198,6 +199,7 @@ def pandasView3(request, olympiad_id):
 
     last_hack = styled_df.to_html(classes='table table-bordered table-hover', na_rep="", escape=False)
     last_hack = re.sub('<th class="blank level0" >&nbsp;</th>', '<th class="blank level0" >№</th>', last_hack)
+    last_hack = re.sub('<th>1005</th>', '<th>№1</th>', last_hack)
 
     context = {
         'pivot': last_hack,
@@ -1925,12 +1927,14 @@ def result_view(request, olympiad_id):
 def result_view_org(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     zid = int(request.GET.get('z', 0))
+    sid = int(request.GET.get('s', 0))
 
     try:
         olympiad = Olympiad.objects.get(pk=olympiad_id)
     except:
         return render(request, 'olympiad/results/no_olympiad.html')
-    results = Result.objects.filter(olympiad_id=olympiad_id).order_by('contestant_id', 'problem__order')
+    # results = Result.objects.filter(olympiad_id=olympiad_id).order_by('contestant_id', 'problem__order')
+    results = Result.objects.filter(olympiad_id=olympiad_id)
 
     if not results.exists():
         return render(request, 'olympiad/results/no_results.html')
