@@ -1,6 +1,7 @@
 import string
 import random
 import re
+from schools.models import School
 
 def random_salt(n=8):
     characterList = string.ascii_letters + string.digits
@@ -22,3 +23,9 @@ def check_email(email):
     else:
         return False
 
+def activate_users():
+    schools=School.objects.all()
+    for school in schools:
+        for user in school.group.user_set.filter(is_active=False):
+            user.is_active=True
+            user.save()
