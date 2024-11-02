@@ -401,3 +401,31 @@ class OlympiadGroup(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ScoreSheet(models.Model):
+    user = models.ForeignKey(User, related_name='results', on_delete=models.CASCADE, null=True, blank=True)
+    olympiad = models.ForeignKey(Olympiad, on_delete=models.CASCADE)
+    s1 = models.IntegerField(null=True, blank=True)
+    s2 = models.IntegerField(null=True, blank=True)
+    s3 = models.IntegerField(null=True, blank=True)
+    s4 = models.IntegerField(null=True, blank=True)
+    s5 = models.IntegerField(null=True, blank=True)
+    s6 = models.IntegerField(null=True, blank=True)
+    s7 = models.IntegerField(null=True, blank=True)
+    s8 = models.IntegerField(null=True, blank=True)
+    s9 = models.IntegerField(null=True, blank=True)
+    s10 = models.IntegerField(null=True, blank=True)
+    s11 = models.IntegerField(null=True, blank=True)
+    s12 = models.IntegerField(null=True, blank=True)
+    s13 = models.IntegerField(null=True, blank=True)
+    s14 = models.IntegerField(null=True, blank=True)
+    s15 = models.IntegerField(null=True, blank=True)
+    s16 = models.IntegerField(null=True, blank=True)
+    s17 = models.IntegerField(null=True, blank=True)
+    s18 = models.IntegerField(null=True, blank=True)
+    s19 = models.IntegerField(null=True, blank=True)
+    s20 = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return "{} олимпиад, {}".format(self.olympiad.name, self.user)

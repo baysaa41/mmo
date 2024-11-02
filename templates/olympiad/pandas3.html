@@ -37,10 +37,8 @@
         {% endfor %}
     </select>
 {% endif %}
+{% include 'selection_menu.html' %}
 </div>
-    {% if quiz.level.id == 1 %}
-        <p>Бага ангийн сурагчдын дүнг нэрсээр гаргаагүй. Өөрсдийн ID-гаараа дүнгээ шалгаарай.</p>
-    {% endif %}
     <div class="ustify-content-center">
         {{ pivot | safe }}
     </div>

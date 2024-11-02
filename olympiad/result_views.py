@@ -74,8 +74,38 @@ def json_results(request, olympiad_id):
     except Olympiad.DoesNotExist:
         return JsonResponse({})
 
-@cache_page(60*3600*24)
+# @cache_page(60*3600*24)
 def pandasView(request, olympiad_id):
+    p = request.GET.get('p', 0)
+    z = request.GET.get('z', 0)
+    s = request.GET.get('s', 0)
+
+    try:
+        if p:
+            users = User.objects.filter(data__province_id=p)
+            province = Province.objects.get(pk=p)
+            title = province.name
+        elif z:
+            if z == '12':
+                users = User.objects.filter(data__province_id__gt=21)
+                title = 'Улаанбаатар хот'
+            else:
+                users = User.objects.filter(data__province__zone_id=z)
+                zone = Zone.objects.get(pk=z)
+                title = zone.name
+        elif s:
+            school = School.objects.get(pk=s)
+            users = school.group.user_set.all()
+            title = school.name
+        else:
+            users = User.objects.filter(is_active=True)
+            title = 'Бүх сурагчид'
+    except:
+        users = User.objects.filter(is_active=True)
+        title = 'Бүх сурагчид exception'
+        pass
+
+
     pd.options.display.float_format = '{:,.2f}'.format
     try:
         quiz = Olympiad.objects.get(pk=olympiad_id)
@@ -83,7 +113,6 @@ def pandasView(request, olympiad_id):
         print(str(e))
 
     answers = Result.objects.filter(olympiad_id=olympiad_id)
-    users = User.objects.select_related('data').filter(is_active=True)
     answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
     users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id'], verbose=False)
 
@@ -91,7 +120,7 @@ def pandasView(request, olympiad_id):
     pivot["Дүн"] = pivot.sum(axis=1)
     pivot.loc['AVG'] = pivot.mean()
     # print(pivot)
-    results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='right')
+    results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='inner')
     results.sort_values(by='Дүн', ascending=False, inplace=True)
     # results["link"] = results["id"]
     results["link"] = results["id"].apply(
@@ -109,6 +138,7 @@ def pandasView(request, olympiad_id):
         'df': results.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
         'pivot': results.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
         'quiz': quiz,
+        'title': title
     }
     return render(request, 'olympiad/pandas3.html', context)
 
