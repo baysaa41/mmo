@@ -29,9 +29,11 @@ def activate_users():
         for user in school.group.user_set.filter(is_active=False):
             user.is_active=True
             user.save()
+    return True
 
 def list_inactivate_users():
     schools=School.objects.all()
     for school in schools:
         for user in school.group.user_set.filter(is_active=False):
             print(school.name,user.name)
+    return True
