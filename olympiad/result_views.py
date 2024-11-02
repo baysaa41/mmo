@@ -102,7 +102,7 @@ def pandasView(request, olympiad_id):
             title = 'Бүх сурагчид'
     except:
         users = User.objects.filter(is_active=True)
-        title = 'Бүх сурагчид exception'
+        title = ''
         pass
 
 
@@ -114,7 +114,7 @@ def pandasView(request, olympiad_id):
 
     answers = Result.objects.filter(olympiad_id=olympiad_id)
     answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
-    users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id'], verbose=False)
+    users_df = read_frame(users, fieldnames=['id', 'last_name', 'first_name', 'data__school'], verbose=False)
 
     pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
     pivot["Дүн"] = pivot.sum(axis=1)
@@ -124,12 +124,13 @@ def pandasView(request, olympiad_id):
     results.sort_values(by='Дүн', ascending=False, inplace=True)
     # results["link"] = results["id"]
     results["link"] = results["id"].apply(
-        lambda x: "<a href='/olympiads/result/{0}/{1}'>Хариултууд</a>".format(olympiad_id, x))
+        lambda x: "<a href='/olympiads/result/{0}/{1}'>+</a>".format(olympiad_id, x))
     results.rename(columns={
         'id': 'ID',
         'first_name': 'Нэр',
         'last_name': 'Овог',
-        'link': 'Хариултууд',
+        'data__school': 'Сургууль',
+        'link': '+',
     }, inplace=True)
     results.index = np.arange(1, results.__len__() + 1)
 

@@ -54,12 +54,11 @@
         <th>Бүртгэлийн ажилтан</th>
         {% if request.user.is_staff %}
             <th>Холбогдох утас</th>
-            <th>Сүүлийн нэвтрэл</th>
+            <th>Сүүлийн нэвтрэлт</th>
             <th>Имэйл хаяг</th>
         {% endif %}
         <th>Нэвтрэх нэр</th>
         <th>Удирдах</th>
-        <th>Олимпиад</th>
         {% for olympiad in olympiads %}
             <th>{{ olympiad.description }}</th>
         {% endfor %}
@@ -82,11 +81,8 @@
             <td>
                 <a href="{% url 'manage_school' school.id %}" class="btn btn-sm btn-info">Удирдах</a>
             </td>
-            <td>
-                <a href="{% url 'quiz_list_view' school.id  %}" class="btn btn-sm btn-danger">Хариулт</a>
-            </td>
         {% for olympiad in olympiads %}
-            <td><a class="btn btn-warning btn-sm" href="{% url 'olympiad_group_answer_view' olympiad_id=olympiad.id group_id=school.group.id %}" target="_blank">Дүн харах</a></td>
+            <td><a class="btn btn-warning btn-sm" href="{% url 'olympiad_group_answer_view' olympiad_id=olympiad.id group_id=school.group.id %}" target="_blank">Хариулт харах</a></td>
         {% endfor %}
         </tr>
     {% endfor %}

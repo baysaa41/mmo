@@ -28,20 +28,11 @@
     <h3>{{ title }}</h3>
     <h4>{{ quiz.name }}, {{ quiz.level.name }} ангиллын дүн</h4>
 <div>
-{% if provinces|length > 0 %}
-<label for="provinces">Аймаг, Дүүрэг сонгох:</label>
-    <select onchange="reloadPage(this.value)">
-    <option>------</option>
-        {% for province in provinces %}
-        <option value="{{province.id}}">{{province.name}}</option>
-        {% endfor %}
-    </select>
-{% endif %}
 {% include 'selection_menu.html' %}
 </div>
-    <div class="ustify-content-center">
-        {{ pivot | safe }}
-    </div>
+<div class="ustify-content-center">
+    {{ pivot | safe }}
+</div>
 <script>
     function reloadPage(i) {
         window.location.replace('?p=' + i)
