@@ -1,12 +1,9 @@
 {% extends 'base.html' %}
 
-{% load cache %}
-
 {% block title %}Монголын Математикийн Олимпиадын Хороо{% endblock %}
 
 
 {% block content %}
-    {% cache 600 "content" %}
     {% if messages %}
         <ul class="messages">
             {% for message in messages %}
