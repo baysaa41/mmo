@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ olympiad.name }} Scores</title>
+</head>
+<body>
+    <h1>Scores for {{ olympiad.name }}</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>User</th>
+                {% for i in problem_range %}
+                    <th>Score {{ i }}</th>
+                {% endfor %}
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in score_data %}
+                <tr>
+                    <td>{{ data.user }}</td>
+                    {% for score in data.scores %}
+                        <td>{{ score }}</td>
+                    {% endfor %}
+                    <td>{{ data.total }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

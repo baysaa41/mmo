@@ -1,9 +1,9 @@
 from django.http import HttpResponse, JsonResponse, FileResponse
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.decorators.cache import cache_page
 from accounts.models import UserMeta
 from myquiz.models import UserAnswer
-from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article
+from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article, ScoreSheet
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.forms import modelformset_factory
@@ -718,3 +718,27 @@ def upload_file(request):
                    "excel_data_f": excel_data_f, 'error': error}
 
         return render(request, 'olympiad/upload_file.html', context)
+
+
+def olympiad_scores(request, olympiad_id):
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
+    problem_count = olympiad.problem_set.count()
+
+    # Prepare score data for each ScoreSheet up to the length of the problem set
+    score_data = []
+    for scoresheet in scoresheets:
+        scores = [getattr(scoresheet, f's{i}') for i in range(1, problem_count + 1)]
+        score_data.append({
+            'user': scoresheet.user,
+            'scores': scores,
+            'total': scoresheet.total,
+        })
+
+    # Pass a range for the number of problems to the template
+    context = {
+        'olympiad': olympiad,
+        'score_data': score_data,
+        'problem_range': range(1, problem_count + 1),  # Passing the range here
+    }
+    return render(request, 'olympiad/olympiad_scores.html', context)

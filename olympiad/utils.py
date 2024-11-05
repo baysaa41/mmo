@@ -1,4 +1,6 @@
-from .models import Olympiad, Result
+from .models import Olympiad, Result, ScoreSheet
+from schools.models import School
+from accounts.models import UserMeta
 from django.contrib.auth.models import User
 import json
 
@@ -35,3 +37,39 @@ def prepare_json_results(olympiad_id):
     olympiad.json_results = json.dumps(results)
     olympiad.save()
     return olympiad.json_results
+
+def set_schools_name():
+    schools = School.objects.all()
+    for school in schools:
+        for user in school.group.user_set.all():
+            try:
+                user.data.school = school.name
+            except Exception as e:
+                data = UserMeta.objects.create(user=user, school=school.name, province=school.province, reg_num='',mobile=0)
+                print(user.username, e)
+    return True
+
+
+import math
+
+
+def set_scoretable(olympiad_id):
+    results = Result.objects.filter(olympiad_id=olympiad_id)
+    for result in results:
+        sheet, created = ScoreSheet.objects.get_or_create(user_id=result.contestant_id, olympiad_id=olympiad_id)
+
+        # Initialize total to 0 if it's None
+        if sheet.total is None:
+            sheet.total = 0
+
+        # Check if result.score is a valid number before assigning
+        if result.score is not None and not math.isnan(result.score):
+            setattr(sheet, f"s{result.problem.order}", result.score)
+            sheet.total += result.score
+        else:
+            # Optionally, set a default value like 0 if the score is NaN or None
+            setattr(sheet, f"s{result.problem.order}", 0)
+
+        # Save the updated sheet
+        sheet.save()
+

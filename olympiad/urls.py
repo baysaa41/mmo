@@ -53,4 +53,5 @@ urlpatterns = [
     path('quizzes/list/<int:school_id>', views.quiz_list_view, name='quiz_list_view'),
     #path('results/data/<int:olympiad_id>', data_views.olympiad_results_json, name='olympiad_results_json'),
     #path('r/<int:olympiad_id>', data_views.results, name='olympiad_results_data'),
+    path('olympiad/<int:olympiad_id>/scores/', views.olympiad_scores, name='olympiad_scores'),
 ]
