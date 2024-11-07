@@ -743,9 +743,11 @@ def olympiad_scores(request, olympiad_id):
     for scoresheet in scoresheets:
         scores = [getattr(scoresheet, f's{i}') for i in range(1, problem_count + 1)]
         score_data.append({
-            'user': scoresheet.user,
+            'last_name': scoresheet.user.last_name,
+            'first_name': scoresheet.user.first_name,
             'scores': scores,
             'total': scoresheet.total,
+            'ranking': scoresheet.ranking
         })
 
     # Pass a range for the number of problems to the template
