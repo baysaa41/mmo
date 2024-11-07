@@ -9,17 +9,20 @@
     <table border="1">
         <thead>
             <tr>
-                <th>User</th>
+                <th>Овог</th>
+                <th>Нэр</th>
                 {% for i in problem_range %}
                     <th>Score {{ i }}</th>
                 {% endfor %}
-                <th>Total</th>
+                <th>Нийт</th>
+                <th>Байр</th>
             </tr>
         </thead>
         <tbody>
             {% for data in score_data %}
                 <tr>
-                    <td>{{ data.user }}</td>
+                    <td>{{ data.user.last_name }}</td>
+                    <td>{{ data.user.first_name }}</td>
                     {% for score in data.scores %}
                         <td>{{ score }}</td>
                     {% endfor %}
