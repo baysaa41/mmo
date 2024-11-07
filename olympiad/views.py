@@ -721,8 +721,12 @@ def upload_file(request):
 
 
 def olympiad_scores(request, olympiad_id):
+    p=request.GET.get('p','0')
+    z=request.GET.get('z','0')
+    n=request.GET.get('n','1')
+    size=100
     olympiad = get_object_or_404(Olympiad, id=olympiad_id)
-    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
+    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad).order_by('-total')
     problem_count = olympiad.problem_set.count()
 
     # Prepare score data for each ScoreSheet up to the length of the problem set

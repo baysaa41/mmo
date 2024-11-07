@@ -3,8 +3,8 @@ from . import views, result_views, beltgel2023, data_views
 
 urlpatterns = [
     path('', views.list_upcomming_olympiads, name='olympiad_home'),
-    path('jsonview/<int:olympiad_id>/', result_views.json_view, name='jsonview'),
-    path('json/<int:olympiad_id>/', result_views.json_results, name='jsonview'),
+    # path('jsonview/<int:olympiad_id>/', result_views.json_view, name='jsonview'),
+    # path('json/<int:olympiad_id>/', result_views.json_results, name='jsonview'),
     path('excel/', views.upload_file, name='upload_file'),
     path('supplements/', views.supplement_home, name='olympiad_supplement_home'),
     path('supplements/admin/', views.supplements_view, name='supplements_view'),
