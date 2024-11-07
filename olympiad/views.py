@@ -721,12 +721,21 @@ def upload_file(request):
 
 
 def olympiad_scores(request, olympiad_id):
-    p=request.GET.get('p','0')
-    z=request.GET.get('z','0')
-    n=request.GET.get('n','1')
+    province_id=request.GET.get('p','0')
+    zone_id=request.GET.get('z','0')
+    page=request.GET.get('n','1')
     size=100
     olympiad = get_object_or_404(Olympiad, id=olympiad_id)
-    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad).order_by('-total')
+    if province_id:
+        scoresheets = ScoreSheet.objects.filter(olympiad=olympiad,user__data__province_id=province_id).order("-total")
+    elif zone_id:
+        scoresheets = ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order("-total")
+    else:
+        scoresheets = ScoreSheet.objects.filter(olympiad=olympiad).order("-total")
+
+    if page:
+        scoresheets = scoresheets.limit(size)
+
     problem_count = olympiad.problem_set.count()
 
     # Prepare score data for each ScoreSheet up to the length of the problem set

@@ -66,3 +66,13 @@ def set_scoretable(olympiad_id):
         # Save the updated sheet
         sheet.save()
 
+    scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id).order_by('-total')
+    place = 1
+    count = 0
+    last_score = 0
+    for sheet in scoresheets:
+        if last_score < sheet.total:
+            last_score = sheet.total
+            place = count + 1
+        count += 1
+        sheet.place = place
