@@ -67,12 +67,12 @@ def set_scoretable(olympiad_id):
         sheet.save()
 
     scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id).order_by('-total')
-    place = 1
+    ranking = 1
     last_score = None
 
     for index, sheet in enumerate(scoresheets, start=1):
         if last_score != sheet.total:
-            place = index
+            ranking = index
             last_score = sheet.total
-        sheet.place = place
+        sheet.ranking = ranking
         sheet.save()
