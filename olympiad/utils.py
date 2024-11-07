@@ -76,3 +76,4 @@ def set_scoretable(olympiad_id):
             place = count + 1
         count += 1
         sheet.place = place
+        sheet.save()
