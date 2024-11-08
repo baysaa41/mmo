@@ -17,6 +17,7 @@ from django.template.loader import render_to_string
 import os
 import openpyxl
 from accounts.views import random_salt
+from django.core.paginator import Paginator
 
 from schools.models import School
 
@@ -721,27 +722,39 @@ def upload_file(request):
 
 
 def olympiad_scores(request, olympiad_id):
-    province_id=request.GET.get('p','0')
-    zone_id=request.GET.get('z','0')
-    page=request.GET.get('n','1')
-    size=100
-    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
-    if province_id:
-        scoresheets = ScoreSheet.objects.filter(olympiad=olympiad,user__data__province_id=province_id).order("-total")
-    elif zone_id:
-        scoresheets = ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order("-total")
-    else:
-        scoresheets = ScoreSheet.objects.filter(olympiad=olympiad).order("-total")
+    province_id = request.GET.get('p', '0')
+    zone_id = request.GET.get('z', '0')
+    page_number = request.GET.get('n', '1')
+    size = 100
 
-    if page:
-        scoresheets = scoresheets.limit(size)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    # Filter based on province or zone, or get all scoresheets
+    if province_id != '0':
+        scoresheets = ScoreSheet.objects.filter(
+            olympiad=olympiad,
+            user__data__province_id=province_id
+        ).order_by("-total")
+    elif zone_id != '0':
+        scoresheets = ScoreSheet.objects.filter(
+            olympiad=olympiad,
+            user__data__province__zone_id=zone_id
+        ).order_by("-total")
+    else:
+        scoresheets = ScoreSheet.objects.filter(
+            olympiad=olympiad
+        ).order_by("-total")
+
+    # Paginate scoresheets
+    paginator = Paginator(scoresheets, size)
+    scoresheets_page = paginator.get_page(page_number)
 
     problem_count = olympiad.problem_set.count()
 
-    # Prepare score data for each ScoreSheet up to the length of the problem set
+    # Prepare score data for each ScoreSheet
     score_data = []
-    for scoresheet in scoresheets:
-        scores = [getattr(scoresheet, f's{i}') for i in range(1, problem_count + 1)]
+    for scoresheet in scoresheets_page:
+        scores = [getattr(scoresheet, f's{i}', None) for i in range(1, problem_count + 1)]
         score_data.append({
             'last_name': scoresheet.user.last_name,
             'first_name': scoresheet.user.first_name,
@@ -750,10 +763,11 @@ def olympiad_scores(request, olympiad_id):
             'ranking': scoresheet.ranking
         })
 
-    # Pass a range for the number of problems to the template
     context = {
         'olympiad': olympiad,
         'score_data': score_data,
-        'problem_range': range(1, problem_count + 1),  # Passing the range here
+        'problem_range': range(1, problem_count + 1),
+        'paginator': paginator,
+        'page_obj': scoresheets_page
     }
     return render(request, 'olympiad/olympiad_scores.html', context)

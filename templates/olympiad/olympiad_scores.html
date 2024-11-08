@@ -21,8 +21,8 @@
         <tbody>
             {% for data in score_data %}
                 <tr>
-                    <td>{{ data.user.last_name }}</td>
-                    <td>{{ data.user.first_name }}</td>
+                    <td>{{ data.last_name }}</td>
+                    <td>{{ data.first_name }}</td>
                     {% for score in data.scores %}
                         <td>{{ score }}</td>
                     {% endfor %}
