@@ -428,7 +428,9 @@ class ScoreSheet(models.Model):
     s20 = models.IntegerField(default=0)
     total = models.IntegerField(default=0)
     prizes = models.TextField(null=True, blank=True)
-    ranking = models.IntegerField(default=1)
+    ranking_a = models.IntegerField(default=0)
+    ranking_b = models.IntegerField(default=0)
+
     def __str__(self):
         return "{} олимпиад, {}".format(self.olympiad.name, self.user)
 
@@ -441,4 +443,3 @@ class ScoreSheet(models.Model):
             getattr(self, f's{i}') for i in range(1, 21)
         )
         super().save(*args, **kwargs)
-

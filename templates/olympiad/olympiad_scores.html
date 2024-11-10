@@ -3,31 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ olympiad.name }} ({{ olympiad.description }}) олимпиадын дүнгийн хүснэгт</title>
+    <style>
+        /* Basic page styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1 {
+            color: #004085;
+            text-align: center;
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #007bff;
+            color: #fff;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Pagination styling */
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 16px;
+            line-height: 2.8;
+        }
+        .pagination a, .pagination strong {
+            margin: 8px 5px;
+            padding: 8px 12px;
+            text-decoration: none;
+            color: #007bff;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .pagination a:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .pagination strong {
+            background-color: #004085;
+            color: #fff;
+            border: 1px solid #004085;
+        }
+    </style>
 </head>
 <body>
     <h1>{{ olympiad.name }} олимпиадын дүн</h1>
-    <table border="1">
+   <!-- Pagination controls (same as before) -->
+    <div class="pagination">
+        <span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        
+        {% if page_obj.has_previous %}
+            <a href="?page=1">&laquo;</a>
+            <a href="?page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+        {% endif %}
+
+        {% for page_num in page_obj.paginator.page_range %}
+            {% if page_num == page_obj.number %}
+                <strong>{{ page_num }}</strong>
+            {% else %}
+                <a href="?page={{ page_num }}">{{ page_num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">&rsaquo;</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+        {% endif %}
+    </div>
+    <table>
         <thead>
             <tr>
                 <th>Овог</th>
                 <th>Нэр</th>
+                <th>ММО ID</th>
                 {% for i in problem_range %}
-                    <th>Score {{ i }}</th>
+                    <th>№{{ i }}</th>
                 {% endfor %}
                 <th>Нийт</th>
                 <th>Байр</th>
             </tr>
         </thead>
         <tbody>
+            <!-- Display current user's score at the top if available -->
+            {% if user_score_data %}
+                <tr style="background-color: #ccc;">
+                    <th>{{ user_score_data.last_name }}</th>
+                    <th>{{ user_score_data.first_name }}</th>
+                    <th>{{ user_score_data.id }}</th>
+                    {% for score in user_score_data.scores %}
+                        <th>{{ score }}</th>
+                    {% endfor %}
+                    <th>{{ user_score_data.total }}</th>
+                    {% if user_score_data.ranking_a == user_score_data.ranking_b %}
+                        <th>{{ user_score_data.ranking_a }}</th>
+                    {% else %}
+                        <th>{{ user_score_data.ranking_a }}-{{ user_score_data.ranking_b }}</th>
+                    {% endif %}
+                </tr>
+            {% endif %}
+
+            <!-- Display all other scores -->
             {% for data in score_data %}
                 <tr>
                     <td>{{ data.last_name }}</td>
                     <td>{{ data.first_name }}</td>
+                    <td>{{ data.id }}</td>
                     {% for score in data.scores %}
                         <td>{{ score }}</td>
                     {% endfor %}
                     <td>{{ data.total }}</td>
-                    <td>{{ data.ranking }}</td>
+                    {% if data.ranking_a == data.ranking_b %}
+                        <td>{{ data.ranking_a }}</td>
+                    {% else %}
+                        <td>{{ data.ranking_a }}-{{ data.ranking_b }}</td>
+                    {% endif %}
                 </tr>
             {% endfor %}
         </tbody>

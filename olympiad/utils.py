@@ -52,27 +52,42 @@ def set_schools_name():
 
 
 def set_scoretable(olympiad_id):
+    print("setting scores...")
     results = Result.objects.filter(olympiad_id=olympiad_id)
     for result in results:
         sheet, created = ScoreSheet.objects.get_or_create(user_id=result.contestant_id, olympiad_id=olympiad_id)
 
-        # Check if result.score is a valid number before assigning
-        if result.score is not None and not math.isnan(result.score):
+        if result.score:
             setattr(sheet, f"s{result.problem.order}", result.score)
-        else:
-            # Optionally, set a default value like 0 if the score is NaN or None
-            setattr(sheet, f"s{result.problem.order}", 0)
 
-        # Save the updated sheet
         sheet.save()
+    print("setting ranking a...")
+    set_ranking_a(olympiad_id)
+    print("setting ranking b...")
+    set_ranking_b(olympiad_id)
 
+
+def set_ranking_a(olympiad_id):
     scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id).order_by('-total')
     ranking = 1
-    last_score = None
+    current_score = None
 
     for index, sheet in enumerate(scoresheets, start=1):
-        if last_score != sheet.total:
+        if current_score != sheet.total:
             ranking = index
-            last_score = sheet.total
-        sheet.ranking = ranking
+            current_score = sheet.total
+        sheet.ranking_a = ranking
+        sheet.save()
+
+def set_ranking_b(olympiad_id):
+    scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id).order_by('total')
+    lowest = len(scoresheets)
+    ranking = lowest
+    current_score = None
+
+    for index, sheet in enumerate(scoresheets, start=1):
+        if current_score != sheet.total:
+            ranking = lowest - index + 1
+            current_score = sheet.total
+        sheet.ranking_b = ranking
         sheet.save()
