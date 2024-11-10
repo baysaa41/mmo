@@ -430,6 +430,8 @@ class ScoreSheet(models.Model):
     prizes = models.TextField(null=True, blank=True)
     ranking_a = models.IntegerField(default=0)
     ranking_b = models.IntegerField(default=0)
+    ranking_a_p = models.IntegerField(default=0)
+    ranking_b_p = models.IntegerField(default=0)
 
     def __str__(self):
         return "{} олимпиад, {}".format(self.olympiad.name, self.user)

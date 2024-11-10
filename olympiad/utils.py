@@ -91,3 +91,30 @@ def set_ranking_b(olympiad_id):
             current_score = sheet.total
         sheet.ranking_b = ranking
         sheet.save()
+
+def set_ranking_a_p(olympiad_id,province_id):
+    scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                            user__data__province_id=province_id).order_by('-total')
+    ranking = 1
+    current_score = None
+
+    for index, sheet in enumerate(scoresheets, start=1):
+        if current_score != sheet.total:
+            ranking = index
+            current_score = sheet.total
+        sheet.ranking_a_p = ranking
+        sheet.save()
+
+def set_ranking_b_p(olympiad_id,province_id):
+    scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                            user__data__province_id=province_id).order_by('total')
+    lowest = len(scoresheets)
+    ranking = lowest
+    current_score = None
+
+    for index, sheet in enumerate(scoresheets, start=1):
+        if current_score != sheet.total:
+            ranking = lowest - index + 1
+            current_score = sheet.total
+        sheet.ranking_b_p = ranking
+        sheet.save()
