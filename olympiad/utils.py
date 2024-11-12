@@ -65,6 +65,16 @@ def set_scoretable(olympiad_id):
     set_ranking_a(olympiad_id)
     print("setting ranking b...")
     set_ranking_b(olympiad_id)
+    for i in range(30):
+        set_ranking_a_p(olympiad_id,i+1)
+        set_ranking_b_p(olympiad_id,i+1)
+
+
+def set_scoretables():
+    set_scoretable(160)
+    set_scoretable(161)
+    set_scoretable(162)
+    set_scoretable(163)
 
 
 def set_ranking_a(olympiad_id):

@@ -735,13 +735,10 @@ def olympiad_scores(request, olympiad_id):
     if request.user.is_authenticated:
         try:
             user_scoresheet = ScoreSheet.objects.get(olympiad=olympiad, user=request.user)
-            problem_count = olympiad.problem_set.count()
-            user_scores = [getattr(user_scoresheet, f's{i}', None) for i in range(1, problem_count + 1)]
             user_score_data = {
                 'last_name': user_scoresheet.user.last_name,
                 'first_name': user_scoresheet.user.first_name,
                 'id': user_scoresheet.user.id,
-                'scores': user_scores,
                 'total': user_scoresheet.total,
                 'ranking_a': user_scoresheet.ranking_a,
                 'ranking_b': user_scoresheet.ranking_b,
@@ -750,11 +747,13 @@ def olympiad_scores(request, olympiad_id):
             user_score_data = None
 
     # Filter based on province or zone, or get all scoresheets
+    is_province = False
     if province_id != '0':
         scoresheets = ScoreSheet.objects.filter(
             olympiad=olympiad,
             user__data__province_id=province_id
         ).order_by("-total")
+        is_province = True
     elif zone_id != '0':
         scoresheets = ScoreSheet.objects.filter(
             olympiad=olympiad,
@@ -771,17 +770,34 @@ def olympiad_scores(request, olympiad_id):
 
     # Prepare score data for each ScoreSheet
     score_data = []
-    for scoresheet in scoresheets_page:
-        scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
-        score_data.append({
-            'last_name': scoresheet.user.last_name,
-            'first_name': scoresheet.user.first_name,
-            'id': scoresheet.user.id,
-            'scores': scores,
-            'total': scoresheet.total,
-            'ranking_a': scoresheet.ranking_a,
-            'ranking_b': scoresheet.ranking_b,
-        })
+    if is_province:
+        for scoresheet in scoresheets_page:
+            scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
+            score_data.append({
+                'last_name': scoresheet.user.last_name,
+                'first_name': scoresheet.user.first_name,
+                'id': scoresheet.user.id,
+                'province': scoresheet.user.data.province.name,
+                'school': scoresheet.user.data.school,
+                'scores': scores,
+                'total': scoresheet.total,
+                'ranking_a': scoresheet.ranking_a_p,
+                'ranking_b': scoresheet.ranking_b_p,
+            })
+    else:
+        for scoresheet in scoresheets_page:
+            scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
+            score_data.append({
+                'last_name': scoresheet.user.last_name,
+                'first_name': scoresheet.user.first_name,
+                'id': scoresheet.user.id,
+                'province': scoresheet.user.data.province.name,
+                'school': scoresheet.user.data.school,
+                'scores': scores,
+                'total': scoresheet.total,
+                'ranking_a': scoresheet.ranking_a,
+                'ranking_b': scoresheet.ranking_b,
+            })
 
     context = {
         'olympiad': olympiad,
@@ -789,6 +805,7 @@ def olympiad_scores(request, olympiad_id):
         'score_data': score_data,
         'problem_range': range(1, olympiad.problem_set.count() + 1),
         'paginator': paginator,
-        'page_obj': scoresheets_page
+        'page_obj': scoresheets_page,
+        'is_province': is_province,
     }
     return render(request, 'olympiad/olympiad_scores.html', context)

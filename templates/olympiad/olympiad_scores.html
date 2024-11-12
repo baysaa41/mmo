@@ -65,6 +65,7 @@
 </head>
 <body>
     <h1>{{ olympiad.name }} олимпиадын дүн</h1>
+    {% include 'selection_menu.html' %}
    <!-- Pagination controls (same as before) -->
     <div class="pagination">
         <span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
@@ -87,12 +88,26 @@
             <a href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a>
         {% endif %}
     </div>
+    <div>
+                    <!-- Display current user's score at the top if available -->
+            {% if user_score_data %}
+                 <strong>Таны авсан оноо: {{ user_score_data.total }}</strong><br>
+                 <strong>Байр: </strong>
+                    {% if user_score_data.ranking_a == user_score_data.ranking_b %}
+                        <span>{{ user_score_data.ranking_a }}</span>
+                    {% else %}
+                        <span>{{ user_score_data.ranking_a }}-{{ user_score_data.ranking_b }}</span>
+                    {% endif %}
+            {% endif %}
+    </div>
     <table>
         <thead>
             <tr>
                 <th>Овог</th>
                 <th>Нэр</th>
                 <th>ММО ID</th>
+                <th>Аймаг/Дүүрэг</th>
+                <th>Сургууль</th>
                 {% for i in problem_range %}
                     <th>№{{ i }}</th>
                 {% endfor %}
@@ -101,39 +116,23 @@
             </tr>
         </thead>
         <tbody>
-            <!-- Display current user's score at the top if available -->
-            {% if user_score_data %}
-                <tr style="background-color: #ccc;">
-                    <th>{{ user_score_data.last_name }}</th>
-                    <th>{{ user_score_data.first_name }}</th>
-                    <th>{{ user_score_data.id }}</th>
-                    {% for score in user_score_data.scores %}
-                        <th>{{ score }}</th>
-                    {% endfor %}
-                    <th>{{ user_score_data.total }}</th>
-                    {% if user_score_data.ranking_a == user_score_data.ranking_b %}
-                        <th>{{ user_score_data.ranking_a }}</th>
-                    {% else %}
-                        <th>{{ user_score_data.ranking_a }}-{{ user_score_data.ranking_b }}</th>
-                    {% endif %}
-                </tr>
-            {% endif %}
-
             <!-- Display all other scores -->
             {% for data in score_data %}
                 <tr>
                     <td>{{ data.last_name }}</td>
                     <td>{{ data.first_name }}</td>
                     <td>{{ data.id }}</td>
+                    <td>{{ data.province }}</td>
+                    <td>{{ data.school }}</td>
                     {% for score in data.scores %}
                         <td>{{ score }}</td>
                     {% endfor %}
                     <td>{{ data.total }}</td>
-                    {% if data.ranking_a == data.ranking_b %}
-                        <td>{{ data.ranking_a }}</td>
-                    {% else %}
-                        <td>{{ data.ranking_a }}-{{ data.ranking_b }}</td>
-                    {% endif %}
+                        {% if data.ranking_a == data.ranking_b %}
+                            <td>{{ data.ranking_a }}</td>
+                        {% else %}
+                            <td>{{ data.ranking_a }}-{{ data.ranking_b }}</td>
+                        {% endif %}
                 </tr>
             {% endfor %}
         </tbody>
