@@ -45,6 +45,8 @@ def set_schools_name():
         for user in school.group.user_set.all():
             try:
                 user.data.school = school.name
+                user.data.province = school.province
+                user.save()
             except Exception as e:
                 data = UserMeta.objects.create(user=user, school=school.name, province=school.province, reg_num='',mobile=0)
                 print(user.username, e)
@@ -103,7 +105,11 @@ def set_ranking_b(olympiad_id):
         sheet.save()
 
 def set_ranking_a_p(olympiad_id,province_id):
-    scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+    if province_id in [22,23,26]:
+        scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                                user__data__province_id__in=[22,23,26]).order_by('-total')
+    else:
+        scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                             user__data__province_id=province_id).order_by('-total')
     ranking = 1
     current_score = None
@@ -116,7 +122,11 @@ def set_ranking_a_p(olympiad_id,province_id):
         sheet.save()
 
 def set_ranking_b_p(olympiad_id,province_id):
-    scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+    if province_id in [22,23,26]:
+        scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                                user__data__province_id__in=[22,23,26]).order_by('total')
+    else:
+        scoresheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                             user__data__province_id=province_id).order_by('total')
     lowest = len(scoresheets)
     ranking = lowest
@@ -127,4 +137,8 @@ def set_ranking_b_p(olympiad_id,province_id):
             ranking = lowest - index + 1
             current_score = sheet.total
         sheet.ranking_b_p = ranking
+        if ranking < 31 and province_id < 22:
+            sheet.prizes = 'II даваа I шат, аймгийн жагсаалт'
+        elif ranking < 51 and province_id in [24,25,26,27,28,29,30]:
+            sheet.prizes = 'II даваа I шат, дүүргийн жагсаалт'
         sheet.save()

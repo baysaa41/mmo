@@ -773,31 +773,39 @@ def olympiad_scores(request, olympiad_id):
     if is_province:
         for scoresheet in scoresheets_page:
             scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
-            score_data.append({
-                'last_name': scoresheet.user.last_name,
-                'first_name': scoresheet.user.first_name,
-                'id': scoresheet.user.id,
-                'province': scoresheet.user.data.province.name,
-                'school': scoresheet.user.data.school,
-                'scores': scores,
-                'total': scoresheet.total,
-                'ranking_a': scoresheet.ranking_a_p,
-                'ranking_b': scoresheet.ranking_b_p,
-            })
+            try:
+                score_data.append({
+                    'last_name': scoresheet.user.last_name,
+                    'first_name': scoresheet.user.first_name,
+                    'id': scoresheet.user.id,
+                    'province': scoresheet.user.data.province.name,
+                    'school': scoresheet.user.data.school,
+                    'scores': scores,
+                    'total': scoresheet.total,
+                    'ranking_a': scoresheet.ranking_a_p,
+                    'ranking_b': scoresheet.ranking_b_p,
+                    'prizes': scoresheet.prizes,
+                })
+            except Exception as e:
+                print(e, scoresheet.user.id)
     else:
         for scoresheet in scoresheets_page:
             scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
-            score_data.append({
-                'last_name': scoresheet.user.last_name,
-                'first_name': scoresheet.user.first_name,
-                'id': scoresheet.user.id,
-                'province': scoresheet.user.data.province.name,
-                'school': scoresheet.user.data.school,
-                'scores': scores,
-                'total': scoresheet.total,
-                'ranking_a': scoresheet.ranking_a,
-                'ranking_b': scoresheet.ranking_b,
-            })
+            try:
+                score_data.append({
+                    'last_name': scoresheet.user.last_name,
+                    'first_name': scoresheet.user.first_name,
+                    'id': scoresheet.user.id,
+                    'province': scoresheet.user.data.province.name,
+                    'school': scoresheet.user.data.school,
+                    'scores': scores,
+                    'total': scoresheet.total,
+                    'ranking_a': scoresheet.ranking_a,
+                    'ranking_b': scoresheet.ranking_b,
+                    'prizes': scoresheet.prizes,
+                })
+            except Exception as e:
+                print(e, scoresheet.user.id)
 
     context = {
         'olympiad': olympiad,

@@ -65,6 +65,7 @@
 </head>
 <body>
     <h1>{{ olympiad.name }} олимпиадын дүн</h1>
+    <h2>{{ olympiad.description }}</h2>
     {% include 'selection_menu.html' %}
    <!-- Pagination controls (same as before) -->
     <div class="pagination">
@@ -113,6 +114,7 @@
                 {% endfor %}
                 <th>Нийт</th>
                 <th>Байр</th>
+                <th>Шагнал</th>
             </tr>
         </thead>
         <tbody>
@@ -133,6 +135,7 @@
                         {% else %}
                             <td>{{ data.ranking_a }}-{{ data.ranking_b }}</td>
                         {% endif %}
+                    <td>{% if data.prizes %}{{ data.prizes }}{% endif %}</td>
                 </tr>
             {% endfor %}
         </tbody>
