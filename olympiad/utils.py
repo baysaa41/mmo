@@ -137,8 +137,8 @@ def set_ranking_b_p(olympiad_id,province_id):
             ranking = lowest - index + 1
             current_score = sheet.total
         sheet.ranking_b_p = ranking
-        if ranking < 31 and province_id < 22:
-            sheet.prizes = 'II даваа I шат, аймгийн жагсаалт'
-        elif ranking < 51 and province_id in [24,25,26,27,28,29,30]:
-            sheet.prizes = 'II даваа I шат, дүүргийн жагсаалт'
+        # if ranking < 31 and province_id < 22:
+        #    sheet.prizes = 'II даваа I шат, аймгийн жагсаалт'
+        #elif ranking < 51 and province_id in [24,25,26,27,28,29,30]:
+        #    sheet.prizes = 'II даваа I шат, дүүргийн жагсаалт'
         sheet.save()

@@ -756,7 +756,7 @@ def olympiad_scores(request, olympiad_id):
         ).order_by("-total")
         is_province = True
     elif zone_id != '0':
-        if zone_id == 12:
+        if zone_id == '12':
             scoresheets = ScoreSheet.objects.filter(
                 olympiad=olympiad,
                 user__data__province_id__gt=21
@@ -814,7 +814,8 @@ def olympiad_scores(request, olympiad_id):
                 })
             except Exception as e:
                 print(e, scoresheet.user.id)
-
+    if is_province:
+        title = ''
     context = {
         'olympiad': olympiad,
         'user_score_data': user_score_data,
