@@ -748,6 +748,7 @@ def olympiad_scores(request, olympiad_id):
 
     # Filter based on province or zone, or get all scoresheets
     is_province = False
+    is_zone = False
     if province_id != '0':
         scoresheets = ScoreSheet.objects.filter(
             olympiad=olympiad,
@@ -755,10 +756,17 @@ def olympiad_scores(request, olympiad_id):
         ).order_by("-total")
         is_province = True
     elif zone_id != '0':
-        scoresheets = ScoreSheet.objects.filter(
-            olympiad=olympiad,
-            user__data__province__zone_id=zone_id
-        ).order_by("-total")
+        if zone_id == 12:
+            scoresheets = ScoreSheet.objects.filter(
+                olympiad=olympiad,
+                user__data__province_id__gt=21
+            ).order_by("-total")
+        else:
+            scoresheets = ScoreSheet.objects.filter(
+                olympiad=olympiad,
+                user__data__province__zone_id=zone_id
+            ).order_by("-total")
+        is_zone = True
     else:
         scoresheets = ScoreSheet.objects.filter(
             olympiad=olympiad
@@ -770,7 +778,7 @@ def olympiad_scores(request, olympiad_id):
 
     # Prepare score data for each ScoreSheet
     score_data = []
-    if is_province:
+    if is_province or is_zone:
         for scoresheet in scoresheets_page:
             scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
             try:
