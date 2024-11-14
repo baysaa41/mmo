@@ -21,11 +21,11 @@ olympiad_id_map = {
 def validate_score(value):
     """Helper function to validate that a score is a positive integer or None."""
     if value is None:
-        return None
+        return 0
     elif isinstance(value, int) and value > 0:
         return value
     else:
-        return None
+        return 0
 
 def read_all_sheets_from_excel(directory_path):
     # Check if the directory exists
