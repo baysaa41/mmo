@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from .forms import UserForm, UserMetaForm
 from django.contrib import messages
+from .forms import UserSearchForm, AddUserForm
 
 import random
 import string
@@ -125,11 +126,8 @@ def school_moderators_view(request):
         schools = School.objects.select_related('user', 'group', 'province').filter(province__zone_id=zid).order_by('province__name','user__data__school')
     else:
         schools = School.objects.select_related('user', 'group', 'province').all().order_by('province__name','user__data__school')  # Fetch all schools and related data
-    olympiads = Olympiad.objects.filter(is_grading=True, is_open=True)
+    olympiads = Olympiad.objects.filter(round=1,school_year=61)
     return render(request, 'schools/school_moderators_list.html', {'schools': schools, 'olympiads': olympiads})
-
-from .forms import UserSearchForm, AddUserForm
-from accounts.models import UserMeta  # Assuming UserMeta model for additional data
 
 @login_required
 def manage_school(request, school_id):
