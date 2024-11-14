@@ -2216,7 +2216,6 @@ def is_my_school_group(user_id, group_id):
     return False
 
 def answers_view2(request, olympiad_id, group_id):
-
     try:
         group = Group.objects.get(pk=group_id)
         olympiad = Olympiad.objects.get(pk=olympiad_id)
