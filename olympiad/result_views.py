@@ -2227,7 +2227,7 @@ def answers_view2(request, olympiad_id, group_id):
     if not is_my_school_group(request.user.id,group_id) and not request.user.is_staff:
         return render(request, 'error.html', {'error': 'Хандах эрхгүй.'})
 
-    results = Result.objects.filter(olympiad_id=olympiad_id, contestant__groups=group).order_by('contestant_id', 'problem__order')
+    results = Result.objects.filter(olympiad_id=olympiad_id, contestant__groups__id=group_id).order_by('contestant_id', 'problem__order')
     if not results.exists():
         return render(request, 'olympiad/results/no_results.html')
 
