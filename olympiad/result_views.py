@@ -2229,7 +2229,6 @@ def answers_view2(request, olympiad_id, group_id):
         return render(request, 'error.html', {'error': 'Хандах эрхгүй.'})
 
     results = Result.objects.filter(olympiad_id=olympiad_id, contestant__groups=group).order_by('contestant_id', 'problem__order')
-
     if not results.exists():
         return render(request, 'olympiad/results/no_results.html')
 
