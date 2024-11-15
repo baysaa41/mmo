@@ -228,7 +228,7 @@ def student_supplement_view(request, olympiad_id):
             return redirect('olympiad_supplement_home')
 
     results = olympiad.result_set.filter(contestant=request.user)
-    if not results or not request.user.is_staff:
+    if not results and not request.user.is_staff:
         return HttpResponse("Zuvhun ene olympiadad oroltsson suragchid material nemj oruulah bolomjtoi.")
 
     if olympiad.is_grading:
