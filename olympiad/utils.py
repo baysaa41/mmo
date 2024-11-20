@@ -64,12 +64,12 @@ def set_scoretable(olympiad_id):
 
         sheet.save()
     print("setting ranking a...")
-    set_ranking_a(olympiad_id)
+    # set_ranking_a(olympiad_id)
     print("setting ranking b...")
-    set_ranking_b(olympiad_id)
-    for i in range(30):
-        set_ranking_a_p(olympiad_id,i+1)
-        set_ranking_b_p(olympiad_id,i+1)
+    # set_ranking_b(olympiad_id)
+    # for i in range(30):
+        #set_ranking_a_p(olympiad_id,i+1)
+        #set_ranking_b_p(olympiad_id,i+1)
 
 
 def set_scoretables():
