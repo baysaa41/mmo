@@ -384,6 +384,7 @@ class Article(models.Model):
     createdate = models.DateField(default=date.today)
     updatedate = models.DateField(null=True, blank=True)
 
+
     class Meta:
         ordering = ['-year_id','-isspec']
 
