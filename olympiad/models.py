@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
 from accounts.models import Author, Province, Zone, Grade, Level
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from ckeditor.fields import RichTextField
 
 # Create your models here.
@@ -364,16 +364,16 @@ class TeamMember(models.Model):
 
 
 class Article(models.Model):
-    oldid = models.IntegerField()
+    oldid = models.IntegerField(default=1)
     title = models.CharField(max_length=500,null=True, blank=True)
     intro = models.TextField(null=True, blank=True)
     descr = RichTextField(null=True, blank=True)
-    year = models.ForeignKey('SchoolYear', on_delete=models.SET_NULL, null=True, blank=True)
-    startdate = models.DateField(null=True, blank=True)
+    year = models.ForeignKey('SchoolYear', on_delete=models.SET_NULL, null=True, blank=True, default=61)
+    startdate = models.DateField(default=date.today)
     enddate = models.DateField(null=True, blank=True)
     imagesource = models.CharField(max_length=200,null=True, blank=True)
     author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True, blank=True)
-    isspec = models.BooleanField(default=False)
+    isspec = models.BooleanField(default=True)
     embedcode = models.TextField(null=True, blank=True)
     pictures = models.TextField(null=True, blank=True)
     files = models.TextField(null=True, blank=True)
@@ -381,7 +381,7 @@ class Article(models.Model):
     sawcount = models.IntegerField(null=True, blank=True)
     isshow = models.BooleanField(default=True)
     createuserid = models.IntegerField(null=True, blank=True)
-    createdate = models.DateField(null=True, blank=True)
+    createdate = models.DateField(default=date.today)
     updatedate = models.DateField(null=True, blank=True)
 
     class Meta:
