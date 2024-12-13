@@ -2,7 +2,7 @@ from django.http import HttpResponse, JsonResponse, FileResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, get_object_or_404
-from olympiad.models import Olympiad, Result, SchoolYear, Award, Problem, OlympiadGroup
+from olympiad.models import Olympiad, Result, SchoolYear, Award, Problem, OlympiadGroup, ScoreSheet
 from schools.models import School
 from accounts.models import Province, Zone, UserMeta
 from django.forms import modelformset_factory
@@ -2338,3 +2338,18 @@ def problem_stats_view(request, problem_id):
     }
 
     return render(request, 'olympiad/stats/problem_stats.html', context)
+
+
+def scoresheet_view(request,olympiad_id):
+    olympiad = Olympiad.objects.get(pk=olympiad_id)
+    score_sheets = ScoreSheet.objects.select_related('user').filter(olympiad_id=olympiad_id).order_by('-total')
+    num_problems = olympiad.problem_set.count()
+    labels = list(map(lambda x: 'P'+str(x+1), range(num_problems)))
+    context = {
+        'olympiad': olympiad,
+        'num_problems': num_problems,
+        'score_sheets': score_sheets,
+        'labels': labels
+    }
+    return render(request,'olympiad/scoresheet.html', context)
+

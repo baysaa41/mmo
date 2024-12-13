@@ -35,7 +35,8 @@ urlpatterns = [
     path('results/', result_views.results_home, name='olympiad_results_home'),
     path('result/<int:olympiad_id>/<int:contestant_id>/', result_views.student_result_view, name='olympiad_student_result'),
     # path('results/<int:olympiad_id>/', result_views.result_view_org, name='olympiad_result_view'),
-    path('results/<int:olympiad_id>/', result_views.pandasView, name='olympiad_result_view'),
+    # path('results/<int:olympiad_id>/', result_views.pandasView, name='olympiad_result_view'),
+    path('results/<int:olympiad_id>/', result_views.scoresheet_view, name='olympiad_result_view'),
     path('answers/<int:olympiad_id>/', result_views.answers_view, name='olympiad_answer_view'),
     path('answers/<int:olympiad_id>/<int:group_id>/', result_views.answers_view2, name='olympiad_group_answer_view'),
     # path('results/new/<int:olympiad_id>/', result_views.newResultView, name='olympiad_result_data_view'),
@@ -53,4 +54,5 @@ urlpatterns = [
     path('quizzes/list/<int:school_id>', views.quiz_list_view, name='quiz_list_view'),
     #path('results/data/<int:olympiad_id>', data_views.olympiad_results_json, name='olympiad_results_json'),
     #path('r/<int:olympiad_id>', data_views.results, name='olympiad_results_data'),
+    path('scoresheet/<int:olympiad_id>/', result_views.scoresheet_view, name='scoresheet_view'),
 ]

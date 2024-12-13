@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ olympiad.name }}</title>
+    <style>
+        table, th, td {
+            margin: 0;
+            padding: 0;
+            border: 1px solid #ccc;
+        }
+        td.id {
+            text-align: right;
+        }
+        td.total {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<h3>{{ olympiad.name }}, {{ olympiad.level.name }}</h3>
+<table>
+    <tr>
+        <th>#</th>
+        <th>Овог</th>
+        <th>Нэр</th>
+        <th>ID</th>
+        <th>Аймаг/Дүүрэг</th>
+        <th>Сургууль</th>
+        {% for label in labels %}
+            <th>{{ label }}</th>
+        {% endfor %}
+        <th>Нийт</th>
+    </tr>
+{% for item in score_sheets %}
+    <tr>
+    <td>{{ forloop.counter }}</td>
+    <td>{{ item.user.last_name }}</td>
+    <td>{{ item.user.first_name }}</td>
+    <td class="id">{{ item.user.id }}</td>
+    <td>{{ item.user.data.province.name }}</td>
+    <td>{{ item.user.data.school }}</td>
+    {% for label in labels %}
+        {% with key="item.s"|add:forloop.counter %}
+            <td>{{ key }}</td>
+        {% endwith %}
+    {% endfor %}
+    <td class="total">{{ item.total }}</td>
+    </tr>
+{% endfor %}
+</table>
+</body>
+</html>

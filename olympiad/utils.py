@@ -1,4 +1,4 @@
-from .models import Olympiad, Result
+from .models import Olympiad, Result, ScoreSheet
 from django.contrib.auth.models import User
 import json
 
@@ -35,3 +35,11 @@ def prepare_json_results(olympiad_id):
     olympiad.json_results = json.dumps(results)
     olympiad.save()
     return olympiad.json_results
+
+def to_scoresheet(olympiad_id):
+    results = Result.objects.filter(olympiad_id=olympiad_id)
+    for result in results:
+        ss, created = ScoreSheet.objects.get_or_create(user=result.contestant, olympiad_id=olympiad_id)
+        exec(f"ss.s{result.problem.order} = {result.score or 0}")
+        ss.total += result.score or 0
+        ss.save()
