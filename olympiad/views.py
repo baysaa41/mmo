@@ -1,9 +1,9 @@
 from django.http import HttpResponse, JsonResponse, FileResponse
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.decorators.cache import cache_page
 from accounts.models import UserMeta
 from myquiz.models import UserAnswer
-from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article
+from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article, ScoreSheet
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.forms import modelformset_factory
@@ -17,6 +17,7 @@ from django.template.loader import render_to_string
 import os
 import openpyxl
 from accounts.views import random_salt
+from django.core.paginator import Paginator
 
 from schools.models import School
 
@@ -227,7 +228,7 @@ def student_supplement_view(request, olympiad_id):
             return redirect('olympiad_supplement_home')
 
     results = olympiad.result_set.filter(contestant=request.user)
-    if not results:
+    if not results and not request.user.is_staff:
         return HttpResponse("Zuvhun ene olympiadad oroltsson suragchid material nemj oruulah bolomjtoi.")
 
     if olympiad.is_grading:
@@ -718,3 +719,110 @@ def upload_file(request):
                    "excel_data_f": excel_data_f, 'error': error}
 
         return render(request, 'olympiad/upload_file.html', context)
+
+
+@login_required
+def olympiad_scores(request, olympiad_id):
+    province_id = request.GET.get('p', '0')
+    zone_id = request.GET.get('z', '0')
+    page_number = request.GET.get('page', '1')
+    size = 1000
+
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    # Get current user's score, if available
+    user_score_data = None
+    if request.user.is_authenticated:
+        try:
+            user_scoresheet = ScoreSheet.objects.get(olympiad=olympiad, user=request.user)
+            user_score_data = {
+                'last_name': user_scoresheet.user.last_name,
+                'first_name': user_scoresheet.user.first_name,
+                'id': user_scoresheet.user.id,
+                'total': user_scoresheet.total,
+                'ranking_a': user_scoresheet.ranking_a,
+                'ranking_b': user_scoresheet.ranking_b,
+            }
+        except ScoreSheet.DoesNotExist:
+            user_score_data = None
+
+    # Filter based on province or zone, or get all scoresheets
+    is_province = False
+    is_zone = False
+    if province_id != '0':
+        scoresheets = ScoreSheet.objects.filter(
+            olympiad=olympiad,
+            user__data__province_id=province_id
+        ).order_by("-total")
+        is_province = True
+    elif zone_id != '0':
+        if zone_id == '12':
+            scoresheets = ScoreSheet.objects.filter(
+                olympiad=olympiad,
+                user__data__province_id__gt=21
+            ).order_by("-total")
+        else:
+            scoresheets = ScoreSheet.objects.filter(
+                olympiad=olympiad,
+                user__data__province__zone_id=zone_id
+            ).order_by("-total")
+        is_zone = True
+    else:
+        scoresheets = ScoreSheet.objects.filter(
+            olympiad=olympiad
+        ).order_by("-total")
+
+    # Paginate scoresheets
+    paginator = Paginator(scoresheets, size)
+    scoresheets_page = paginator.get_page(page_number)
+
+    # Prepare score data for each ScoreSheet
+    score_data = []
+    if is_province or is_zone:
+        for scoresheet in scoresheets_page:
+            scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
+            try:
+                score_data.append({
+                    'last_name': scoresheet.user.last_name,
+                    'first_name': scoresheet.user.first_name,
+                    'id': scoresheet.user.id,
+                    'province': scoresheet.user.data.province.name,
+                    'school': scoresheet.user.data.school,
+                    'scores': scores,
+                    'total': scoresheet.total,
+                    'ranking_a': scoresheet.ranking_a_p,
+                    'ranking_b': scoresheet.ranking_b_p,
+                    'prizes': scoresheet.prizes,
+                })
+            except Exception as e:
+                print(e, scoresheet.user.id)
+    else:
+        for scoresheet in scoresheets_page:
+            scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
+            try:
+                score_data.append({
+                    'last_name': scoresheet.user.last_name,
+                    'first_name': scoresheet.user.first_name,
+                    'id': scoresheet.user.id,
+                    'province': scoresheet.user.data.province.name,
+                    'school': scoresheet.user.data.school,
+                    'scores': scores,
+                    'total': scoresheet.total,
+                    'ranking_a': scoresheet.ranking_a,
+                    'ranking_b': scoresheet.ranking_b,
+                    'prizes': scoresheet.prizes,
+                })
+            except Exception as e:
+                print(e, scoresheet.user.id)
+    if is_province:
+        title = ''
+    context = {
+        'olympiad': olympiad,
+        'user_score_data': user_score_data,
+        'score_data': score_data,
+        'problem_range': range(1, olympiad.problem_set.count() + 1),
+        'paginator': paginator,
+        'page_obj': scoresheets_page,
+        'is_province': is_province,
+    }
+    return render(request, 'olympiad/olympiad_scores.html', context)

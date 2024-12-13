@@ -9,6 +9,7 @@ def save_json_to_file(data, filename='json_results.json'):
     with open(filename, 'w') as f:
         json.dump(data, f)
     return filename
+
 def olympiad_results_json(request, olympiad_id):
     olympiad = Olympiad.objects.get(pk=olympiad_id)
     file = save_json_to_file(olympiad.json_results)

@@ -17,7 +17,7 @@ class ArticleAdmin(admin.ModelAdmin):
     list_display = ("title","year")
     list_filter = ("year",)
     raw_id_fields = ("author",)
-    exclude = ("intro", "imagesource", "embedcode", "pictures", "files", "tags", "sawcount", "createuserid", "author")
+    exclude = ("oldid", "intro", "imagesource", "embedcode", "pictures", "files", "tags", "sawcount", "createuserid", "author")
     search_fields = ["title", "descr"]
 
     def get_queryset(self, request):

@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="mn">
+{% load static %}
+{% load i18n %}
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}ММО{% endblock %}</title>
+    <link rel="shortcut icon" href="{% static 'logo.png' %}">
+
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"
+          integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Popper JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+
+    <!-- Latest compiled JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax:{inlineMath:[["$","$"],["\\(","\\)"]]},
+            TeX:{Macros:{tg:"{\\operatorname{tg}\\,}",
+            ctg:"{\\operatorname{ctg}\\,}",
+            arctg:"{\\operatorname{arctg}\\,}",
+            arcctg:"{\\operatorname{arcctg}\\,}",
+            cosec:"{\\operatorname{cosec}\\,}",
+            ebox:"\\fbox{ }",
+            sgn:"{\\operatorname{sgn}\\,}",
+            lt:"{\\,<\\,}",
+            geo:"{\\div\\kern{-0.5em}\\div}"}},
+            SVG:{scale:105}
+        });
+        MathJax.Hub.Register.StartupHook("TeX Jax Ready",function () {
+          MathJax.Hub.Insert(MathJax.InputJax.TeX.Definitions.macros,{
+            cancel: ["Extension","cancel"],
+            bcancel: ["Extension","cancel"],
+            xcancel: ["Extension","cancel"],
+            cancelto: ["Extension","cancel"],
+            boxed: ["Extentsion","amsmath"]
+          });
+        });
+
+    </script>
+    <script type="text/javascript" async
+            src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <style>
+        #navigation {
+            position: fixed;
+            top: 0;
+            right: 0;
+            margin-left: 0;
+            margin-right: 0;
+            padding: 0;
+            height: 3rem;
+        }
+
+        .content {
+            z-index: -1;
+            position: fixed;
+            top: 4rem;
+            bottom: 2.1rem;
+            padding-bottom: 2rem;
+            overflow: scroll;
+            width: 100%;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            padding: 0;
+            width: 100%;
+            height: 2rem;
+            vertical-align: center;
+        }
+
+        .user {
+            z-index: 100;
+            color: #e4e4e4;
+            position: fixed;
+            top: 1rem;
+            right: 2rem
+        }
+
+        .user a {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .user a:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        @media only screen and (max-width: 768px) {
+            .user {
+                top: 4rem;
+                color: #3e3432;
+            }
+
+            .user a {
+                color: #3e3432;
+            }
+
+            .user a:hover {
+                color: #3e3432;
+            }
+
+            .content {
+                top: 7rem;
+                bottom: 3.1rem;
+            }
+
+            .footer {
+                height: 3rem;
+            }
+        }
+    </style>
+
+    <!-- viewer -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.9.0/viewer.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.9.0/viewer.css">
+    <script src="/static/jquery-viewer.js"></script>
+</head>
+<body>
+<div id="navigation" class="container-fluid">
+    <nav class="navbar navbar-expand-md bg-dark navbar-dark">
+        <!-- Brand -->
+        <a class="navbar-brand" href="{% url 'home' %}"><img src="{% static 'logo.png' %}" alt="logo"
+                                                             style="width:40px"></a>
+
+        <!-- Toggler/collapsibe Button -->
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navbar links -->
+        <div class="collapse navbar-collapse" id="collapsibleNavbar">
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbardrop" data-toggle="dropdown">
+                        ОЛИМПИАД
+                    </a>
+                    <div class="dropdown-menu">
+                        {% comment %}
+                        <a class="dropdown-item" href="{% url 'mmo57' %}">Хуваарь</a>
+                        {% endcomment %}
+                        <a class="dropdown-item" href="{% url 'olympiad_home' %}">Олимпиадад оролцох</a>
+                        <a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}">Материал нэмж оруулах</a>
+                        <a class="dropdown-item" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a>
+                        <a class="dropdown-item" href="{% url 'olympiad_problems_home' %}">Олимпиадын бодлогууд</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="http://www.mmo.mn/post/?id=268">EGMO</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="http://www.mmo.mn/post/?id=142">Танд тусалъя</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</div>
+<div class="user">
+    {% block userlogin %}
+        {% if user.is_authenticated %}
+            <p>Сайн уу, <a href="{% url 'user_profile' %}">{{ user.username }}</a> /
+                <a href="{% url 'user_logout' %}">Гарах</a>
+            </p>
+        {% else %}
+            <p>
+                <a href="{% url 'django_registration_register' %}" class="btn btn-dark text-white">Бүртгүүлэх</a>
+                <a href="{% url 'user_login' %}" class="btn btn-warning text-dark">Нэвтрэх</a>
+            </p>
+        {% endif %}
+    {% endblock %}
+</div>
+<div>
+    <iframe src="https://calendar.google.com/calendar/embed?src=d7ar3du90oi9frqvtfeo73iq9covhs0g%40import.calendar.google.com&ctz=Asia%2FUlaanbaatar" style="border: 0" width="400" height="300" frameborder="0" scrolling="no"></iframe>
+</div>
+<div class="content">
+    <div class="container">
+        {% block content %}
+            {% autoescape off %}{{ text_content }}{% endautoescape %}
+        {% endblock %}
+    </div>
+</div>
+<div class="footer text-center border-top">
+    E-mail: <a href="mailto:baysa.edu@gmail.com" class="text-secondary">baysa.edu@gmail.com</a> &bullet; ММОХ
+    &copy; 2021 он
+    &nbsp; &nbsp; &nbsp; <a href="http://www.mmoc.mn" class="text-secondary">ММОХ</a>
+    / <a href="http://old.mmo.mn" class="text-secondary">old.mmo.mn</a>
+</div>
+</body>
+</html>
