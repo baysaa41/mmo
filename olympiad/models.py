@@ -364,7 +364,7 @@ class TeamMember(models.Model):
 
 
 class Article(models.Model):
-    oldid = models.IntegerField()
+    oldid = models.IntegerField(default=1)
     title = models.CharField(max_length=500,null=True, blank=True)
     intro = models.TextField(null=True, blank=True)
     descr = RichTextField(null=True, blank=True)
@@ -373,7 +373,7 @@ class Article(models.Model):
     enddate = models.DateField(null=True, blank=True)
     imagesource = models.CharField(max_length=200,null=True, blank=True)
     author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True, blank=True)
-    isspec = models.BooleanField(default=False)
+    isspec = models.BooleanField(default=True)
     embedcode = models.TextField(null=True, blank=True)
     pictures = models.TextField(null=True, blank=True)
     files = models.TextField(null=True, blank=True)
