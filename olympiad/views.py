@@ -723,7 +723,6 @@ def upload_file(request):
 
 @login_required
 def olympiad_scores(request, olympiad_id):
-
     province_id = request.GET.get('p', '0')
     zone_id = request.GET.get('z', '0')
     page_number = request.GET.get('page', '1')

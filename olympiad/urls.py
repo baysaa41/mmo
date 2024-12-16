@@ -55,4 +55,5 @@ urlpatterns = [
     #path('results/data/<int:olympiad_id>', data_views.olympiad_results_json, name='olympiad_results_json'),
     #path('r/<int:olympiad_id>', data_views.results, name='olympiad_results_data'),
     path('scoresheet/<int:olympiad_id>/', result_views.scoresheet_view, name='scoresheet_view'),
+    path('scores/<int:olympiad_id>/', views.olympiad_scores, name='olympiad_scores'),
 ]
