@@ -16,7 +16,6 @@ def olympiad_results_json(request, olympiad_id):
     file_path = f'/path/to/json_results_{file}'
     return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file)
 
-
 def results(request, olympiad_id):
     try:
         olympiad = Olympiad.objects.get(pk=olympiad_id)
