@@ -74,7 +74,7 @@ def json_results(request, olympiad_id):
     except Olympiad.DoesNotExist:
         return JsonResponse({})
 
-@cache_page(60*3600*24)
+@cache_page(3600)
 def pandasView(request, olympiad_id):
     p = request.GET.get('p', 0)
     z = request.GET.get('z', 0)
@@ -114,7 +114,7 @@ def pandasView(request, olympiad_id):
 
     answers = Result.objects.filter(olympiad_id=olympiad_id)
     answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
-    users_df = read_frame(users, fieldnames=['id', 'last_name', 'first_name', 'data__school'], verbose=False)
+    users_df = read_frame(users, fieldnames=['id', 'last_name', 'first_name', 'data__province__name', 'data__school'], verbose=False)
 
     pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
     pivot["Дүн"] = pivot.sum(axis=1)
@@ -129,6 +129,7 @@ def pandasView(request, olympiad_id):
         'id': 'ID',
         'first_name': 'Нэр',
         'last_name': 'Овог',
+        'data__province__name': 'Аймаг/Дүүрэг',
         'data__school': 'Сургууль',
         'link': '+',
     }, inplace=True)
