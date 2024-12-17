@@ -799,6 +799,7 @@ def olympiad_scores(request, olympiad_id):
     else:
         for scoresheet in scoresheets_page:
             scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
+            print(scores)
             try:
                 score_data.append({
                     'last_name': scoresheet.user.last_name,

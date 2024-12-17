@@ -427,6 +427,11 @@ class ScoreSheet(models.Model):
     s18 = models.IntegerField(default=0, blank=True, null=True)
     s19 = models.IntegerField(default=0, blank=True, null=True)
     s20 = models.IntegerField(default=0, blank=True, null=True)
+    ranking_a = models.IntegerField(default=0)
+    ranking_b = models.IntegerField(default=0)
+    ranking_a_p = models.IntegerField(default=0)
+    ranking_b_p = models.IntegerField(default=0)
+    prizes = models.CharField(max_length=256, blank=True, null=True)
     total = models.IntegerField(default=0, null=False, blank=False)
 
     def __str__(self):
