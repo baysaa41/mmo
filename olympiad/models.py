@@ -431,7 +431,7 @@ class ScoreSheet(models.Model):
     ranking_b = models.IntegerField(default=0)
     ranking_a_p = models.IntegerField(default=0)
     ranking_b_p = models.IntegerField(default=0)
-    prizes = models.CharField(max_length=256, blank=True, null=True)
+    prizes = models.CharField(max_length=5112, blank=True, null=True)
     total = models.IntegerField(default=0, null=False, blank=False)
 
     def __str__(self):
