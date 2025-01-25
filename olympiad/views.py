@@ -551,7 +551,6 @@ def remove_supplement(request):
     return JsonResponse({'msg': 'No uploads.'})
 
 
-@cache_page(60 * 60)
 def list_upcomming_olympiads(request):
     now = datetime.now(timezone.utc)
     start = datetime.now(timezone.utc) + timedelta(hours=-5)
