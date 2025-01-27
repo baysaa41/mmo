@@ -47,7 +47,7 @@ def read_all_sheets_from_excel(directory_path):
             workbook = openpyxl.load_workbook(file_path)
 
             # Loop through each specified sheet
-            for sheet_name in ['C (5-6)', 'D (7-8)', 'E (9-10)', 'F (11-12)', 'S (ББ)', 'Т (ДБ)']:
+            for sheet_name in ['C (5-6)', 'D (7-8)', 'E (9-10)', 'F (11-12)', 'S (ББ)', 'Т (ДБ)', 'EGMO-1']:
                 if sheet_name in workbook.sheetnames:
                     sheet = workbook[sheet_name]
                     olympiad_id = olympiad_id_map[sheet_name]
