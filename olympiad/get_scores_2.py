@@ -14,6 +14,7 @@ problem_id_map = {
     'EGMO-1': [1091,1092,1093,1094,1095,1096],
 }
 
+#egmo added
 olympiad_id_map = {
     'C (5-6)': 168,
     'D (7-8)': 169,
