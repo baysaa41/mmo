@@ -1,7 +1,7 @@
 from django.http import HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.decorators.cache import cache_page
-from accounts.models import UserMeta
+from accounts.models import UserMeta, Province, Zone
 from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article, ScoreSheet
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -752,21 +752,27 @@ def olympiad_scores(request, olympiad_id):
         scoresheets = ScoreSheet.objects.filter(
             olympiad=olympiad,
             user__data__province_id=province_id
-        ).order_by("-total")
+        ).order_by("list_rank_p")
         is_province = True
+        province = Province.objects.get(pk=province_id)
+        page_title = province.name
     elif zone_id != '0':
         if zone_id == '12':
+            page_title = 'Улаанбаатар'
             scoresheets = ScoreSheet.objects.filter(
                 olympiad=olympiad,
-                user__data__province_id__gt=21
-            ).order_by("list_rank_p")
+                user__data__province__zone_id__gt=5
+            ).order_by("list_rank_z")
         else:
+            zone = Zone.objects.get(pk=zone_id)
+            page_title = zone.name
             scoresheets = ScoreSheet.objects.filter(
                 olympiad=olympiad,
                 user__data__province__zone_id=zone_id
-            ).order_by("-total")
+            ).order_by("list_rank_z")
         is_zone = True
     else:
+        page_title = 'Бүх оролцогч'
         scoresheets = ScoreSheet.objects.filter(
             olympiad=olympiad
         ).order_by("list_rank")
@@ -844,7 +850,7 @@ def olympiad_scores(request, olympiad_id):
     else:
         for scoresheet in scoresheets_page:
             scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
-            print(scores)
+            # print(scores)
             try:
                 score_data.append({
                     'list_rank': scoresheet.list_rank,
@@ -877,6 +883,7 @@ def olympiad_scores(request, olympiad_id):
     if is_province:
         title = ''
     context = {
+        'page_title': page_title,
         'olympiad': olympiad,
         'user_score_data': user_score_data,
         'score_data': score_data,

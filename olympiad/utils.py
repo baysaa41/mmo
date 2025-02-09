@@ -1,10 +1,76 @@
 from .models import Olympiad, Result, ScoreSheet
+from accounts.models import Province, Zone
 from django.contrib.auth.models import User
 import json
 
 olympiads = [168,169,170,171,172,173]
-provinces = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]
-zones = [1,2,3,4,12]
+provinces = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,24,25,27,28,29,30]
+zones = [1,2,3,4,5,12]
+
+#(olympiad,ulsiin_erh,hotiin_erh_jagsaalt,hotiin_erh,busiin_erh)
+kwots = [(168,0,30,20,0),(169,0,30,20,10),(170,2,30,20,10),(171,2,30,20,10),(172,0,10,10,5),(173,2,10,10,5)]
+
+def set_kwots():
+    ScoreSheet.objects.filter(olympiad_id__in=olympiads).update(prizes=None)
+    for kwot in kwots:
+        olympiad_id, third_kwot, city_kwot_by_order, city_kwot_by_province, zone_kwot = kwot
+        #ulsiin erh
+        sheets_0 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                             user__data__province_id__in=provinces,
+                                             ranking_b_p__lte=third_kwot,
+                                             ranking_b_p__gte=1)
+        sheets_0.update(prizes='Улсын эрх')
+        #ulsiin erh 3 duureg
+        sheets_01 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                             user__data__province__zone_id=5,
+                                             ranking_b_z__lte=third_kwot,
+                                             ranking_b_z__gte=1)
+        sheets_01.update(prizes='Улсын эрх')
+        #hotiin jagsaalt
+        sheets_1 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                             user__data__province_id__in=[24,25,27,28,29,30],
+                                             ranking_b_z__lte=city_kwot_by_order,
+                                             ranking_b_z__gte=1,
+                                             prizes=None)
+        sheets_1.update(prizes='Хотын эрх, жагсаалт')
+        #aimgaas bused
+        sheets_2 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                     user__data__province_id__lte=21,
+                                     ranking_b_p__lte=zone_kwot,
+                                     ranking_b_p__gte=1,
+                                     prizes=None)
+        sheets_2.update(prizes='Бүсийн эрх')
+        #3 duureg hotiin erh
+        sheets_3 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                             user__data__province_id__in=[22,23,26],
+                                             ranking_b_z__lte=city_kwot_by_province,
+                                             ranking_b_z__gte=1,
+                                             prizes=None)
+        sheets_3.update(prizes='Хотын эрх, дүүргээс')
+        for province_id in provinces:
+            set_district_kwots(province_id)
+
+
+def set_district_kwots(province_id):
+    for kwot in kwots:
+        olympiad_id, third_kwot, city_kwot_by_order, city_kwot_by_province, zone_kwot = kwot
+        sheets = list(ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                           user__data__province_id=province_id,
+                                           prizes=None).order_by('ranking_b_p'))
+        for index, sheet in enumerate(sheets):
+            if index < city_kwot_by_province:
+                sheet.prizes='Хотын эрх, дүүргээс'
+                sheet.save()
+                max_total = sheet.total
+
+        remaining_sheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                           user__data__province_id=province_id,
+                                           prizes=None).order_by('ranking_b_p')
+        if remaining_sheets.count() > 0 and max_total == remaining_sheets[0].total:
+            ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                           user__data__province_id=province_id,
+                                           total=max_total).update(prizes=None)
+
 
 def adjusted_int_name(number, size=2):
     name = str(number)
@@ -111,7 +177,7 @@ def update_rankings_a_z(olympiad_id,zone_id):
     updates = []
     for olympiad in olympiads:
         if zone_id==12:
-            scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id_gt=5).order_by("-total"))
+            scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id__gt=5).order_by("-total"))
         else:
             scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order_by("-total"))
 
@@ -186,7 +252,6 @@ def update_rankings_b_p(olympiad_id,province_id):
             else:
                 score_count += 1
 
-            sheet.ranking_b = i # Assign lowest possible rank
             sheet.ranking_b_p = count - lowest_rank + 1
             prev_score = sheet.total
 
@@ -194,14 +259,16 @@ def update_rankings_b_p(olympiad_id,province_id):
 
     ScoreSheet.objects.bulk_update(updates, ["ranking_b_p"])
 
-
 def update_rankings_b_z(olympiad_id,zone_id):
     """Updates rankings for each unique Olympiad."""
     olympiads = Olympiad.objects.filter(pk=olympiad_id)  # Fetch all Olympiad instances
 
     updates = []
     for olympiad in olympiads:
-        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order_by("total"))
+        if zone_id==12:
+            scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id__gt=5).order_by("total"))
+        else:
+            scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order_by("total"))
         count = len(scores)
         # print(count)
 
@@ -229,8 +296,9 @@ def update_all():
         update_rankings_a(olympiad)
         update_rankings_b(olympiad)
         for province in provinces:
-            update_rankings_a_p(olympiad,province)
-            update_rankings_b_p(olympiad,province)
+            if province.zone_id != 5:
+                update_rankings_a_p(olympiad,province)
+                update_rankings_b_p(olympiad,province)
         for zone in zones:
             update_rankings_a_z(olympiad,zone)
             update_rankings_b_z(olympiad,zone)
