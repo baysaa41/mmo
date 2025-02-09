@@ -47,7 +47,7 @@ def set_kwots():
                                              ranking_b_z__gte=1,
                                              prizes=None)
         sheets_3.update(prizes='Хотын эрх, дүүргээс')
-        for province_id in provinces:
+        for province_id in [24,25,27,28,29,30]:
             set_district_kwots(province_id)
 
 
