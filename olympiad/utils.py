@@ -74,7 +74,7 @@ def update_rankings_a(olympiad_id):
 
         updates.extend(scores)
 
-    ScoreSheet.objects.bulk_update(updates, ["ranking_a","list_rank_p"])
+    ScoreSheet.objects.bulk_update(updates, ["ranking_a","list_rank"])
 
 def update_rankings_a_p(olympiad_id,province_id):
     """Updates rankings for each unique Olympiad."""
