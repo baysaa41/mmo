@@ -2,7 +2,6 @@ from django.http import HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.decorators.cache import cache_page
 from accounts.models import UserMeta
-from myquiz.models import UserAnswer
 from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article, ScoreSheet
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -720,7 +719,7 @@ def upload_file(request):
         return render(request, 'olympiad/upload_file.html', context)
 
 
-@login_required
+#@login_required
 def olympiad_scores(request, olympiad_id):
     province_id = request.GET.get('p', '0')
     zone_id = request.GET.get('z', '0')
@@ -735,6 +734,7 @@ def olympiad_scores(request, olympiad_id):
         try:
             user_scoresheet = ScoreSheet.objects.get(olympiad=olympiad, user=request.user)
             user_score_data = {
+                'list_rank': user_scoresheet.list_rank,
                 'last_name': user_scoresheet.user.last_name,
                 'first_name': user_scoresheet.user.first_name,
                 'id': user_scoresheet.user.id,
@@ -759,7 +759,7 @@ def olympiad_scores(request, olympiad_id):
             scoresheets = ScoreSheet.objects.filter(
                 olympiad=olympiad,
                 user__data__province_id__gt=21
-            ).order_by("-total")
+            ).order_by("list_rank_p")
         else:
             scoresheets = ScoreSheet.objects.filter(
                 olympiad=olympiad,
@@ -769,7 +769,7 @@ def olympiad_scores(request, olympiad_id):
     else:
         scoresheets = ScoreSheet.objects.filter(
             olympiad=olympiad
-        ).order_by("-total")
+        ).order_by("list_rank")
 
     # Paginate scoresheets
     paginator = Paginator(scoresheets, size)
@@ -777,11 +777,12 @@ def olympiad_scores(request, olympiad_id):
 
     # Prepare score data for each ScoreSheet
     score_data = []
-    if is_province or is_zone:
+    if is_province:
         for scoresheet in scoresheets_page:
             scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
             try:
                 score_data.append({
+                    'list_rank': scoresheet.list_rank_p,
                     'last_name': scoresheet.user.last_name,
                     'first_name': scoresheet.user.first_name,
                     'id': scoresheet.user.id,
@@ -794,6 +795,51 @@ def olympiad_scores(request, olympiad_id):
                     'prizes': scoresheet.prizes,
                 })
             except Exception as e:
+                score_data.append({
+                    'list_rank': scoresheet.list_rank_p,
+                    'last_name': scoresheet.user.last_name,
+                    'first_name': scoresheet.user.first_name,
+                    'id': scoresheet.user.id,
+                    'province': '',
+                    'school': '',
+                    'scores': scores,
+                    'total': scoresheet.total,
+                    'ranking_a': scoresheet.ranking_a_p,
+                    'ranking_b': scoresheet.ranking_b_p,
+                    'prizes': scoresheet.prizes,
+                })
+                print(e, scoresheet.user.id)
+    elif is_zone:
+        for scoresheet in scoresheets_page:
+            scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
+            try:
+                score_data.append({
+                    'list_rank': scoresheet.list_rank_z,
+                    'last_name': scoresheet.user.last_name,
+                    'first_name': scoresheet.user.first_name,
+                    'id': scoresheet.user.id,
+                    'province': scoresheet.user.data.province.name,
+                    'school': scoresheet.user.data.school,
+                    'scores': scores,
+                    'total': scoresheet.total,
+                    'ranking_a': scoresheet.ranking_a_z,
+                    'ranking_b': scoresheet.ranking_b_z,
+                    'prizes': scoresheet.prizes,
+                })
+            except Exception as e:
+                score_data.append({
+                    'list_rank': scoresheet.list_rank_z,
+                    'last_name': scoresheet.user.last_name,
+                    'first_name': scoresheet.user.first_name,
+                    'id': scoresheet.user.id,
+                    'province': '',
+                    'school': '',
+                    'scores': scores,
+                    'total': scoresheet.total,
+                    'ranking_a': scoresheet.ranking_a_z,
+                    'ranking_b': scoresheet.ranking_b_z,
+                    'prizes': scoresheet.prizes,
+                })
                 print(e, scoresheet.user.id)
     else:
         for scoresheet in scoresheets_page:
@@ -801,6 +847,7 @@ def olympiad_scores(request, olympiad_id):
             print(scores)
             try:
                 score_data.append({
+                    'list_rank': scoresheet.list_rank,
                     'last_name': scoresheet.user.last_name,
                     'first_name': scoresheet.user.first_name,
                     'id': scoresheet.user.id,
@@ -813,6 +860,19 @@ def olympiad_scores(request, olympiad_id):
                     'prizes': scoresheet.prizes,
                 })
             except Exception as e:
+                score_data.append({
+                    'list_rank': scoresheet.list_rank,
+                    'last_name': scoresheet.user.last_name,
+                    'first_name': scoresheet.user.first_name,
+                    'id': scoresheet.user.id,
+                    'province': '',
+                    'school': '',
+                    'scores': scores,
+                    'total': scoresheet.total,
+                    'ranking_a': scoresheet.ranking_a,
+                    'ranking_b': scoresheet.ranking_b,
+                    'prizes': scoresheet.prizes,
+                })
                 print(e, scoresheet.user.id)
     if is_province:
         title = ''

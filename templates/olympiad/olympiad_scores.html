@@ -122,7 +122,7 @@
             <!-- Display all other scores -->
             {% for data in score_data %}
                 <tr>
-                    <td>{{ forloop.counter }}</td>
+                    <td>{{ data.list_rank }}</td>
                     <td>{{ data.last_name }}</td>
                     <td>{{ data.first_name }}</td>
                     <td>{{ data.id }}</td>
