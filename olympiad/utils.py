@@ -296,9 +296,8 @@ def update_all():
         update_rankings_a(olympiad)
         update_rankings_b(olympiad)
         for province in provinces:
-            if province.zone_id != 5:
-                update_rankings_a_p(olympiad,province)
-                update_rankings_b_p(olympiad,province)
+            update_rankings_a_p(olympiad,province)
+            update_rankings_b_p(olympiad,province)
         for zone in zones:
             update_rankings_a_z(olympiad,zone)
             update_rankings_b_z(olympiad,zone)
