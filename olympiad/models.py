@@ -438,7 +438,6 @@ class ScoreSheet(models.Model):
     ranking_b_z = models.IntegerField(default=0)
     prizes = models.CharField(max_length=5112, blank=True, null=True)
     total = models.IntegerField(default=0, null=False, blank=False)
-    desc = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return "{} олимпиад, {}".format(self.olympiad.name, self.user)

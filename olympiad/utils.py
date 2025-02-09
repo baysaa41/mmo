@@ -110,7 +110,10 @@ def update_rankings_a_z(olympiad_id,zone_id):
 
     updates = []
     for olympiad in olympiads:
-        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order_by("-total"))
+        if zone_id==12:
+            scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id_gt=5).order_by("-total"))
+        else:
+            scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order_by("-total"))
 
         # Compute Lowest Possible Rank (Best Case)
         lowest_rank = 1  # Start ranking from 1
