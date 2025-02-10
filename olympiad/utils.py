@@ -20,6 +20,12 @@ def set_ulsiin_erh():
                                              ranking_b_p__lte=third_kwot,
                                              ranking_b_p__gte=1)
         sheets_0.update(prizes='Улсын эрх')
+        #ulsiin erh 3 duureg
+        sheets_01 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
+                                             user__data__province__zone_id=5,
+                                             ranking_b_z__lte=third_kwot,
+                                             ranking_b_z__gte=1)
+        sheets_01.update(prizes='Улсын эрх')
 
 def set_kwots():
     ScoreSheet.objects.filter(olympiad_id__in=olympiads).update(prizes=None)
@@ -27,12 +33,7 @@ def set_kwots():
 
     for kwot in kwots:
         olympiad_id, third_kwot, city_kwot_by_order, city_kwot_by_province, zone_kwot = kwot
-        #ulsiin erh 3 duureg
-        sheets_01 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
-                                             user__data__province__zone_id=5,
-                                             ranking_b_z__lte=third_kwot,
-                                             ranking_b_z__gte=1)
-        sheets_01.update(prizes='Улсын эрх')
+
         #hotiin jagsaalt
         sheets_1 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                              user__data__province_id__in=[24,25,27,28,29,30],
