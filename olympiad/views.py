@@ -753,23 +753,16 @@ def olympiad_scores(request, olympiad_id):
             olympiad=olympiad,
             user__data__province_id=province_id
         ).order_by("list_rank_p")
-        is_province = True
         province = Province.objects.get(pk=province_id)
         page_title = province.name
+        is_province = True
     elif zone_id != '0':
-        if zone_id == '12':
-            page_title = 'Улаанбаатар'
-            scoresheets = ScoreSheet.objects.filter(
-                olympiad=olympiad,
-                user__data__province__zone_id__gt=5
-            ).order_by("list_rank_z")
-        else:
-            zone = Zone.objects.get(pk=zone_id)
-            page_title = zone.name
-            scoresheets = ScoreSheet.objects.filter(
-                olympiad=olympiad,
-                user__data__province__zone_id=zone_id
-            ).order_by("list_rank_z")
+        scoresheets = ScoreSheet.objects.filter(
+            olympiad=olympiad,
+            user__data__province__zone_id=zone_id
+        ).order_by("list_rank_z")
+        zone = Zone.objects.get(pk=zone_id)
+        page_title = zone.name
         is_zone = True
     else:
         page_title = 'Бүх оролцогч'
