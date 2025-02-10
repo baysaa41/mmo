@@ -68,15 +68,16 @@ def set_district_kwots(province_id):
             if index < city_kwot_by_province:
                 sheet.prizes='Хотын эрх, дүүргээс'
                 sheet.save()
-                max_total = sheet.total
+                last_total = sheet.total
 
         remaining_sheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                            user__data__province_id=province_id,
-                                           prizes=None).order_by('ranking_b_p')
-        if remaining_sheets.count() > 0 and max_total == remaining_sheets[0].total:
+                                           total=last_total,
+                                           prizes=None).exists()
+        if remaining_sheets:
             ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                            user__data__province_id=province_id,
-                                           total=max_total).update(prizes=None)
+                                           total=last_total).update(prizes=None)
 
 
 def adjusted_int_name(number, size=2):
