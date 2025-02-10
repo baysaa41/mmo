@@ -10,8 +10,8 @@ zones = [1,2,3,4,5,12]
 #(olympiad,ulsiin_erh,hotiin_erh_jagsaalt,hotiin_erh,busiin_erh)
 kwots = [(168,0,30,20,0),(169,0,30,20,10),(170,2,30,20,10),(171,2,30,20,10),(172,0,10,10,5),(173,2,10,10,5)]
 
-def set_kwots():
-    ScoreSheet.objects.filter(olympiad_id__in=olympiads).update(prizes=None)
+
+def set_ulsiin_erh():
     for kwot in kwots:
         olympiad_id, third_kwot, city_kwot_by_order, city_kwot_by_province, zone_kwot = kwot
         #ulsiin erh
@@ -20,6 +20,13 @@ def set_kwots():
                                              ranking_b_p__lte=third_kwot,
                                              ranking_b_p__gte=1)
         sheets_0.update(prizes='Улсын эрх')
+
+def set_kwots():
+    ScoreSheet.objects.filter(olympiad_id__in=olympiads).update(prizes=None)
+    set_ulsiin_erh()
+
+    for kwot in kwots:
+        olympiad_id, third_kwot, city_kwot_by_order, city_kwot_by_province, zone_kwot = kwot
         #ulsiin erh 3 duureg
         sheets_01 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                              user__data__province__zone_id=5,
@@ -291,6 +298,7 @@ def update_rankings_b_z(olympiad_id,zone_id):
 
     ScoreSheet.objects.bulk_update(updates, ["ranking_b_z"])
 
+#sets rankings
 def update_all():
     for olympiad in olympiads:
         update_rankings_a(olympiad)
