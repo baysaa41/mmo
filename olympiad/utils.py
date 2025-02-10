@@ -64,6 +64,7 @@ def set_district_kwots(province_id):
         sheets = list(ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                            user__data__province_id=province_id,
                                            prizes=None).order_by('ranking_b_p'))
+        last_total=0
         for index, sheet in enumerate(sheets):
             if index < city_kwot_by_province:
                 sheet.prizes='Хотын эрх, дүүргээс'
