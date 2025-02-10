@@ -27,13 +27,9 @@ def set_ulsiin_erh():
                                              ranking_b_z__gte=1)
         sheets_01.update(prizes='Улсын эрх')
 
-def set_kwots():
-    ScoreSheet.objects.filter(olympiad_id__in=olympiads).update(prizes=None)
-    set_ulsiin_erh()
-
+def set_hotiin_jagsaalt_erh():
     for kwot in kwots:
         olympiad_id, third_kwot, city_kwot_by_order, city_kwot_by_province, zone_kwot = kwot
-
         #hotiin jagsaalt
         sheets_1 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                              user__data__province_id__in=[24,25,27,28,29,30],
@@ -41,6 +37,16 @@ def set_kwots():
                                              ranking_b_z__gte=1,
                                              prizes=None)
         sheets_1.update(prizes='Хотын эрх, жагсаалт')
+
+def set_kwots():
+    ScoreSheet.objects.filter(olympiad_id__in=olympiads).update(prizes=None)
+    set_ulsiin_erh()
+    set_hotiin_jagsaalt_erh()
+
+    for kwot in kwots:
+        olympiad_id, third_kwot, city_kwot_by_order, city_kwot_by_province, zone_kwot = kwot
+
+
         #aimgaas bused
         sheets_2 = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                      user__data__province_id__lte=21,
