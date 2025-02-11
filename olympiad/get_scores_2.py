@@ -27,6 +27,7 @@ olympiad_id_map = {
     'EGMO-2': 175,
 }
 
+'''
 def validate_score(value):
     """Helper function to validate that a score is a positive integer or None."""
     if value is None:
@@ -35,6 +36,15 @@ def validate_score(value):
         return value
     else:
         return None
+'''
+def validate_score(value):
+    """Validate that a score is a non-negative float or None."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)) and value >= 0:
+        return float(value)
+    raise ValueError("Score must be a non-negative float or None")
+
 
 def read_all_sheets_from_excel(directory_path):
     # Check if the directory exists

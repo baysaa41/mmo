@@ -8,7 +8,7 @@ provinces = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,24,25,27,2
 districts = [22,24,25,27,28,29,30]
 zones = [1,2,3,4,5]
 
-#(olympiad,ulsiin_erh,hotiin_erh_jagsaalt,hotiin_erh,busiin_erh)
+#(olympiad,ulsiin_erh,hotiin_jagsaalt_erh,hotiin_erh,busiin_erh)
 kwots = [(168,0,0,0,0),(169,0,30,20,10),(170,2,30,20,10),(171,2,30,20,10),(172,0,10,10,5),(173,2,10,10,5)]
 
 
@@ -31,7 +31,7 @@ def set_hotiin_jagsaalt_erh():
                                              user__data__province_id__in=districts,
                                              ranking_b_z__lte=city_kwot_by_order,
                                              ranking_b_z__gte=1,
-                                             prizes=None)
+                                             prizes__isnull=True)
         sheets_1.update(prizes='Хотын эрх, жагсаалт')
 
 #aimgaas bused
@@ -42,7 +42,7 @@ def set_busiin_erh():
                                      user__data__province_id__lte=21,
                                      ranking_b_p__lte=zone_kwot,
                                      ranking_b_p__gte=1,
-                                     prizes=None)
+                                     prizes__isnull=True)
         sheets_2.update(prizes='Бүсийн эрх')
 
 def clear_kwots():
@@ -63,7 +63,7 @@ def set_district_kwots(province_id):
         olympiad_id, third_kwot, city_kwot_by_order, city_kwot_by_province, zone_kwot = kwot
         sheets = list(ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                            user__data__province_id=province_id,
-                                           prizes=None).order_by('ranking_b_p'))
+                                           prizes__isnull=True).order_by('ranking_b_p'))
         last_total=0
         for index, sheet in enumerate(sheets):
             if index < city_kwot_by_province:
@@ -74,8 +74,9 @@ def set_district_kwots(province_id):
         remaining_sheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                            user__data__province_id=province_id,
                                            total=last_total,
-                                           prizes=None).exists()
+                                           prizes__isnull=True).exists()
         if remaining_sheets:
+            print(province_id, olympiad_id, city_kwot_by_province, last_total)
             ScoreSheet.objects.filter(olympiad_id=olympiad_id,
                                            user__data__province_id=province_id,
                                            total=last_total).update(prizes=None)
