@@ -3,7 +3,8 @@ from accounts.models import Province, Zone
 from django.contrib.auth.models import User
 import json
 
-olympiads = [168,169,170,171,172,173]
+# olympiads = [168,169,170,171,172,173]
+olympiads = [176,177,178,179,180]
 provinces = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,24,25,27,28,29,30]
 districts = [22,24,25,27,28,29,30]
 zones = [1,2,3,4,5]
