@@ -307,3 +307,13 @@ def update_all():
         for zone in zones:
             update_rankings_a_z(olympiad,zone)
             update_rankings_b_z(olympiad,zone)
+
+def copy_ulsiin_erh():
+    score_sheets = ScoreSheet.objects.filter(prizes__icontains="улс",olympiad_id__in=[170,171,173])
+    for score_sheet in score_sheets:
+        if score_sheet.olympiad_id == 170:
+            ScoreSheet.objects.filter(olympiad_id=177,user_id=score_sheet.user_id).update(prizes=score_sheet.prizes)
+        elif score_sheet.olympiad_id == 171:
+            ScoreSheet.objects.filter(olympiad_id=178,user_id=score_sheet.user_id).update(prizes=score_sheet.prizes)
+        elif score_sheet.olympiad_id == 173:
+            ScoreSheet.objects.filter(olympiad_id=180,user_id=score_sheet.user_id).update(prizes=score_sheet.prizes)
