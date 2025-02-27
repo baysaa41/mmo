@@ -9,7 +9,7 @@ problem_id_map = {
     'E': [1107,1108,1109,1110,1111,1112],
     'F': [1113,1114,1115,1116,1117,1118],
     'S': [1119,1120,1121,1122,1123,1124],
-    'Т': [1125,1126,1127,1128,1129,1130],
+    'T': [1125,1126,1127,1128,1129,1130],
 }
 
 #egmo added
@@ -18,7 +18,7 @@ olympiad_id_map = {
     'E': 177,
     'F': 178,
     'S': 179,
-    'Т': 180,
+    'T': 180,
 }
 
 def validate_score(value):
@@ -43,7 +43,7 @@ def read_all_sheets_from_excel(directory_path):
             workbook = openpyxl.load_workbook(file_path)
 
             # Loop through each specified sheet
-            for sheet_name in ['D', 'E', 'F', 'S', 'Т']:
+            for sheet_name in ['D', 'E', 'F', 'S', 'T']:
                 if sheet_name in workbook.sheetnames:
                     sheet = workbook[sheet_name]
                     olympiad_id = olympiad_id_map[sheet_name]
