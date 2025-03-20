@@ -317,3 +317,24 @@ def copy_ulsiin_erh():
             ScoreSheet.objects.filter(olympiad_id=178,user_id=score_sheet.user_id).update(prizes='Улсын эрх, дүүргээс')
         elif score_sheet.olympiad_id == 173:
             ScoreSheet.objects.filter(olympiad_id=180,user_id=score_sheet.user_id).update(prizes='Улсын эрх, дүүргээс')
+
+
+def clone_olympiad(olympiad_id):
+    try:
+        original_olympiad = Olympiad.objects.get(pk=olympiad_id)
+
+        # Clone the author (excluding the primary key)
+        new_olympiad = Olympiad.objects.get(pk=olympiad_id)
+        new_olympiad.pk = None
+        new_olympiad.save()  # Now, new_author has a new id
+
+        # Clone related books
+        problems = original_olympiad.problem_set.all()
+        for problem in problems:
+            problem.pk = None  # Remove the primary key
+            problem.olympiad = new_olympiad  # Assign the new author
+            problem.save()  # Save as a new book
+        return new_olympiad
+    except Olympiad.DoesNotExist:
+        print('Olympiad not found')
+        return None
