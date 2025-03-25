@@ -10,6 +10,7 @@ problem_id_map = {
     'F': [1141,1142,1143,1144,1145,1146],
     'S': [1147,1148,1149,1150,1151,1152],
     'T': [1153,1154,1155,1156,1157,1158],
+    'IMO-1': [1159,1160,1161,1162,1163,1164],
 }
 
 #egmo added
@@ -19,6 +20,7 @@ olympiad_id_map = {
     'F': 183,
     'S': 184,
     'T': 185,
+    'IMO-1': 186,
 }
 
 def validate_score(value):
@@ -54,7 +56,7 @@ def read_all_sheets_from_excel(directory_path):
                         columns = [
                             'num', 'student_id', 'name', 'score1', 'score2', 'score3', 'score4'
                         ]
-                    else:  # For sheets E, F, S, T
+                    else:  # For sheets E, F, S, T, IMO-1
                         columns = [
                             'num', 'student_id', 'name', 'score1', 'score2', 'score3', 'score4',
                             'score5', 'score6'
