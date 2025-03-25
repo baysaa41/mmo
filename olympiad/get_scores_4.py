@@ -20,7 +20,7 @@ olympiad_id_map = {
     'F': 183,
     'S': 184,
     'T': 185,
-    'IMO1': 186,
+    'IMO-1': 186,
 }
 
 def validate_score(value):
@@ -46,7 +46,7 @@ def read_all_sheets_from_excel(directory_path):
             workbook = openpyxl.load_workbook(file_path)
 
             # Loop through each specified sheet
-            for sheet_name in ['D', 'E', 'F', 'S', 'T']:
+            for sheet_name in ['D', 'E', 'F', 'S', 'T', 'IMO-1']:
                 if sheet_name in workbook.sheetnames:
                     sheet = workbook[sheet_name]
                     olympiad_id = olympiad_id_map[sheet_name]
@@ -57,7 +57,7 @@ def read_all_sheets_from_excel(directory_path):
                         columns = [
                             'num', 'student_id', 'name', 'score1', 'score2', 'score3', 'score4'
                         ]
-                    else:  # For sheets E, F, S, T, IMO1
+                    else:  # For sheets E, F, S, T, IMO-1
                         columns = [
                             'num', 'student_id', 'name', 'score1', 'score2', 'score3', 'score4',
                             'score5', 'score6'
