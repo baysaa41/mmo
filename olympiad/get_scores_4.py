@@ -40,8 +40,8 @@ def read_all_sheets_from_excel(directory_path):
 
     # Loop through each .xlsx file in the specified directory
     for filename in os.listdir(directory_path):
-        print(filename)
         if filename.endswith('.xlsx'):
+            print(filename)
             file_path = os.path.join(directory_path, filename)
             workbook = openpyxl.load_workbook(file_path)
 
