@@ -89,7 +89,7 @@ def read_all_sheets_from_excel(directory_path):
                                     problem_id=problem_id,
                                     defaults={
                                         'score': score,
-                                        'state': Result.States.not_submitted,  # Default state
+                                        'state': Result.States.submitted,  # Default state
                                         'is_active': True  # Set to True if active
                                     }
                                 )
@@ -105,7 +105,7 @@ def read_all_sheets_from_excel(directory_path):
                                     problem_id=problem_id,
                                     defaults={
                                         'score': 0,
-                                        'state': Result.States.not_submitted,  # Default state
+                                        'state': Result.States.submitted,  # Default state
                                         'is_active': True  # Set to True if active
                                     }
                                 )
