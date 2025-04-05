@@ -4,6 +4,7 @@ from olympiad.models import Result, Olympiad, Problem
 from django.contrib.auth.models import User
 
 # Define mappings based on sheet type.
+'''
 problem_id_map = {
     'D': [1131,1132,1133,1134],
     'E': [1135,1136,1137,1138,1139,1140],
@@ -22,6 +23,23 @@ olympiad_id_map = {
     'T': 185,
     'IMO-1': 186,
 }
+'''
+
+problem_id_map = {
+    'E': [1165,1166,1167,1168,1169,1170],
+    'F': [1171,1172,1173,1174,1175,1176],
+    'T': [1177,1178,1179,1180,1181,1182],
+    'IMO-2': [1183,1184,1185,1186,1187,1188],
+}
+
+#egmo added
+olympiad_id_map = {
+    'E': 187,
+    'F': 188,
+    'T': 189,
+    'IMO-2': 190,
+}
+
 
 def validate_score(value):
     """Helper function to validate that a score is a positive integer or None."""
