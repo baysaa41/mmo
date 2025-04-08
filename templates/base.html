@@ -13,29 +13,33 @@
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"
           integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
 
-<script type="text/x-mathjax-config">
-    MathJax = {
-        tex: {
-            inlineMath: [["$", "$"], ["\\(", "\\)"]],
-            macros: {
-                tg: "{\\operatorname{tg}\\,}",
-                ctg: "{\\operatorname{ctg}\\,}",
-                arctg: "{\\operatorname{arctg}\\,}",
-                arcctg: "{\\operatorname{arcctg}\\,}",
-                cosec: "{\\operatorname{cosec}\\,}",
-                ebox: "\\fbox{ }",
-                sgn: "{\\operatorname{sgn}\\,}",
-                lt: "{\\,<\\,}",
-                geo: "{\\div\\kern{-0.5em}\\div}"
-            }
-        },
-        svg: {
-            scale: 105
-        }
-    };
-</script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax:{inlineMath:[["$","$"],["\\(","\\)"]]},
+            TeX:{Macros:{tg:"{\\operatorname{tg}\\,}",
+            ctg:"{\\operatorname{ctg}\\,}",
+            arctg:"{\\operatorname{arctg}\\,}",
+            arcctg:"{\\operatorname{arcctg}\\,}",
+            cosec:"{\\operatorname{cosec}\\,}",
+            ebox:"\\fbox{ }",
+            sgn:"{\\operatorname{sgn}\\,}",
+            lt:"{\\,<\\,}",
+            geo:"{\\div\\kern{-0.5em}\\div}"}},
+            SVG:{scale:105}
+        });
+        MathJax.Hub.Register.StartupHook("TeX Jax Ready",function () {
+          MathJax.Hub.Insert(MathJax.InputJax.TeX.Definitions.macros,{
+            cancel: ["Extension","cancel"],
+            bcancel: ["Extension","cancel"],
+            xcancel: ["Extension","cancel"],
+            cancelto: ["Extension","cancel"],
+            boxed: ["Extentsion","amsmath"]
+          });
+        });
 
-    <script src="{% static 'mathjax/es5/tex-mml-chtml.js' %}"></script>
+    </script>
+    <script type="text/javascript" async
+            src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
     <style>
         #navigation {
             position: fixed;
