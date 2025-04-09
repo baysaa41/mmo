@@ -1,5 +1,7 @@
+{% extends 'base-fluid.html' %}
 {% load latex_filter %}
 
+{% block content %}
 <label>Бодлого {{ result.problem.order }}.</label>
 <div>{% autoescape off %}{{ result.problem.statement | latex }}{% endautoescape %}</div>
 <div id="images">
@@ -8,3 +10,4 @@
         {% endfor %}
 </div>
 <button type="button" onclick="load()" class="btn btn-secondary btn-sm">Зураг үзэх</button>
+{% endblock %}

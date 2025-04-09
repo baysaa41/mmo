@@ -31,7 +31,6 @@ urlpatterns = [
     path('problems/', views.problems_home, name='olympiad_problems_home'),
     # results
     path('update/<int:olympiad_id>/', result_views.update_results, name='update_result_views'),
-    path('pandas/<int:olympiad_id>/', result_views.pandasView3, name='olympiad_pandas_results'),
     path('results/', result_views.results_home, name='olympiad_results_home'),
     path('result/<int:olympiad_id>/<int:contestant_id>/', result_views.student_result_view, name='olympiad_student_result'),
     # path('results/<int:olympiad_id>/', result_views.result_view_org, name='olympiad_result_view'),

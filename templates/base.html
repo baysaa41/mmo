@@ -13,33 +13,31 @@
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"
           integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
 
-    <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-            tex2jax:{inlineMath:[["$","$"],["\\(","\\)"]]},
-            TeX:{Macros:{tg:"{\\operatorname{tg}\\,}",
-            ctg:"{\\operatorname{ctg}\\,}",
-            arctg:"{\\operatorname{arctg}\\,}",
-            arcctg:"{\\operatorname{arcctg}\\,}",
-            cosec:"{\\operatorname{cosec}\\,}",
-            ebox:"\\fbox{ }",
-            sgn:"{\\operatorname{sgn}\\,}",
-            lt:"{\\,<\\,}",
-            geo:"{\\div\\kern{-0.5em}\\div}"}},
-            SVG:{scale:105}
-        });
-        MathJax.Hub.Register.StartupHook("TeX Jax Ready",function () {
-          MathJax.Hub.Insert(MathJax.InputJax.TeX.Definitions.macros,{
-            cancel: ["Extension","cancel"],
-            bcancel: ["Extension","cancel"],
-            xcancel: ["Extension","cancel"],
-            cancelto: ["Extension","cancel"],
-            boxed: ["Extentsion","amsmath"]
-          });
-        });
-
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                macros: {
+                    tg: "\\operatorname{tg}",
+                    ctg: "\\operatorname{ctg}",
+                    arctg: "\\operatorname{arctg}",
+                    arcctg: "\\operatorname{arcctg}",
+                    cosec: "\\operatorname{cosec}",
+                    sgn: "\\operatorname{sgn}",
+                    lt: "\\,<\\,",
+                    geo: "\\div\\kern{-0.5em}\\div",
+                },
+                packages: ['base', 'ams', 'cancel']
+            },
+            svg: {
+                scale: 1.05
+            }
+        };
     </script>
-    <script type="text/javascript" async
-            src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+    <script type="text/javascript" id="MathJax-script" async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
     <style>
         #navigation {
             position: fixed;
@@ -57,6 +55,7 @@
             flex-direction: column;
             text-align: center;
         }
+
         a.logo {
             display: flex;
             margin-bottom: 20px;
@@ -64,10 +63,11 @@
             text-decoration: none;
             font-weight: bold;
         }
+
         a.logo img {
             max-width: 80%;
         }
-        
+
         .content {
             z-index: -1;
             top: 4rem;
@@ -75,7 +75,7 @@
             padding-bottom: 2rem;
             overflow: scroll;
         }
-        
+
         .footer {
             position: fixed;
             bottom: 0;
@@ -105,100 +105,103 @@
 </head>
 <body>
 
-    <!-- Top Navigation Menu -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'home' %}"><img src="{% static 'logo.png' %}" alt="logo"
-                                                             style="width:40px"></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <!-- User login/logout block -->
-            <div class="user">
-                {% block userlogin %}
-                    {% if user.is_authenticated %}
-                        <p>Сайн уу, <a href="{% url 'user_profile' %}">{{ user.username }}</a> /
-                            <a href="{% url 'user_logout' %}">Гарах</a>
-                        </p>
-                    {% else %}
-                        <p>
-                            <a href="{% url 'django_registration_register' %}" class="btn btn-dark text-white">Бүртгүүлэх</a>
-                            <a href="{% url 'user_login' %}" class="btn btn-warning text-dark">Нэвтрэх</a>
-                        </p>
-                    {% endif %}
-                {% endblock %}
-            </div>
-        </div>
-    </nav>
-
+<!-- Top Navigation Menu -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-        <div class="row">
-            <!-- Left Sidebar Menu -->
-            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-                <div class="position-sticky pt-3">
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a class="nav-link" href="http://www.mmo.mn/post/?id=381">Удирдамж</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'olympiad_home' %}">Олимпиадууд</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="{% url 'school_moderators_list' %}">Сургуулиуд (I даваа)</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'olympiad_supplement_home' %}">Материал нэмж оруулах</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'olympiad_problems_home' %}">Олимпиадын бодлогууд</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="http://www.mmo.mn/post/?id=142">Танд тусалъя</a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="sponsors">
-                    <h4>Ивээн тэтгэгчид</h4>
-                    <a href="https://moe.gov.mn/" class="logo" target="_blank">
-                        <img src="https://www.mmo.mn/media/education_yam.jpeg" alt="Боловсролын Яам"></a>
-                    <a href="https://edu.gov.mn/public/" class="logo" target="_blank">Боловсролын Ерөнхий Газар</a>
-                    <a href="https://en.monpolymet.mn/" class="logo" target="_blank">
-                        <img src="https://www.mmo.mn/media/MPG.jpg" alt="Монполимет групп"></a>
-                    <a href="https://and.global/" class="logo" target="_blank">
-                        <img src="https://www.mmo.mn/media/AND_Global.PNG" alt="Анд глобал"></a>
-                    <a href="https://www.capitronbank.mn/" class="logo" target="_blank">
-                        <img src="https://www.mmo.mn/media/Capitron.png" alt="Капитрон банк"></a>
-                    <a href="https://cosmo.mn/" class="logo" target="_blank">
-                        <img src="https://www.mmo.mn/media/Cosmo.png" alt="Cosmo"></a>
-                    <a href="https://ondo.mn/" class="logo" target="_blank">
-                        <img src="https://www.mmo.mn/media/ONDO.png" alt="Ондо"></a>
-                </div>
-            </nav>
-
-            <!-- Main Content Area -->
-            <main class="col-md-9 col-lg-7 ms-sm-auto px-md-4">
-                <!-- Content goes here -->
-                <div class="content">
-                    <div class="container">
-                        {% block content %}
-                            {% autoescape off %}{{ text_content }}{% endautoescape %}
-                        {% endblock %}
-                    </div>
-                </div>
-            </main>
-
-            <!-- Right Sidebar Google Calendar -->
-            <aside class="col-lg-3 d-none d-lg-block">
-                <iframe src="https://calendar.google.com/calendar/embed?src=d7ar3du90oi9frqvtfeo73iq9covhs0g%40import.calendar.google.com&ctz=Asia%2FUlaanbaatar" style="border: 0" width="100%" height="400"></iframe>
-            </aside>
+        <a class="navbar-brand" href="{% url 'home' %}"><img src="{% static 'logo.png' %}" alt="logo"
+                                                             style="width:40px"></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <!-- User login/logout block -->
+        <div class="user">
+            {% block userlogin %}
+                {% if user.is_authenticated %}
+                    <p>Сайн уу, <a href="{% url 'user_profile' %}">{{ user.username }}</a> /
+                        <a href="{% url 'user_logout' %}">Гарах</a>
+                    </p>
+                {% else %}
+                    <p>
+                        <a href="{% url 'django_registration_register' %}"
+                           class="btn btn-dark text-white">Бүртгүүлэх</a>
+                        <a href="{% url 'user_login' %}" class="btn btn-warning text-dark">Нэвтрэх</a>
+                    </p>
+                {% endif %}
+            {% endblock %}
         </div>
     </div>
+</nav>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Left Sidebar Menu -->
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="http://www.mmo.mn/post/?id=381">Удирдамж</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'olympiad_home' %}">Олимпиадууд</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'school_moderators_list' %}">Сургуулиуд (I даваа)</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'olympiad_supplement_home' %}">Материал нэмж оруулах</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'olympiad_problems_home' %}">Олимпиадын бодлогууд</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="http://www.mmo.mn/post/?id=142">Танд тусалъя</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="sponsors">
+                <h4>Ивээн тэтгэгчид</h4>
+                <a href="https://moe.gov.mn/" class="logo" target="_blank">
+                    <img src="https://www.mmo.mn/media/education_yam.jpeg" alt="Боловсролын Яам"></a>
+                <a href="https://edu.gov.mn/public/" class="logo" target="_blank">Боловсролын Ерөнхий Газар</a>
+                <a href="https://en.monpolymet.mn/" class="logo" target="_blank">
+                    <img src="https://www.mmo.mn/media/MPG.jpg" alt="Монполимет групп"></a>
+                <a href="https://and.global/" class="logo" target="_blank">
+                    <img src="https://www.mmo.mn/media/AND_Global.PNG" alt="Анд глобал"></a>
+                <a href="https://www.capitronbank.mn/" class="logo" target="_blank">
+                    <img src="https://www.mmo.mn/media/Capitron.png" alt="Капитрон банк"></a>
+                <a href="https://cosmo.mn/" class="logo" target="_blank">
+                    <img src="https://www.mmo.mn/media/Cosmo.png" alt="Cosmo"></a>
+                <a href="https://ondo.mn/" class="logo" target="_blank">
+                    <img src="https://www.mmo.mn/media/ONDO.png" alt="Ондо"></a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="col-md-9 col-lg-7 ms-sm-auto px-md-4">
+            <!-- Content goes here -->
+            <div class="content">
+                <div class="container">
+                    {% block content %}
+                        {% autoescape off %}{{ text_content }}{% endautoescape %}
+                    {% endblock %}
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar Google Calendar -->
+        <aside class="col-lg-3 d-none d-lg-block">
+            <iframe src="https://calendar.google.com/calendar/embed?src=d7ar3du90oi9frqvtfeo73iq9covhs0g%40import.calendar.google.com&ctz=Asia%2FUlaanbaatar"
+                    style="border: 0" width="100%" height="400"></iframe>
+        </aside>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 
 <div class="footer text-center border-top">
     E-mail: <a href="mailto:baysa.edu@gmail.com" class="text-secondary">baysa.edu@gmail.com</a> &bullet; ММОХ
