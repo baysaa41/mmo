@@ -210,64 +210,6 @@ def getJSONResults(request, olympiad_id):
     return JsonResponse(data)
 
 
-def newResultView(request, olympiad_id):
-    return render(request, "olympiad/javascript_pivot.html", {'olympiad': olympiad_id})
-
-
-def pandasIMO64(request):
-    ids = [117, 118, 120]
-    quizzes = Olympiad.objects.filter(pk__in=ids).order_by('id')
-    answers = Result.objects.filter(olympiad_id__in=ids)
-    title = 'Нэгдсэн дүн'
-
-    if answers.count() == 0:
-        context = {
-            'df': '',
-            'pivot': '',
-            'quiz': '',
-            'title': 'Оролцсон сурагч байхгүй.',
-        }
-        return render(request, 'olympiad/pandas3.html', context)
-
-    users = User.objects.filter(groups__name='IMO-64 сорилго')
-    answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
-    users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id', 'data__school'], verbose=False)
-    answers_df['score'] = answers_df['score'].fillna(0)
-    pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
-    pivot["Дүн"] = pivot.sum(axis=1)
-    results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='inner')
-    results.sort_values(by='Дүн', ascending=False, inplace=True)
-    results['id'].fillna(0).astype(int)
-    results['id'] = results['id'].apply(lambda x: "{id:.0f}".format(id=x))
-    results.rename(columns={
-        'id': 'ID',
-        'first_name': 'Нэр',
-        'last_name': 'Овог',
-        'data__school': 'Cургууль',
-        'link': '<i class="fas fa-expand-wide"></i>',
-    }, inplace=True)
-    results.index = np.arange(1, results.__len__() + 1)
-
-    pd.set_option('colheader_justify', 'center')
-
-    num = 0
-    for quiz in quizzes:
-        num = num + 1
-        for item in quiz.problem_set.all().order_by('order'):
-            # print(item.id, item.order)
-            results = results.rename(columns={item.id: '№' + str(num) + '.' + str(item.order)})
-
-    context = {
-        'df': results.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
-        'pivot': results.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
-        'quiz': {
-            'name': 'IMO-64 сорилго',
-        },
-        'title': title,
-    }
-    return render(request, 'olympiad/pandas3.html', context)
-
-
 @cache_page(60 * 15)
 def olympiad_group_result_view(request,group_id):
     try:

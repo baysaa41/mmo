@@ -398,6 +398,7 @@ class Tag(models.Model):
 class OlympiadGroup(models.Model):
     name = models.CharField(max_length=128)
     olympiads = models.ManyToManyField(Olympiad, blank=True)
+    group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.name

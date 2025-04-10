@@ -16,8 +16,8 @@
                 <tr>
                     <th>№</th>
                     <th>Овог, нэр</th>
+                    <th>Утас</th>
                     <th>ID</th>
-                    <th>Бүс</th>
                     <th>Бодолт зассан</th>
                     <th>Коммент</th>
                     <th>Оноо</th>
@@ -27,9 +27,9 @@
                 {% for result in results %}
                     <tr id="result{{ result.id }}">
                         <td>{{ forloop.counter }}</td>
-                        <td>{{ result.contestant.last_name }}, {{ result.contestant.first_name }}, {{ result.contestant.data.mobile }}</td>
+                        <td>{{ result.contestant.last_name }}, {{ result.contestant.first_name }}</td>
+                        <td>{{ result.contestant.data.mobile }}</td>
                         <td>{{ result.contestant.id }}</td>
-                        <td><a href="{% url 'zone_olympiad_exam_grading' problem_id=result.problem.id zone_id=result.contestant.data.province.zone.id %}">{{ result.contestant.data.province.zone.name }}</a></td>
                         <td>{{ result.coordinator.first_name }}</td>
                         <td>{{ result.grader_comment }}</td>
                         <td>{{ result.score }}</td>
