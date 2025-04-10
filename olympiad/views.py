@@ -434,24 +434,6 @@ def exam_grading_view(request, problem_id):
 
 
 @login_required
-def zone_exam_grading_view(request, problem_id, zone_id):
-    problem = Problem.objects.filter(pk=problem_id).first()
-    if not request.user.is_staff:
-        return HttpResponse("handah erhgui bna.")
-
-    z_id = zone_id
-
-    if z_id:
-        results = Result.objects.filter(problem_id=problem_id, contestant__data__province__zone_id=z_id).order_by(
-            'score').reverse
-    else:
-        results = Result.objects.filter(problem_id=problem_id).order_by('score').reverse
-
-    return render(request, 'olympiad/zone_exam_grading.html',
-                  {'results': results, 'problem': problem, 'zone_id': zone_id})
-
-
-@login_required
 def grade(request):
     result_id = int(request.GET.get('result_id', 0))
     if result_id > 0:
@@ -472,31 +454,6 @@ def grade(request):
         return render(request, "olympiad/result_form.html", {'form': form, 'result': result})
     else:
         return HttpResponse("Ийм хариулт олдсонгүй.")
-
-
-@login_required
-def zone_grade(request, zone_id):
-    result_id = int(request.GET.get('result_id', 0))
-    if result_id > 0:
-        result = Result.objects.get(pk=result_id)
-        if not result.olympiad.is_grading or result.state == 5:
-            return HttpResponse("Энэ бодлогын үнэлгээг өөрчлөх боломжгүй.")
-        if request.method == 'POST':
-            form = ResultsGraderForm(request.POST, instance=result)
-            if form.is_valid() and request.user.is_staff:
-                form.save()
-                result.coordinator = request.user
-                result.state = 2
-                result.save()
-                url = reverse('zone_olympiad_exam_grading',
-                              kwargs={'problem_id': result.problem.id, 'zone_id': zone_id})
-                url = url + '#result{}'.format(result.id)
-                return redirect(url)
-        form = ResultsGraderForm(instance=result)
-        return render(request, "olympiad/zone_result_form.html", {'form': form, 'result': result, 'zone_id': zone_id})
-    else:
-        return HttpResponse("Ийм хариулт олдсонгүй.")
-
 
 @login_required
 def student_exam_materials_view(request):

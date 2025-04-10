@@ -38,7 +38,6 @@ urlpatterns = ([
     path('accounts/', include('django_registration.backends.activation.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('olympiads/', include('olympiad.urls')),
-    path('quizzes/', include('quiz.urls')),
     path('send_email/', accounts_views.send_email_with_attachments, name='send_email_with_attachments'),
     path('password_reset/', CustomPasswordResetView.as_view(), name='password_reset'),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
