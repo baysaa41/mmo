@@ -83,8 +83,10 @@
                         <li><a class="dropdown-item" href="http://www.mmo.mn/post/?id=381">Удирдамж</a></li>
                         <li><a class="dropdown-item" href="{% url 'olympiad_home' %}">Оролцох</a></li>
                         <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a></li>
-                        <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}">Олимпиадын бодлогууд</a></li>
-                        <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}">Материал нэмж оруулах</a></li>
+                        <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}">Олимпиадын бодлогууд</a>
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}">Материал нэмж
+                            оруулах</a></li>
                     </ul>
                 </li>
 
@@ -112,11 +114,13 @@
             <div class="d-flex align-items-center user">
                 {% block userlogin %}
                     {% if user.is_authenticated %}
-                        <span class="me-2">Сайн уу, <a href="{% url 'user_profile' %}" class="text-white">{{ user.username }}</a> /
+                        <span class="me-2">Сайн уу, <a href="{% url 'user_profile' %}"
+                                                       class="text-white">{{ user.username }}</a> /
                             <a href="{% url 'user_logout' %}" class="text-warning">Гарах</a>
                         </span>
                     {% else %}
-                        <a href="{% url 'django_registration_register' %}" class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
+                        <a href="{% url 'django_registration_register' %}"
+                           class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
                         <a href="{% url 'user_login' %}" class="btn btn-sm btn-warning text-dark">Нэвтрэх</a>
                     {% endif %}
                 {% endblock %}
@@ -146,6 +150,9 @@
             {% block content %}
                 {% autoescape off %}{{ text_content }}{% endautoescape %}
             {% endblock %}
+        </div>
+        <div class="d-lg-none text-center">
+            <img src="/media/banner.gif" class="img-fluid" style="max-height: 50px;">
         </div>
     </div>
 </main>
