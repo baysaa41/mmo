@@ -8,7 +8,7 @@
     {% autoescape off %}
     <h3>{{ problem.olympiad.name }}, {{ problem.order }}</h3>
     <p class="text-danger">{{ problem.statement | latex | linebreaksbr }}</p>
-    <p class="text-info">Бодсон: {{ count }}</p>
+    <p class="text-info">Нийт: {{ count }}</p>
     {% for result in results_grouped %}
     <p class="text-info">{{ result.score }} оноо: {{ result.score_count }}</p>
     {% endfor %}

@@ -133,6 +133,10 @@ def pandasView(request, olympiad_id):
         'data__school': 'Сургууль',
         'link': '+',
     }, inplace=True)
+    olympiad = Olympiad.objects.get(pk=olympiad_id)
+    for item in olympiad.problem_set.all().order_by('order'):
+            results = results.rename(columns={item.id: '№' + str(item.order)})
+
     results.index = np.arange(1, results.__len__() + 1)
 
     pd.set_option('colheader_justify', 'center')
@@ -235,7 +239,6 @@ def olympiad_group_result_view(request,group_id):
         users = olympiad_group.group.user_set.all()
     else:
         users = User.objects.all()
-    print(users)
     answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
     users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id', 'data__school'], verbose=False)
     answers_df['score'] = answers_df['score'].fillna(0)

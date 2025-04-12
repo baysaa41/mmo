@@ -1,8 +1,8 @@
 import math
 
 from django.shortcuts import render, redirect, HttpResponse
-from accounts.forms import UserForm, UserMetaForm, EmailForm
-from django.contrib.auth.models import User, Group
+from accounts.forms import UserForm, UserMetaForm
+from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
@@ -10,14 +10,12 @@ from .forms import LoginForm, CustomPasswordResetForm
 from .models import UserMeta, Province, Level, Grade, UserMails, Zone
 from django.urls import reverse
 from django.core.mail import send_mass_mail
-from olympiad.models import Article, SchoolYear, Result
+from olympiad.models import Article, SchoolYear
 from datetime import datetime, timezone
-from .forms import AddRemoveUsersToGroupForm
 
 from schools.models import School
 from django.contrib.auth.models import Group
 from .forms import EmailForm
-from django.views.decorators.cache import cache_page
 
 
 
