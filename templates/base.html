@@ -146,13 +146,13 @@
 <!-- Main Content Area -->
 <main class="container-fluid">
     <div class="row">
+        <div class="d-lg-none text-center">
+            <img src="/media/banner.gif" class="img-fluid" style="max-height: 50px;">
+        </div>
         <div class="container">
             {% block content %}
                 {% autoescape off %}{{ text_content }}{% endautoescape %}
             {% endblock %}
-        </div>
-        <div class="d-lg-none text-center">
-            <img src="/media/banner.gif" class="img-fluid" style="max-height: 50px;">
         </div>
     </div>
 </main>
