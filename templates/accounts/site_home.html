@@ -18,7 +18,7 @@
     </div>
     {% if articles %}
     {% for article in articles %}
-        <div class="card p-3 mt-2 bg-light text-dark">
+        <div class="article card p-3 mt-2 bg-light text-dark">
             <h4 class="my-3"><a href="{% url 'post_view' %}?id={{ article.id }}" class="text-info">{{ article.title }}</a></h4>
         {% if request.user.is_staff and mode %}
             <a href="/admin/olympiad/article/{{ article.id }}/change/" target="_blank">Засах</a>
