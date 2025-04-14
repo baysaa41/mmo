@@ -83,9 +83,12 @@
                             <ul class="dropdown-menu" aria-labelledby="navbarDropdown1">
                                 <li><a class="dropdown-item" href="http://www.mmo.mn/post/?id=381">Удирдамж</a></li>
                                 <li><a class="dropdown-item" href="{% url 'olympiad_home' %}">Оролцох</a></li>
-                                <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a></li>
-                                <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}">Олимпиадын бодлогууд</a></li>
-                                <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}">Материал нэмж оруулах</a></li>
+                                <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a>
+                                </li>
+                                <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}">Олимпиадын
+                                    бодлогууд</a></li>
+                                <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}">Материал нэмж
+                                    оруулах</a></li>
                             </ul>
                         </li>
                         <!-- Сургуулиуд -->
@@ -104,6 +107,7 @@
                 </div>
             </div>
 
+
             <!-- Гол: Banner -->
             <div class="d-none d-lg-block text-center">
                 <img src="/media/banner.gif" class="img-fluid" style="max-height: 50px;">
@@ -118,7 +122,8 @@
                             <a href="{% url 'user_logout' %}" class="text-warning">Гарах</a>
                         </span>
                     {% else %}
-                        <a href="{% url 'django_registration_register' %}" class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
+                        <a href="{% url 'django_registration_register' %}"
+                           class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
                         <a href="{% url 'user_login' %}" class="btn btn-sm btn-warning text-dark">Нэвтрэх</a>
                     {% endif %}
                 {% endblock %}
@@ -127,11 +132,16 @@
                         data-bs-target="#calendarModal">
                     📅 Календар
                 </button>
+                <!-- Toggler -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#navbarNav" aria-controls="navbarNav"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
             </div>
         </div>
     </nav>
 </header>
-
 
 
 <!-- Calendar Modal (Optional) -->
