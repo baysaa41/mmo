@@ -114,26 +114,26 @@
             </div>
 
             <!-- Баруун тал: Login / Calendar -->
-            <div class="d-flex align-items-center">
+            <div class="d-flex mr-2 align-items-center">
                 {% block userlogin %}
                     {% if user.is_authenticated %}
-                        <span class="me-2 text-white">Сайн уу,
+                        <span class="mx-2 text-white">Сайн уу,
                             <a href="{% url 'user_profile' %}" class="text-white">{{ user.username }}</a> /
                             <a href="{% url 'user_logout' %}" class="text-warning">Гарах</a>
                         </span>
                     {% else %}
                         <a href="{% url 'django_registration_register' %}"
-                           class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
+                           class="btn btn-sm btn-light mx-2">Бүртгүүлэх</a>
                         <a href="{% url 'user_login' %}" class="btn btn-sm btn-warning text-dark">Нэвтрэх</a>
                     {% endif %}
                 {% endblock %}
 
-                <button class="btn btn-outline-light ms-2 d-none d-lg-block" data-bs-toggle="modal"
+                <button class="btn btn-outline-light mx-2 d-none d-lg-block" data-bs-toggle="modal"
                         data-bs-target="#calendarModal">
                     📅 Календар
                 </button>
                 <!-- Toggler -->
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                <button class="navbar-toggler mx-2" type="button" data-bs-toggle="collapse"
                         data-bs-target="#navbarNav" aria-controls="navbarNav"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
