@@ -57,7 +57,13 @@
         }
 
         .article {
-            overflow: scroll;
+          overflow: auto;
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* Internet Explorer 10+ */
+        }
+
+        .article::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, and Opera */
         }
     </style>
 </head>
