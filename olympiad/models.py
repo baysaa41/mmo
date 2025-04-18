@@ -17,12 +17,13 @@ class Olympiad(models.Model):
     is_grading = models.BooleanField(default=False)
     rounds = [
         (0, 'Бусад олимпиад'),
-        (1, 'Сонгон шалгаруулалт'),
+        (1, 'Сургуулийн олимпиад'),
         (2, 'Дүүргийн олимпиад'),
         (3, 'Хотын олимпиад'),
         (4, 'Улсын олимпиад'),
         (5, 'Олон улсын олимпиад'),
         (6, 'Олон улсын бусад'),
+        (7, 'Сонгон шалгаруулалт'),
     ]
     round = models.IntegerField(choices=rounds, default=0)
     next_round = models.ForeignKey('Olympiad', related_name='next', on_delete=models.SET_NULL, null=True, blank=True)
