@@ -1,4 +1,4 @@
-{% extends 'base-fluid.html' %}
+{% extends 'base.html' %}
 
 {% load crispy_forms_tags %}
 
@@ -11,7 +11,7 @@
     <div class="justify-content-center">
         {% if messages %}
             {% for message in messages %}
-                <h5 class="alert alert-danger">{{ message }}</h5>
+                <h5 class="alert alert-danger">{% autoescape on %}{{ message }}{% endautoescape %}</h5>
             {% endfor %}
         {% endif %}
         <div id="time">Улаанбаатарын цаг: {{ now | date:'Y-m-d H:i' }}</div>

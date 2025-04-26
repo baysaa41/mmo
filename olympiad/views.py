@@ -175,7 +175,8 @@ def exam_student_view(request, olympiad_id):
 
     if olympiad.group is not None:
         if contestant not in olympiad.group.user_set.all():
-            message = "Зөвхөн '{}' бүлгийн сурагчид оролцох боломжтой".format(olympiad.group.name)
+            url = 'https://www.integral.mn/accounts/users/{}/'.format(olympiad.group.id)
+            message = "Зөвхөн {} бүлгийн сурагчид оролцох боломжтой".format(olympiad.group.name)
             messages.info(request, message)
             return redirect('olympiad_home')
 
