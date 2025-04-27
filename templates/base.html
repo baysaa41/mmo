@@ -18,6 +18,31 @@
     <!-- Popper JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
 
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                macros: {
+                    tg: "\\operatorname{tg}",
+                    ctg: "\\operatorname{ctg}",
+                    arctg: "\\operatorname{arctg}",
+                    arcctg: "\\operatorname{arcctg}",
+                    cosec: "\\operatorname{cosec}",
+                    sgn: "\\operatorname{sgn}",
+                    lt: "\\,<\\,",
+                    geo: "\\div\\kern{-0.5em}\\div",
+                },
+                packages: ['base', 'ams', 'cancel']
+            },
+            svg: {
+                scale: 1.05
+            }
+        };
+    </script>
+
+    <script type="text/javascript" id="MathJax-script" async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
     <style>
         .navbar {
             position: fixed;
