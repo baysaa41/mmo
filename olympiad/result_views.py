@@ -2072,12 +2072,12 @@ def answers_view2(request, olympiad_id, group_id):
         group = Group.objects.get(pk=group_id)
         olympiad = Olympiad.objects.get(pk=olympiad_id)
     except Group.DoesNotExist:
-        return render(request, 'error.html', {'error': 'Бүлэг олдоогүй.'})
+        return render(request, 'errors/error.html', {'error': 'Бүлэг олдоогүй.'})
     except Olympiad.DoesNotExist:
-       return render(request, 'error.html', {'error': 'Олимпиад олдоогүй.'})
+       return render(request, 'errors/error.html', {'error': 'Олимпиад олдоогүй.'})
 
     if not is_my_school_group(request.user.id,group_id) and not request.user.is_staff:
-        return render(request, 'error.html', {'error': 'Хандах эрхгүй.'})
+        return render(request, 'errors/error.html', {'error': 'Хандах эрхгүй.'})
 
     results = Result.objects.filter(olympiad_id=olympiad_id, contestant__groups__id=group_id).order_by('contestant_id', 'problem__order')
     if not results.exists():

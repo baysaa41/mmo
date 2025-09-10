@@ -355,7 +355,7 @@ def quiz_staff_view2(request, quiz_id, contestant_id):
     group = school.group
 
     if not is_my_student(staff.id,contestant_id) and not staff.is_staff:
-        return render(request, 'error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
+        return render(request, 'errors/error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
 
     if request.method == 'POST':
         keys = request.POST.keys()

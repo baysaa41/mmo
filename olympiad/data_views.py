@@ -20,6 +20,6 @@ def results(request, olympiad_id):
     try:
         olympiad = Olympiad.objects.get(pk=olympiad_id)
     except Olympiad.DoesNotExist:
-        return render(request, 'error.html', {'error': 'olympiad not found'})
+        return render(request, 'errors/error.html', {'error': 'olympiad not found'})
 
     return render(request, 'olympiad/result_handler.html', {'olympiad': olympiad})

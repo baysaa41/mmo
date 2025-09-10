@@ -141,7 +141,7 @@ def manage_school(request, school_id):
             is_my_school = True
 
     if not is_my_school and not request.user.is_staff:
-        return render(request, 'error.html', {'error': 'Та энэ сургуулийг удирдах эрхгүй. Таны нэвтэрсэн нэр {}.'.format(request.user.username)})
+        return render(request, 'errors/error.html', {'error': 'Та энэ сургуулийг удирдах эрхгүй. Таны нэвтэрсэн нэр {}.'.format(request.user.username)})
     school = get_object_or_404(School, id=school_id)
     group = school.group
 
@@ -299,7 +299,7 @@ def edit_user_in_group(request, user_id):
             is_my_student = True
 
     if not is_my_student and not request.user.is_staff:
-        return render(request, 'error.html', {'error': 'Та энэ хэрэглэгчийг засварлах эрхгүй.'})
+        return render(request, 'errors/error.html', {'error': 'Та энэ хэрэглэгчийг засварлах эрхгүй.'})
 
     try:
         user_meta = target_user.data  # Access UserMeta object via related_name 'data'
