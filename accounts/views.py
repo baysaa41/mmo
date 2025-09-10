@@ -27,6 +27,8 @@ from django.core.mail import get_connection, EmailMultiAlternatives, EmailMessag
 
 from django_pandas.io import read_frame
 
+from django.core.paginator import Paginator
+
 import os
 import pandas as pd
 import numpy as np
@@ -148,7 +150,7 @@ class CustomPasswordResetView(PasswordResetView):
     email_template_name = 'registration/password_reset_email.html'
     success_url = '/password_reset/done/'  # customize as needed
 
-def users(request):
+def users2(request):
     # create_users()
     provinces = Province.objects.all()
     levels = Level.objects.all()
@@ -170,6 +172,61 @@ def users(request):
         users = UserMeta.objects.filter(level_id=int(l), is_valid=1).order_by('grade_id', 'province_id')
         level = Level.objects.get(pk=l)
         return render(request, 'accounts/users.html', {'users': users, 'title': level.name})
+
+from django.shortcuts import render, get_object_or_404
+from django.core.paginator import Paginator  # <-- 1. Paginator-г импорт хийх
+from .models import Province, Level, UserMeta
+
+def users(request):
+    try:
+        # 'p' параметрийг авахдаа хоосон байвал 0 гэж үзнэ
+        province_id = int(request.GET.get('p') or 0)
+    except (ValueError, TypeError):
+        province_id = 0
+
+    try:
+        # 'l' параметрийг авахдаа хоосон байвал 0 гэж үзнэ
+        level_id = int(request.GET.get('l') or 0)
+    except (ValueError, TypeError):
+        level_id = 0
+
+    if not province_id and not level_id:
+        provinces = Province.objects.all()
+        levels = Level.objects.all()
+        return render(request, 'accounts/users-home.html', {'provinces': provinces, 'levels': levels})
+
+    users_query = UserMeta.objects.filter(is_valid=1)
+    title_parts = []
+
+    # ... (Query-г шүүх хэсэг өөрчлөгдөхгүй) ...
+    if province_id:
+        province = get_object_or_404(Province, pk=province_id)
+        users_query = users_query.filter(province=province)
+        title_parts.append(province.name)
+
+    if level_id:
+        level = get_object_or_404(Level, pk=level_id)
+        users_query = users_query.filter(level=level)
+        title_parts.append(level.name)
+
+    if province_id and not level_id:
+        ordering = ('level_id', 'grade_id')
+    else:
+        ordering = ('grade_id', 'province_id')
+
+    user_list = users_query.order_by(*ordering)
+
+    # --- 2. Хуудаслах логикийг энд нэмнэ ---
+    paginator = Paginator(user_list, 50)  # Нэг хуудсанд 100 хэрэглэгч харуулах
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    # ------------------------------------
+
+    context = {
+        'users': page_obj,  # <-- Бүтэн жагсаалтын оронд хуудасны объектыг дамжуулах
+        'title': ', '.join(title_parts)
+    }
+    return render(request, 'accounts/users.html', context)
 
 
 def special_members(request):
@@ -287,7 +344,7 @@ def group_users(request, group_id):
         'title': group.name,
         'pivot': last_hack,
     }
-    return render(request, 'accounts/pd-users.html', context)
+    return render(request, 'accounts/group-users.html', context)
 
 def get_active_emails():
     with connection.cursor() as cursor:
