@@ -1,17 +1,38 @@
-{% extends 'base.html' %} {% block title %}Нүүр хуудас{% endblock %} {% block content %}
-Мэдээ, Зарлал
-{% for post in posts %}
-{{ post.title }}
-Нийтэлсэн: {{ post.startdate|date:"Y-m-d H:i" }}
+{% extends 'base.html' %}
 
-{{ post.content|safe }}
-{% empty %}
-Энэ хичээлийн жилд нийтлэгдсэн мэдээ, зарлал одоогоор алга байна.
+{% block title %}Монголын Математикийн Олимпиадын Хороо{% endblock %}
 
-{% endfor %}
-Хичээлийн жил
-{% if prev %} « {{ prev.name }} оныхыг харах {% endif %} | {% if next %} {{ next.name }} оныхыг харах » {% endif %}
 
-Одоо харагдаж буй: {{ year.name }} оны мэдээлэл
-
+{% block content %}
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    <div class="mt-3 d-flex justify-content-between">
+        <div>{%if prev is not None %}<a class="btn btn-light btn-sm" href="/?year={{ prev.id }}">&larr; {{ prev.name }}</a>{% endif %}</div>
+        <div><button class="btn btn-secondary btn-sm">{{ year.name }}</button></div>
+        <div>{%if next is not None %}<a class="btn btn-light btn-sm" href="/?year={{ next.id }}">{{ next.name }} &rarr;</a>{% endif %}</div>
+    </div>
+    {% if posts %}
+    {% for article in posts %}
+        <div class="article card p-3 mt-2 bg-light text-dark">
+            <h4 class="my-3"><a href="{% url 'post_view' %}?id={{ article.id }}" class="text-info">{{ article.title }}</a></h4>
+        {% if request.user.is_staff and mode %}
+            <a href="/admin/olympiad/article/{{ article.id }}/change/" target="_blank">Засах</a>
+        {% endif %}
+        {% autoescape off %}{{ article.descr }} {% endautoescape %}
+        <p>Сүүлийн засвар: {{ article.startdate | date:'Y-m-d' }}, Нийтэлсэн: {{ article.createdate | date:'Y-m-d' }}</p>
+        </div>
+    {% endfor %}
+    <div class="mt-3 d-flex justify-content-between">
+        <div>{%if prev is not None %}<a class="btn btn-light btn-sm" href="/?year={{ prev.id }}">&larr; {{ prev.name }}</a>{% endif %}</div>
+        <div><button class="btn btn-secondary btn-sm">{{ year.name }}</button></div>
+        <div>{%if next is not None %}<a class="btn btn-light btn-sm" href="/?year={{ next.id }}">{{ next.name }} &rarr;</a>{% endif %}</div>
+    </div>
+        {% else %}
+        <div class="card p-2 mt-3 bg-light text-dark">Ямар нэг мэдээ алга байна.</div>
+    {% endif %}
 {% endblock %}

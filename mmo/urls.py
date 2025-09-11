@@ -18,7 +18,6 @@ from django.urls import include, path
 
 import olympiad.views
 import accounts.views as accounts_views
-from accounts.views import main
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
@@ -28,8 +27,7 @@ urlpatterns = ([
     path('select2/', include('django_select2.urls')),
     path('schools/', include('schools.urls')),
     path('files/', include('file_management.urls')),
-    path('', main.index, name='home'),
-    # path('', include('posts.urls')),  # Homepage now points to the posts app
+    path('', include('posts.urls')),  # Homepage now points to the posts app
     path('admin/clearcache/', include('clearcache.urls')),
     path('post/', olympiad.views.post, name='post_view'),
     path('admin/', admin.site.urls),

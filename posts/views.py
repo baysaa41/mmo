@@ -1,14 +1,15 @@
 from django.shortcuts import render
 from .models import Post
 from olympiad.models import SchoolYear
-from datetime import datetime, timezone
+from datetime import date, timezone
 
 def post_list_view(request):
     """
     Displays a list of posts, serving as the site's homepage.
     This logic was moved from the old `accounts.views.index`.
     """
-    now = datetime.now(timezone.utc)
+    now = date.today()
+    print(now)
 
     # Determine the active and selected school years
     active_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
@@ -23,8 +24,8 @@ def post_list_view(request):
         posts = Post.objects.filter(
             year=selected_year,
             isshow=True,
-            startdate__lt=now
-        ).exclude(enddate__lt=now).order_by('-isspec', '-startdate')
+            startdate__lte=now
+        ).exclude(enddate__lte=now).order_by('-isspec', '-startdate')
 
         prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first()
         next_year = SchoolYear.objects.filter(pk=selected_year.id + 1).first()
