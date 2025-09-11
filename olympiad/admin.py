@@ -2,7 +2,7 @@ from django.contrib import admin
 
 # Register your models here.
 
-from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, Result, Solution, Team, Upload, Article, Tag
+from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, Result, Solution, Team, Upload, Tag
 
 admin.site.register(SchoolYear)
 admin.site.register(Topic)
@@ -13,17 +13,6 @@ admin.site.register(Team)
 admin.site.register(Upload)
 admin.site.register(Tag)
 
-class ArticleAdmin(admin.ModelAdmin):
-    list_display = ("title","year")
-    list_filter = ("year",)
-    raw_id_fields = ("author",)
-    exclude = ("oldid", "intro", "imagesource", "embedcode", "pictures", "files", "tags", "sawcount", "createuserid", "author")
-    search_fields = ["title", "descr"]
-
-    def get_queryset(self, request):
-        return Article.objects.all().order_by("year_id","-id")
-
-admin.site.register(Article,ArticleAdmin)
 
 class OlympiadAdmin(admin.ModelAdmin):
     list_display = ("name", "school_year", "level", "description")

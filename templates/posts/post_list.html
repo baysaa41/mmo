@@ -1,0 +1,17 @@
+{% extends 'base.html' %} {% block title %}Нүүр хуудас{% endblock %} {% block content %}
+Мэдээ, Зарлал
+{% for post in posts %}
+{{ post.title }}
+Нийтэлсэн: {{ post.startdate|date:"Y-m-d H:i" }}
+
+{{ post.content|safe }}
+{% empty %}
+Энэ хичээлийн жилд нийтлэгдсэн мэдээ, зарлал одоогоор алга байна.
+
+{% endfor %}
+Хичээлийн жил
+{% if prev %} « {{ prev.name }} оныхыг харах {% endif %} | {% if next %} {{ next.name }} оныхыг харах » {% endif %}
+
+Одоо харагдаж буй: {{ year.name }} оны мэдээлэл
+
+{% endblock %}

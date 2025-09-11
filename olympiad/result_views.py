@@ -221,7 +221,7 @@ def olympiad_group_result_view(request,group_id):
     except OlympiadGroup.DoesNotExist:
         return render(request,'olympiad/results/no_olympiad.html')
     except Exception as e:
-        return render(request, 'errors/error.html', {'message': str(e)})
+        return render(request, 'messages/../templates/schools/error.html', {'message': str(e)})
     olympiads = olympiad_group.olympiads.all().order_by('id')
     answers = Result.objects.filter(olympiad__in=olympiads)
     title = 'Нэгдсэн дүн'
@@ -2072,12 +2072,12 @@ def answers_view2(request, olympiad_id, group_id):
         group = Group.objects.get(pk=group_id)
         olympiad = Olympiad.objects.get(pk=olympiad_id)
     except Group.DoesNotExist:
-        return render(request, 'errors/error.html', {'error': 'Бүлэг олдоогүй.'})
+        return render(request, 'messages/error.html', {'error': 'Бүлэг олдоогүй.'})
     except Olympiad.DoesNotExist:
-       return render(request, 'errors/error.html', {'error': 'Олимпиад олдоогүй.'})
+       return render(request, 'messages/error.html', {'error': 'Олимпиад олдоогүй.'})
 
     if not is_my_school_group(request.user.id,group_id) and not request.user.is_staff:
-        return render(request, 'errors/error.html', {'error': 'Хандах эрхгүй.'})
+        return render(request, 'messages/error.html', {'error': 'Хандах эрхгүй.'})
 
     results = Result.objects.filter(olympiad_id=olympiad_id, contestant__groups__id=group_id).order_by('contestant_id', 'problem__order')
     if not results.exists():
@@ -2170,7 +2170,7 @@ def problem_stats_view(request, problem_id):
     try:
         problem = Problem.objects.get(pk=problem_id)
     except:
-        return render(request, 'errors/error.html', {'message': 'Бодлого олдоогүй.'})
+        return render(request, 'messages/../templates/schools/error.html', {'message': 'Бодлого олдоогүй.'})
 
     results = problem.get_results()
     for result in results:

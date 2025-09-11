@@ -24,7 +24,7 @@ def upload_file(request):
             form = FileUploadForm()
         return render(request, 'file_management/upload_file.html', {'form': form})
     else:
-        return render(request, 'errors/error.html', {'error': 'Та энэ хуудсанд хандах эрхгүй.'})
+        return render(request, 'error.html', {'message': 'Та энэ хуудсанд хандах эрхгүй.'})
 
 
 @login_required
@@ -43,7 +43,7 @@ def download_file(request, file_id):
             response['Content-Disposition'] = f'attachment; filename="{file_name}"'
             return response
     else:
-        return render(request, 'errors/error.html', {'error': 'Та сургуулийн хаягаар нэвтрээгүй байна.'})
+        return render(request, 'error.html', {'message': 'Та сургуулийн хаягаар нэвтрээгүй байна.'})
 
 @login_required
 def file_list(request):
@@ -52,7 +52,7 @@ def file_list(request):
         files = FileUpload.objects.all()
         return render(request, 'file_management/file_list.html', {'files': files})
     else:
-        return render(request, 'errors/error.html', {'error': 'Та сургуулийн хаягаар нэвтрээгүй байна.'})
+        return render(request, 'error.html', {'message': 'Та сургуулийн хаягаар нэвтрээгүй байна.'})
 
 def is_manager(user_id):
     try:

@@ -18,17 +18,18 @@ from django.urls import include, path
 
 import olympiad.views
 import accounts.views as accounts_views
-from accounts import views
+from accounts.views import main
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
-from accounts.views import CustomPasswordResetView
+from accounts.views.auth import CustomPasswordResetView
 
 urlpatterns = ([
     path('select2/', include('django_select2.urls')),
     path('schools/', include('schools.urls')),
     path('files/', include('file_management.urls')),
-    path('', views.index, name='home'),
+    path('', main.index, name='home'),
+    # path('', include('posts.urls')),  # Homepage now points to the posts app
     path('admin/clearcache/', include('clearcache.urls')),
     path('post/', olympiad.views.post, name='post_view'),
     path('admin/', admin.site.urls),
@@ -38,7 +39,7 @@ urlpatterns = ([
     path('accounts/', include('django_registration.backends.activation.urls')),
     path('accounts/', include('django.contrib.auth.urls')),
     path('olympiads/', include('olympiad.urls')),
-    path('send_email/', accounts_views.send_email_with_attachments, name='send_email_with_attachments'),
+    path('send_email/', accounts_views.email.send_email_with_attachments, name='send_email_with_attachments'),
     path('password_reset/', CustomPasswordResetView.as_view(), name='password_reset'),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),

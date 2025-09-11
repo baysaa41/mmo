@@ -64,8 +64,8 @@ class UserSearchForm(forms.Form):
 
         filters = (
             Q(username__icontains=query) |
-            Q(firstname__icontains=query) |
-            Q(lastname__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
             Q(email__icontains=query) |
             Q(data__school__icontains=query) |
             Q(data__reg_num__icontains=query) |

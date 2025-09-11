@@ -2,20 +2,19 @@ from django.http import HttpResponse, JsonResponse, FileResponse
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.decorators.cache import cache_page
 from accounts.models import UserMeta, Province, Zone
-from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, Article, ScoreSheet
+from olympiad.models import Olympiad, Problem, Result, Upload, SchoolYear, ScoreSheet
+from posts.models import Post
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.forms import modelformset_factory
 from .forms import ResultsForm, UploadForm, ResultsGraderForm
 from datetime import datetime, timezone, timedelta
-import pandas as pd
-from django.db import connection
-from django.contrib.auth.models import User, Group
+
+from django.contrib.auth.models import User
 from django.contrib import messages
-from django.template.loader import render_to_string
-import os
+
 import openpyxl
-from accounts.views import random_salt
+from accounts.services import random_salt
 from django.core.paginator import Paginator
 
 from schools.models import School
@@ -107,7 +106,7 @@ def post(request):
     id = int(request.GET.get('id', 0))
     mode = int(request.GET.get('mode', 0))
     if id > 0:
-        article = Article.objects.filter(pk=id).first()
+        article = Post.objects.filter(pk=id).first()
         return render(request, 'accounts/post.html', {'article': article, 'mode': mode})
 
 @cache_page(60 * 60)
@@ -355,7 +354,7 @@ def quiz_staff_view2(request, quiz_id, contestant_id):
     group = school.group
 
     if not is_my_student(staff.id,contestant_id) and not staff.is_staff:
-        return render(request, 'errors/error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
+        return render(request, 'messages/../templates/schools/error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
 
     if request.method == 'POST':
         keys = request.POST.keys()
@@ -426,7 +425,7 @@ def grading_home(request):
 def exam_grading_view(request, problem_id):
     problem = Problem.objects.filter(pk=problem_id).first()
     if not request.user.is_staff:
-        return render(request, 'errors/error.html', {message: 'Хандах эрхгүй.'})
+        return render(request, 'messages/../templates/schools/error.html', {message: 'Хандах эрхгүй.'})
 
     results = Result.objects.filter(problem_id=problem_id, contestant__data__province__isnull=False).order_by(
         'score').reverse

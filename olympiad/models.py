@@ -6,6 +6,20 @@ from ckeditor.fields import RichTextField
 
 # Create your models here.
 
+
+class SchoolYear(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=10, null=True, blank=True)
+    start = models.DateField(null=True, blank=True)
+    end = models.DateField(null=True, blank=True)
+    descr = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-name']
+
+    def __str__(self):
+        return '{} хичээлийн жил'.format(self.name)
+
 class Olympiad(models.Model):
     name = models.CharField(max_length=120)
     description = models.TextField(default='')
@@ -32,7 +46,7 @@ class Olympiad(models.Model):
         (1, 'Тест'),
     ]
     type = models.IntegerField(choices=types, default=0)
-    school_year = models.ForeignKey('SchoolYear', on_delete=models.SET_NULL, null=True, blank=True)
+    school_year = models.ForeignKey(SchoolYear, on_delete=models.SET_NULL, null=True, blank=True)
     month = models.IntegerField(null=True, blank=True)
     num = models.IntegerField(default=1)
     level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, blank=True)
@@ -87,19 +101,6 @@ class Olympiad(models.Model):
 
     class Meta:
         ordering = ['-school_year_id','-id']
-
-
-class SchoolYear(models.Model):
-    name = models.CharField(max_length=10, null=True, blank=True)
-    start = models.DateField(null=True, blank=True)
-    end = models.DateField(null=True, blank=True)
-    descr = models.CharField(max_length=100, null=True, blank=True)
-
-    class Meta:
-        ordering = ['-name']
-
-    def __str__(self):
-        return '{} хичээлийн жил'.format(self.name)
 
 
 class Round(models.Model):

@@ -116,7 +116,7 @@ def user_creation_view(request):
 
     return render(request, 'schools/upload.html', {'form': form})
 
-
+#old view
 def school_moderators_view(request):
     pid = request.GET.get('p', default=0)
     zid = request.GET.get('z', default=0)
@@ -129,128 +129,122 @@ def school_moderators_view(request):
     olympiads = Olympiad.objects.filter(round=1,school_year=61)
     return render(request, 'schools/school_moderators_list.html', {'schools': schools, 'olympiads': olympiads})
 
+@login_required # Нэвтрээгүй хэрэглэгчийг login хуудас руу үсэргэнэ
+def school_moderators_view(request):
+    # 1. Хэрэглэгчийн эрхээс хамаарч үндсэн жагсаалтыг үүсгэнэ
+    if request.user.is_staff:
+        # Хэрэв staff бол бүх сургуулийг харна
+        schools_qs = School.objects.select_related('user', 'group', 'province')
+    else:
+        # Хэрэв энгийн модератор бол зөвхөн өөрийн удирддаг сургуулийг харна
+        schools_qs = School.objects.select_related('user', 'group', 'province').filter(user=request.user)
+
+    # 2. Нэмэлт шүүлтүүрүүдийг хийнэ
+    pid = request.GET.get('p')
+    zid = request.GET.get('z')
+
+    if pid:
+        schools_qs = schools_qs.filter(province_id=pid)
+    elif zid:
+        schools_qs = schools_qs.filter(province__zone_id=zid)
+
+    # 3. Эцсийн байдлаар эрэмбэлнэ
+    final_schools = schools_qs.order_by('province__name', 'name')
+
+    # Бусад мэдээллийг авах
+    # Жич: school_year=61 гэж шууд заасны оронд динамикаар авдаг болговол илүү тохиромжтой
+    olympiads = Olympiad.objects.filter(round=1, school_year=62)
+
+    context = {
+        'schools': final_schools,
+        'olympiads': olympiads
+    }
+
+    return render(request, 'schools/school_moderators_list.html', context)
+
 @login_required
 def manage_school(request, school_id):
-        # Get the logged-in user's groups
     current_user = request.user
 
-    schools = current_user.moderating.all()
-    is_my_school = False
-    for school in schools:
-        if school.id == school_id:
-            is_my_school = True
-
+    # 1. Эрх шалгах (Төгс болсон)
+    is_my_school = current_user.moderating.filter(id=school_id).exists()
     if not is_my_school and not request.user.is_staff:
-        return render(request, 'errors/error.html', {'error': 'Та энэ сургуулийг удирдах эрхгүй. Таны нэвтэрсэн нэр {}.'.format(request.user.username)})
+        messages.error(request, 'Та энэ сургуулийг удирдах эрхгүй.')
+        return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
+
     school = get_object_or_404(School, id=school_id)
     group = school.group
+    users_in_group = group.user_set.all().select_related('data')
 
-    # List of users in the group
-    users_in_group = group.user_set.all()
-
-    # Initialize forms
-    search_form = UserSearchForm()
-    add_user_form = AddUserForm()
+    search_form = UserSearchForm(request.POST or None)
+    add_user_form = AddUserForm(request.POST or None)
     search_results = None
 
-    # Handle form submissions
     if request.method == 'POST':
-        if 'search_users' in request.POST:
-            # Search for users
-            search_form = UserSearchForm(request.POST)
-            if search_form.is_valid():
-                query = search_form.cleaned_data.get('query')
-                search_results = []
+        # 2. Хайлт хийх (Төгс болсон)
+        if 'search_users' in request.POST and search_form.is_valid():
+            search_results = search_form.search_users()
 
-                if query.isdigit():
-                    user_id = int(query)
-                    try:
-                        # Fetch the user with the provided ID
-                        user_with_id = User.objects.get(id=user_id)
-                        search_results.append(user_with_id)  # Add this user first
-                    except ObjectDoesNotExist:
-                        pass
-
-                # Now search for other users based on the query
-                other_results = User.objects.filter(
-                    Q(username__icontains=query) |
-                    Q(email__icontains=query) |
-                    Q(first_name__icontains=query) |
-                    Q(last_name__icontains=query) |
-                    Q(data__reg_num__icontains=query) |
-                    Q(data__mobile__icontains=query)
-                ).exclude(id__in=[user.id for user in search_results if user])  # Exclude the user found by ID if it exists
-
-                # Combine the results
-                search_results.extend(other_results)
         elif 'add_existing_user' in request.POST:
-            # Add an existing user to the group
             user_id = request.POST.get('user_id')
-            user = User.objects.get(id=user_id)
-            group.user_set.add(user)
+            user_to_add = get_object_or_404(User, id=user_id)
+            group.user_set.add(user_to_add)
+            messages.success(request, f"'{user_to_add.get_full_name()}' хэрэглэгчийг сургуульд нэмлээ.")
             return redirect('manage_school', school_id=school.id)
 
-        elif 'add_user' in request.POST:
-            # Add a new user and assign them to the group
-            add_user_form = AddUserForm(request.POST)
-            if add_user_form.is_valid():
-                new_user, password = add_user_form.save(commit=False)
-                new_user.username = ''.join(random.choice(string.ascii_letters) for _ in range(32))
-                new_user.save()
-                try:
+        # 3. Шинэ хэрэглэгч нэмэх (Сайжруулсан хэсэг)
+        elif 'add_user' in request.POST and add_user_form.is_valid():
+            try:
+                # -- Транзакц энд эхэлнэ --
+                with transaction.atomic():
+                    # a) User үүсгэх
+                    new_user, password = add_user_form.save(commit=False)
+                    new_user.username = ''.join(random.choice(string.ascii_letters) for _ in range(32))
+                    new_user.save()
                     new_user.username = f'u{new_user.id}'
                     new_user.save()
-                except Exception as e:
-                    # Log the error for debugging, or take appropriate action
-                    print(f"Error updating username: {e}")
 
-                try:
-                    meta = UserMeta.objects.create(user=new_user)
-                    meta.school = request.user.data.school
-                    meta.province = request.user.data.province
-                    meta
-                    meta.save()
-                except Exception as e:
-                    # Log the error for debugging, or take appropriate action
-                    print(f"Meta data creating: {e}")
-
-                new_user.groups.add(group)  # Add new user to group
-
-                # Optional: Send email with credentials
-                try:
-                    subject = 'ММОХ бүртгэл'.encode('utf-8', errors='ignore').decode('utf-8')
-                    message = f'Хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}'.encode('utf-8',
-                                            errors='ignore').decode('utf-8')
-
-                    send_mail(
-                        subject,  # Subject
-                        message,  # Message body
-                        'baysa.edu@gmail.com',  # Sender email
-                        [new_user.email],  # Recipient email(s)
-                        fail_silently=False,
+                    # b) UserMeta үүсгэх
+                    UserMeta.objects.create(
+                        user=new_user,
+                        school=request.user.data.school,
+                        province=request.user.data.province
                     )
-                except UnicodeEncodeError as e:
-                    print(f'Encoding error: {e}')
-                except Exception as e:
-                    print(f'Error: {e}')
 
-                return redirect('manage_school', school_id=school.id)
+                    # c) Группт нэмэх
+                    new_user.groups.add(group)
+                # -- Транзакц энд дуусна --
+
+                # d) И-мэйл илгээх (Транзакц амжилттай болсны дараа)
+                try:
+                    subject = 'ММОХ бүртгэл'
+                    message = f'Сайн байна уу, {new_user.first_name}.\n\nТаны хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}'
+                    send_mail(subject, message, 'baysa.edu@gmail.com', [new_user.email])
+                    messages.success(request, f"'{new_user.get_full_name()}' хэрэглэгчийг амжилттай нэмж, нэвтрэх мэдээллийг и-мэйлээр илгээлээ.")
+                except Exception as email_error:
+                    messages.warning(request, f"Хэрэглэгч үүссэн ч и-мэйл илгээхэд алдаа гарлаа: {email_error}")
+
+            except Exception as e:
+                # Транзакцын явцад ямар нэг алдаа гарвал
+                messages.error(request, f"Хэрэглэгч үүсгэхэд алдаа гарлаа: {e}")
+
+            return redirect('manage_school', school_id=school.id)
 
         elif 'remove_user' in request.POST:
-            # Remove a user from the group
             user_id = request.POST.get('user_id')
-            user = User.objects.get(id=user_id)
-            group.user_set.remove(user)
+            user_to_remove = get_object_or_404(User, id=user_id)
+            group.user_set.remove(user_to_remove)
+            messages.info(request, f"'{user_to_remove.get_full_name()}' хэрэглэгчийг сургуулиас хаслаа.")
             return redirect('manage_school', school_id=school.id)
 
     context = {
+        'school': school,
         'group': group,
         'users_in_group': users_in_group,
         'search_form': search_form,
         'add_user_form': add_user_form,
         'search_results': search_results,
     }
-
     return render(request, 'schools/manage_school.html', context)
 
 
@@ -272,7 +266,7 @@ def edit_profile(request):
             messages.success(request, 'Your profile has been updated successfully!')
             return redirect('edit_profile')
         else:
-            messages.error(request, 'Please correct the errors below.')
+            messages.error(request, 'Please correct the messages below.')
     else:
         user_form = UserForm(instance=user)
         user_meta_form = UserMetaForm(instance=user_meta)
@@ -293,13 +287,10 @@ def edit_user_in_group(request, user_id):
 
     target_user = get_object_or_404(User, id=user_id)
 
-    is_my_student = False
-    for school in schools:
-        if target_user in school.group.user_set.all():
-            is_my_student = True
+    is_my_student = School.objects.filter(user=current_user, group__user=target_user).exists()
 
     if not is_my_student and not request.user.is_staff:
-        return render(request, 'errors/error.html', {'error': 'Та энэ хэрэглэгчийг засварлах эрхгүй.'})
+        return render(request, 'error.html', {'message': 'Та энэ хэрэглэгчийг засварлах эрхгүй.'})
 
     try:
         user_meta = target_user.data  # Access UserMeta object via related_name 'data'
@@ -316,7 +307,7 @@ def edit_user_in_group(request, user_id):
             messages.success(request, 'Profile updated successfully!')
             return redirect('edit_user_in_group', user_id=user_id)
         else:
-            messages.error(request, 'Please correct the errors below.')
+            messages.error(request, 'Please correct the messages below.')
 
     else:
         user_form = UserForm(instance=target_user)
