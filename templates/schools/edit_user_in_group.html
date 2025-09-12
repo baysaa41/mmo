@@ -1,55 +1,72 @@
-<!-- templates/edit_user_in_group.html -->
 <!DOCTYPE html>
 <html lang="mn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ target_user.username }} хэрэглэгчийн профайлыг засах</title>
-    <!-- Bootstrap CSS -->
+    <title>{{ target_user.get_full_name|default:target_user.username }} - Профайл засах</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-    <div class="container mt-4">
-        <h2 class="mb-4">{{ target_user.username }} хэрэглэгчийн профайлыг засах</h2>
+    <div class="container my-4">
+
+        <!-- Буцах холбоосууд -->
+        {% if school and school.group %}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <a href="{% url 'manage_school_by_level' school_id=school.id level_id=level.id|default:0 %}" class="btn btn-outline-secondary btn-sm">
+                    « {% if level %}{{ level.name }}{% else %}Ангилалгүй{% endif %} жагсаалт руу буцах
+                </a>
+            </div>
+        {% endif %}
+
+        <h2 class="mb-4">{{ target_user.get_full_name|default:target_user.username }} хэрэглэгчийн профайлыг засах</h2>
 
         <!-- Messages section -->
         {% if messages %}
-            <div class="alert alert-info">
-                <ul class="mb-0">
-                    {% for message in messages %}
-                        <li>{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
         {% endif %}
 
         <!-- Edit Form -->
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
-
-            <div class="mb-4">
-                <h3>Хэрэглэгчийн мэдээлэл</h3>
-                {{ user_form.as_p }}
+            <div class="row">
+                <!-- Зүүн талын багана -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Үндсэн мэдээлэл</h5>
+                        </div>
+                        <div class="card-body">
+                            {{ user_form.as_p }}
+                        </div>
+                    </div>
+                </div>
+                <!-- Баруун талын багана -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header">
+                             <h5 class="mb-0">Профайлын дэлгэрэнгүй мэдээлэл</h5>
+                        </div>
+                        <div class="card-body">
+                            {{ user_meta_form.as_p }}
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="mb-4">
-                <h3>Профайлын мэдээлэл</h3>
-                {{ user_meta_form.as_p }}
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary px-4">Өөрчлөлтийг хадгалах</button>
             </div>
-
-            <button type="submit" class="btn btn-primary">Өөрчлөлтийг хадгалах</button>
         </form>
+       </div>
 
-        <!-- Navigation links -->
-        <div class="mt-4">
-            <a href="{% url 'school_moderators_list' %}" class="btn btn-secondary">Сургуулиуд руу буцах</a>
-            {% for group in school_groups %}
-                <a href="{% url 'manage_school' school_id=group.moderating.id %}" class="btn btn-link">{{ school.group.name }} руу буцах</a>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Bootstrap JS and dependencies (Popper.js) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

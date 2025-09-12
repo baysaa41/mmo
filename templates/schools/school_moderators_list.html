@@ -64,7 +64,7 @@
                 <td>{{ school.user.email }}</td>
             <td>{{ school.user.username }}</td>
             <td>
-                <a href="{% url 'manage_school' school.id %}" class="btn btn-sm btn-info">Бүртгэл</a>
+                <a href="{% url 'school_dashboard' school.id %}" class="btn btn-sm btn-info">Бүртгэл</a>
             </td>
         {% for olympiad in olympiads %}
             <td><a class="btn btn-warning btn-sm" href="{% url 'olympiad_group_answer_view' olympiad_id=olympiad.id group_id=school.group.id %}" target="_blank">Хариулт харах</a></td>
@@ -75,22 +75,36 @@
 </table>
 {% else %}
     <h2>Таны сургуулиуд</h2>
+   <table class="table table-bordered">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Аймаг/Дүүрэг</th>
+        <th>Сургууль</th>
+        <th>Сурагчдын тоо</th>
+        <th>Бүртгэл</th>
+        {% for olympiad in olympiads %}
+            <th>{{ olympiad.description }}</th>
+        {% endfor %}
+    </tr>
+    </thead>
+    <tbody>
     {% for school in schools %}
-        <div class="row m-2">
-            <div class="col-1">{{ forloop.counter }}</div>
-            <div class="col-2">{{ school.province.name }}</div>
-            <div class="col-2">{{ school.name }}</div>
-            <div class="col-2">
-                <a href="{% url 'manage_school' school.id %}" class="btn btn-sm btn-info">Бүртгэл</a>
-            </div>
-            <div class="col-4">
-            {% for olympiad in olympiads %}
-                <span><a class="btn btn-warning btn-sm" href="{% url 'olympiad_group_answer_view' 
-                olympiad_id=olympiad.id group_id=school.group.id %}" target="_blank">Хариулт харах</a></span>
-            {% endfor %}
-            </div>
-        </div>
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ school.province.name }}</td>
+            <td>{{ school.name }}</td>
+            <td>{{ school.group.user_set.count }}</td>
+            <td>
+                <a href="{% url 'school_dashboard' school.id %}" class="btn btn-sm btn-info">Бүртгэл</a>
+            </td>
+        {% for olympiad in olympiads %}
+            <td><a class="btn btn-warning btn-sm" href="{% url 'olympiad_group_answer_view' olympiad_id=olympiad.id group_id=school.group.id %}" target="_blank">Хариулт харах</a></td>
+        {% endfor %}
+        </tr>
     {% endfor %}
+    </tbody>
+</table>
 {% endif %}
 
 </div>

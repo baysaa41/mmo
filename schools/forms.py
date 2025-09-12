@@ -85,7 +85,7 @@ class UserSearchForm(forms.Form):
 class AddUserForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email']
+        fields = ['last_name', 'first_name', 'email']
 
     def save(self, commit=True):
         user = super().save(commit=False)

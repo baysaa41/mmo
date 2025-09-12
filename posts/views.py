@@ -9,7 +9,6 @@ def post_list_view(request):
     This logic was moved from the old `accounts.views.index`.
     """
     now = date.today()
-    print(now)
 
     # Determine the active and selected school years
     active_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
