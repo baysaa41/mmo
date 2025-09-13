@@ -28,7 +28,7 @@ urlpatterns = [
 
     # === 3. Дүн ба Үзүүлэлт Харах ===
     # Олимпиадын нэгдсэн дүнг хүснэгтээр харах (pandas ашигласан)
-    path('results/<int:olympiad_id>/', result_views.pandasView, name='olympiad_result_view'),
+    path('results/<int:olympiad_id>/', views.olympiad_scores, name='olympiad_result_view'),
     # Тодорхой оролцогчийн хувийн дүнг дэлгэрэнгүй харах
     path('result/<int:olympiad_id>/<int:contestant_id>/', result_views.student_result_view, name='olympiad_student_result'),
     # Оролцогчдын өгсөн хариултуудын жагсаалт (админд зориулсан)
@@ -41,8 +41,6 @@ urlpatterns = [
     path('problems/<int:olympiad_id>/', views.problems_view, name='olympiad_problems_view'),
     # Бодлогын статистик мэдээллийг харах
     path('stats/<int:problem_id>/', result_views.problem_stats_view, name='problem_stats'),
-    # Олимпиадын оноог аймаг/бүсээр шүүж харах
-    path('scores/<int:olympiad_id>/', views.olympiad_scores, name='olympiad_scores'),
 
     # === 4. Засалт ба Удирдлага (Багш/Админы Үзэгдэл) ===
     # Excel файлаас олимпиадын дүнг бөөнөөр импортлох

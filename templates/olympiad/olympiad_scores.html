@@ -6,7 +6,7 @@
 {# Үндсэн агуулгыг content block дотор байршуулах #}
 {% block content %}
     <div class="container-fluid">
-        <h2 class="text-center mt-3">{{ olympiad.name }}, {{ olympiad.level.name }} олимпиадын дүн, {{ page_title }}</h2>
+        <h3 class="text-center mt-3">{{ olympiad.name }}, {{ olympiad.level.name }} олимпиадын дүн, {{ page_title }}</h3>
 
         {% include 'selection_menu.html' %}
 
@@ -56,7 +56,7 @@
                     <th>#</th>
                     <th>Овог</th>
                     <th>Нэр</th>
-                    <th>ММО ID</th>
+                    <th>ID</th>
                     <th>Аймаг/Дүүрэг</th>
                     <th>Сургууль</th>
                     {% for i in problem_range %}
@@ -65,7 +65,7 @@
                     <th>Нийт</th>
                     <th>Байр</th>
                     <th>Тайлбар</th>
-                    <th>Д/б</th>
+                    <th><i class="fas fa-plus-circle"></i></th>
                 </tr>
                 </thead>
                 <tbody>
@@ -78,18 +78,18 @@
                         <td>{{ data.province }}</td>
                         <td>{{ data.school }}</td>
                         {% for score in data.scores %}
-                            <td>{{ score }}</td>
+                            <td class="text-center">{{ score }}</td>
                         {% endfor %}
-                        <td><strong>{{ data.total }}</strong></td>
+                        <td class="text-center"><strong>{{ data.total }}</strong></td>
                         {% if data.ranking_a == data.ranking_b %}
-                            <td>{{ data.ranking_a }}</td>
+                            <td class="text-center">{{ data.ranking_a }}</td>
                         {% else %}
-                            <td>{{ data.ranking_a }}-{{ data.ranking_b }}</td>
+                            <td class="text-center">{{ data.ranking_a }}-{{ data.ranking_b }}</td>
                         {% endif %}
                         <td>{% if data.prizes %}{{ data.prizes }}{% endif %}</td>
-                        <td>
+                        <td class="text-center">
                             {% if data.id %}
-                                <a href="{% url 'olympiad_student_result' olympiad.id data.id %}">+</a>
+                                <a href="{% url 'olympiad_student_result' olympiad.id data.id %}"><i class="fas fa-angle-down"></i></a>
                             {% else %}
                                 ID-гүй
                             {% endif %}
