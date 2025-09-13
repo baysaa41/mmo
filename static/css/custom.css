@@ -1,0 +1,61 @@
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1050;
+}
+
+.navbar-brand img {
+    max-height: 36px;
+}
+
+@media (max-width: 576px) {
+    .navbar .navbar-brand {
+        margin-right: auto;
+    }
+
+    .navbar-toggler {
+        margin-left: auto;
+    }
+}
+
+/* Main content */
+/* Энэ хэсэг нь navbar-т зориулж дээрээс зай авна */
+main {
+    padding-top: 70px;
+    padding-bottom: 1rem;
+}
+
+.navbar .navbar-brand img {
+    width: 40px;
+}
+
+.user {
+    color: #e4e4e4;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+.banner {
+    text-align: center;
+    margin: 0 auto;
+    border: 1px solid #cccccc;
+}
+
+.article {
+  overflow: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.article::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, and Opera */
+}
+
+/* --- FOOTER-ИЙН ШИНЭ ЗАГВАР --- */
+.footer {
+    background-color: #f8f9fa; /* Bootstrap-ийн standard light grey */
+    padding: 1rem 0;
+    border-top: 1px solid #dee2e6; /* Дээд талын зураас */
+    font-size: 0.9rem; /* Үсгийн хэмжээг бага зэрэг жижигрүүлэх */
+}

@@ -4,7 +4,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 
 # Import the new view modules
-from .views import auth, display, email, importers
+from .views import auth, display, email
 
 urlpatterns = [
     # Display Views
@@ -25,6 +25,4 @@ urlpatterns = [
     path('track-email/<uuid:token>/', email.track_email_open, name='track_email_open'),
     path('send-to-schools/', email.send_email_to_schools, name='send_email_to_schools'),
 
-    # Import Views
-    path('addusers/', importers.import_file, name='add_users'),
 ]

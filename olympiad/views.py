@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 
 import openpyxl
-from accounts.services import random_salt
+from accounts.utils import random_salt
 from django.core.paginator import Paginator
 
 from schools.models import School
@@ -292,44 +292,6 @@ def exam_staff_view(request, olympiad_id, contestant_id):
         return HttpResponse("handah erhgui bna.")
 
 
-@login_required
-def quiz_staff_view(request, quiz_id, contestant_id):
-    if not request.user.is_staff:
-        return HttpResponse("Zasvartai")
-    staff = request.user
-    contestant = User.objects.get(pk=contestant_id)
-
-    school = staff.moderating.all().first()
-    #group = school.group
-
-    #if not contestant.groups.filter(pk=group.id).exists():
-    #    return render(request, 'error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
-
-    olympiad = Olympiad.objects.filter(pk=quiz_id).first()
-
-    problems = olympiad.problem_set.order_by('order')
-    user = request.user
-    if not problems or not user.is_authenticated:
-        return HttpResponse("Ops, something went wrong.")
-
-    for problem in problems:
-        result = Result.objects.get_or_create(contestant=contestant, olympiad_id=quiz_id, problem=problem)
-
-    items = Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order')
-
-    if request.method == 'POST':
-        form = ResultsFormSet(request.POST)
-        if form.is_valid():
-            form.save()
-            results = Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order')
-            # return redirect('quiz_list_view', staff.moderating.first().id)
-            return render(request, 'olympiad/confirm_teacher.html', {'results': results, 'olympiad': olympiad, 'contestant': contestant})
-    else:
-        form = ResultsFormSet(
-            queryset=Result.objects.filter(contestant=contestant, olympiad_id=quiz_id).order_by('problem__order'))
-    return render(request, 'olympiad/quiz.html', {'items': items, 'form': form,
-                                                  'olympiad': olympiad, 'contestant': contestant})
-
 def is_my_student(teacher_id,student_id):
     try:
         school = School.objects.get(user_id=teacher_id)
@@ -339,7 +301,7 @@ def is_my_student(teacher_id,student_id):
         return False
     return False
 @login_required
-def quiz_staff_view2(request, quiz_id, contestant_id):
+def quiz_staff_view(request, quiz_id, contestant_id):
     if not request.user.is_staff:
         return HttpResponse("Zasvartai")
     staff = request.user
@@ -509,9 +471,22 @@ def remove_supplement(request):
 
 def list_upcomming_olympiads(request):
     now = datetime.now(timezone.utc)
-    start = datetime.now(timezone.utc) + timedelta(hours=-5)
-    end = datetime.now(timezone.utc) + timedelta(days=1)
-    olympiads = Olympiad.objects.exclude(end_time__lt=now).order_by('start_time')
+
+    # Одоогийн идэвхтэй хичээлийн жилийг олох
+    current_school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
+
+    # Шүүлтүүр хийх эцсийн хугацааг тооцоолох (одоогоос 7 хоногийн өмнөх)
+    cutoff_date = now - timedelta(days=7)
+
+    if current_school_year:
+        # Хугацаа нь дуусаагүй бөгөөд одоогийн хичээлийн жилд хамаарах олимпиадуудыг шүүх
+        olympiads = Olympiad.objects.filter(
+            end_time__gte=cutoff_date,
+            school_year=current_school_year
+        ).order_by('start_time')
+    else:
+        # Идэвхтэй хичээлийн жил олдоогүй бол хоосон жагсаалт буцаах
+        olympiads = Olympiad.objects.none()
 
     return render(request, 'olympiad/index.html', {'olympiads': olympiads, 'now': now})
 

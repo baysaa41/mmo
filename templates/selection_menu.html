@@ -1,8 +1,11 @@
-{% block menu %}
-<div>
-    <label for="province-select">Аймаг, Дүүрэг сонгох:</label>
-    <select id="province-select" onchange="updateLocation(this.value, 'p')" class="mb-3">
-        <option>------</option>
+{% comment %}
+Энэ темплэйтыг аймаг эсвэл бүсээр шүүх шаардлагатай хуудсуудад
+{% include "selection_menu.html" %} гэж дуудаж ашиглана.
+{% endcomment %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3 p-2 bg-light border rounded">
+    <label for="province-select" class="form-label mb-0 fw-bold">Аймаг/Дүүрэг:</label>
+    <select id="province-select" onchange="updateLocation(this.value, 'p')" class="form-select form-select-sm w-auto">
+        <option value="0">-- Бүгд --</option>
         <option value="1">Архангай аймаг</option>
         <option value="2">Баян-Өлгий аймаг</option>
         <option value="3">Баянхонгор аймаг</option>
@@ -32,21 +35,53 @@
         <option value="29">Хан-Уул дүүрэг</option>
         <option value="30">Чингэлтэй дүүрэг</option>
     </select>
-    
-    <label for="region-select">Бүс:</label>
-    <select id="region-select" onchange="updateLocation(this.value, 'z')" class="mb-3">
-        <option>------</option>
+
+    <label for="region-select" class="form-label mb-0 fw-bold ms-md-3">Бүс:</label>
+    <select id="region-select" onchange="updateLocation(this.value, 'z')" class="form-select form-select-sm w-auto">
+        <option value="0">-- Бүгд --</option>
         <option value="1">Баруун бүс</option>
         <option value="2">Говийн бүс</option>
         <option value="3">Төвийн бүс</option>
         <option value="4">Зүүн бүс</option>
         <option value="5">Улаанбаатар</option>
     </select>
-
-    <script>
-        function updateLocation(value, param) {
-            window.location.replace('?' + param + '=' + value);
-        }
-    </script>
 </div>
-{% endblock %}
+
+<script>
+    function updateLocation(value, param) {
+        // Одоогийн URL-аас query параметруудыг авна
+        const urlParams = new URLSearchParams(window.location.search);
+
+        // Хэрэв "-- Бүгд --" (утга=0) сонгогдвол бүх шүүлтүүрийг арилгана
+        if (value === "0") {
+            urlParams.delete('p');
+            urlParams.delete('z');
+        } else {
+            // Нэг шүүлтүүрийг сонгоход нөгөөг нь арилгаж, зөрчил үүсэхээс сэргийлнэ
+            if (param === 'p') {
+                urlParams.delete('z');
+            } else if (param === 'z') {
+                urlParams.delete('p');
+            }
+            // Шинэ параметрийг тохируулна
+            urlParams.set(param, value);
+        }
+
+        // Хуудсыг шинэ URL-аар дахин ачаална
+        window.location.href = window.location.pathname + '?' + urlParams.toString();
+    }
+
+    // Хуудас ачаалагдахад одоогийн шүүлтүүрийн дагуу select-ийн утгыг тохируулна
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const provinceParam = urlParams.get('p');
+        const zoneParam = urlParams.get('z');
+
+        if (provinceParam) {
+            document.getElementById('province-select').value = provinceParam;
+        }
+        if (zoneParam) {
+            document.getElementById('region-select').value = zoneParam;
+        }
+    });
+</script>

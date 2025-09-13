@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User, Group
 from accounts.models import Author, Province, Zone, Grade, Level
 from datetime import datetime, timezone, timedelta
-from ckeditor.fields import RichTextField
 
 # Create your models here.
 
@@ -22,7 +21,7 @@ class SchoolYear(models.Model):
 
 class Olympiad(models.Model):
     name = models.CharField(max_length=120)
-    description = models.TextField(default='')
+    description = models.TextField(default='') # endnote зэрэг ашиглаж байгаа.
     start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
     final_message = models.TextField(default='''Бодлогууд таалагдсан гэдэгт итгэлтэй байна. Цаашид улам хичээн суралцаарай!''')

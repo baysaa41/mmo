@@ -10,24 +10,9 @@ import openpyxl
 from django.db import transaction
 from django.contrib.auth.models import User, Group
 from django_pandas.io import read_frame
+from .utils import random_salt
 
 from .models import UserMeta, Province, Level, Grade
-
-# --- Utility Functions ---
-def random_salt(n=8):
-    characterList = string.ascii_letters + string.digits
-    salt = ['s']
-    for i in range(n):
-        randomchar = random.choice(characterList)
-        salt.append(randomchar)
-    return "".join(salt)
-
-def check_email(email):
-    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
-    if email and re.fullmatch(regex, email.strip()):
-        return True
-    else:
-        return False
 
 # --- Pandas Dataframe Service ---
 

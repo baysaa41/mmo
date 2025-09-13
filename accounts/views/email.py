@@ -8,10 +8,13 @@ from django.core.mail import get_connection, EmailMultiAlternatives, EmailMessag
 from ..models import UserMails, School
 from ..forms import EmailForm
 
+import re
+
 # create_diploms_mail, create_emails, create_mails зэрэг функцууд энд орно
 # ...
 
 @login_required(login_url='/accounts/login/')
+@login_required
 def send_email_to_schools(request):
     if request.method == "POST":
         form = EmailForm(request.POST, request.FILES)
@@ -19,19 +22,50 @@ def send_email_to_schools(request):
             subject = form.cleaned_data['subject']
             message = form.cleaned_data['message']
             attachments = request.FILES.getlist('attachments')
-            schools = School.objects.filter(is_sent_confirmation=False)
+
+            # --- ИЛГЭЭХЭЭС ӨМНӨ ЦЭВЭРЛЭХ ХЭСЭГ ---
+            cleaned_subject = clean_string(subject)
+            cleaned_message = clean_string(message)
+            # ------------------------------------
+
+            schools = School.objects.filter(pk=498)
+            print(schools.count())
+
+            sent_count = 0
+            fail_count = 0
 
             for school in schools:
-                email = EmailMessage(
-                    subject=subject, body=message, from_email='no-reply@mmo.mn', to=[school.user.email]
-                )
-                for attachment in attachments:
-                    attachment.seek(0)
-                    email.attach(attachment.name, attachment.read(), attachment.content_type)
+                try:
+                    email = EmailMessage(
+                        subject=cleaned_subject,  # <-- Цэвэрлэсэн хувьсагчийг ашиглана
+                        body=cleaned_message,   # <-- Цэвэрлэсэн хувьсагчийг ашиглана
+                        from_email='info@mmo.mn',
+                        to=[school.user.email]
+                    )
 
-                if email.send():
-                    school.is_sent_confirmation = True
-                    school.save()
+                    for attachment in attachments:
+                        attachment.seek(0)
+                        email.attach(attachment.name, attachment.read(), attachment.content_type)
+
+                    if email.send():
+                        school.is_sent_confirmation = True
+                        school.save()
+                        sent_count += 1
+                    else:
+                        fail_count += 1
+
+                except Exception as e:
+                    messages.error(request, f"'{school.name}' сургууль руу илгээхэд алдаа гарлаа: {e}")
+                    print(f"Failed to send email to {school.name}: {e}")
+                    fail_count += 1
+
+            if sent_count > 0:
+                messages.success(request, f"{sent_count} сургууль руу и-мэйлийг амжилттай илгээлээ.")
+            if fail_count > 0:
+                messages.warning(request, f"{fail_count} сургууль руу и-мэйл илгээхэд алдаа гарлаа.")
+
+            print(sent_count,fail_count)
+
             return redirect('school_moderators_list')
     else:
         form = EmailForm()

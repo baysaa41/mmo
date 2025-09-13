@@ -31,7 +31,6 @@ class UploadedFile(models.Model):
     def __str__(self):
         return self.file.name
 
-
 class UserMeta(models.Model):
     user = models.OneToOneField(User, related_name='data', on_delete=models.CASCADE, primary_key=True)
     photo = models.ImageField(upload_to=user_directory_path, blank=True)

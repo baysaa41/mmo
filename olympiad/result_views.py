@@ -13,7 +13,7 @@ from django_pandas.io import read_frame
 from django.db import connection
 from django.contrib.auth.models import User, Group
 from datetime import datetime, timezone
-from olympiad.utils import adjusted_int_name
+from olympiad.utils.data import adjusted_int_name
 import csv
 import os, io
 import json
@@ -58,11 +58,6 @@ def to_json(olympiad_id):
     selected_fields = ['contestant__first_name', 'contestant_id', 'problem_id', 'score']
     json_str = list(answers.values(*selected_fields))
     return json_str
-
-
-def json_view(request, olympiad_id):
-    olympiad = Olympiad.objects.get(pk=olympiad_id)
-    return render(request, 'olympiad/results/json_results.html', {'olympiad': olympiad})
 
 
 def json_results(request, olympiad_id):
