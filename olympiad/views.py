@@ -650,13 +650,19 @@ def upload_file(request):
 
         return render(request, 'olympiad/upload_file.html', context)
 
+def get_school_display_name(user):
+    school_object=user.data.get_school_object()
+    if school_object:
+        return school_object.name
+    else:
+        return user.data.school or ''
 
-#@login_required
+
 def olympiad_scores(request, olympiad_id):
     province_id = request.GET.get('p', '0')
     zone_id = request.GET.get('z', '0')
     page_number = request.GET.get('page', '1')
-    size = 1000
+    size = 500
 
     olympiad = get_object_or_404(Olympiad, id=olympiad_id)
 
@@ -718,7 +724,7 @@ def olympiad_scores(request, olympiad_id):
                     'first_name': scoresheet.user.first_name,
                     'id': scoresheet.user.id,
                     'province': scoresheet.user.data.province.name,
-                    'school': scoresheet.user.data.school,
+                    'school': get_school_display_name(scoresheet.user),
                     'scores': scores,
                     'total': scoresheet.total,
                     'ranking_a': scoresheet.ranking_a_p,
@@ -732,7 +738,7 @@ def olympiad_scores(request, olympiad_id):
                     'first_name': scoresheet.user.first_name,
                     'id': scoresheet.user.id,
                     'province': '',
-                    'school': '',
+                    'school': get_school_display_name(scoresheet.user),
                     'scores': scores,
                     'total': scoresheet.total,
                     'ranking_a': scoresheet.ranking_a_p,
@@ -750,7 +756,7 @@ def olympiad_scores(request, olympiad_id):
                     'first_name': scoresheet.user.first_name,
                     'id': scoresheet.user.id,
                     'province': scoresheet.user.data.province.name,
-                    'school': scoresheet.user.data.school,
+                    'school': get_school_display_name(scoresheet.user),
                     'scores': scores,
                     'total': scoresheet.total,
                     'ranking_a': scoresheet.ranking_a_z,
@@ -764,7 +770,7 @@ def olympiad_scores(request, olympiad_id):
                     'first_name': scoresheet.user.first_name,
                     'id': scoresheet.user.id,
                     'province': '',
-                    'school': '',
+                    'school': get_school_display_name(scoresheet.user),
                     'scores': scores,
                     'total': scoresheet.total,
                     'ranking_a': scoresheet.ranking_a_z,
@@ -783,7 +789,7 @@ def olympiad_scores(request, olympiad_id):
                     'first_name': scoresheet.user.first_name,
                     'id': scoresheet.user.id,
                     'province': scoresheet.user.data.province.name,
-                    'school': scoresheet.user.data.school,
+                    'school': get_school_display_name(scoresheet.user),
                     'scores': scores,
                     'total': scoresheet.total,
                     'ranking_a': scoresheet.ranking_a,
@@ -797,7 +803,7 @@ def olympiad_scores(request, olympiad_id):
                     'first_name': scoresheet.user.first_name,
                     'id': scoresheet.user.id,
                     'province': '',
-                    'school': '',
+                    'school': get_school_display_name(scoresheet.user),
                     'scores': scores,
                     'total': scoresheet.total,
                     'ranking_a': scoresheet.ranking_a,

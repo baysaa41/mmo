@@ -26,6 +26,7 @@
                                 <th>MMO ID</th>
                                 <th>Нэр</th>
                                 <th>Сургууль</th>
+                                <th>Анги</th>
                                 <th>Үйлдэл</th>
                             </tr>
                         </thead>
@@ -35,6 +36,7 @@
                                     <td>{{ user.id }}</td>
                                     <td>{{ user.last_name }} {{ user.first_name }} ({{ user.username }})</td>
                                     <td>{{ user.data.province.name }}, {{ user.data.school }}</td>
+                                    <td>{{ user.data.grade.name }}</td>
                                     <td>
                                         <form method="POST" class="d-inline">
                                             {% csrf_token %}

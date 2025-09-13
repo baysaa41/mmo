@@ -68,7 +68,8 @@ def school_dashboard(request, school_id):
 @login_required
 def manage_school_by_level(request, school_id, level_id):
     """
-    Manages students for a specific level within a school (add, remove, search).
+    Сонгогдсон нэг ангиллын (эсвэл ангилалгүй) сурагчдыг удирдах хуудас.
+    Энэ функц нь хайх, шинээр нэмэх, одоо байгааг нэмэх, хасах үйлдлүүдийг боловсруулна.
     """
     school = get_object_or_404(School, id=school_id)
     if not request.user.is_staff and school not in request.user.moderating.all():
@@ -77,6 +78,7 @@ def manage_school_by_level(request, school_id, level_id):
 
     group = school.group
 
+    # level_id == 0 байвал "Ангилалгүй" гэж үзнэ
     if level_id == 0:
         selected_level = {'id': 0, 'name': 'Ангилалгүй'}
         users_in_level = group.user_set.filter(data__level__isnull=True).select_related('data__grade')
@@ -84,13 +86,82 @@ def manage_school_by_level(request, school_id, level_id):
         selected_level = get_object_or_404(Level, id=level_id)
         users_in_level = group.user_set.filter(data__level=selected_level).select_related('data__grade')
 
-    search_form = UserSearchForm(request.POST or None)
-    add_user_form = AddUserForm(request.POST or None)
     search_results = None
-
     if request.method == 'POST':
-        # ... POST handling logic ...
-        pass
+        # Аль үйлдэл хийгдсэнээс хамаарч зөвхөн тухайн формыг боловсруулна
+        if 'search_users' in request.POST:
+            search_form = UserSearchForm(request.POST)
+            add_user_form = AddUserForm() # Нөгөө формыг хоосон үлдээх
+            if search_form.is_valid():
+                search_results = search_form.search_users()
+
+        elif 'add_user' in request.POST:
+            add_user_form = AddUserForm(request.POST)
+            search_form = UserSearchForm() # Нөгөө формыг хоосон үлдээх
+            if add_user_form.is_valid():
+                try:
+                    with transaction.atomic():
+                        new_user, password = add_user_form.save(commit=False)
+                        new_user.username = ''.join(random.choice(string.ascii_letters) for _ in range(32))
+                        new_user.save()
+                        new_user.username = f'u{new_user.id}'
+                        new_user.save()
+
+                        # Шинэ хэрэглэгчийн UserMeta-г үүсгэх
+                        meta_data = {
+                            'user': new_user,
+                            'school': request.user.data.school,
+                            'province': request.user.data.province,
+                        }
+                        if level_id != 0:
+                            meta_data['level'] = selected_level
+
+                        UserMeta.objects.create(**meta_data)
+                        new_user.groups.add(group)
+
+                    try:
+                        # TODO: Plaintext password илгээх нь аюулгүй байдлын эрсдэлтэй.
+                        # Нууц үг сэргээх холбоос илгээдэг болгож сайжруулах хэрэгтэй.
+                        subject = 'ММОХ - Шинэ бүртгэл'
+                        message = f'Сайн байна уу, {new_user.first_name}.\n\nТаны хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}'
+                        send_mail(subject, message, 'baysa@mmo.mn', [new_user.email])
+                        level_name = selected_level['name'] if level_id == 0 else selected_level.name
+                        messages.success(request, f"'{new_user.get_full_name()}' хэрэглэгчийг '{level_name}' хэсэгт амжилттай нэмж, нэвтрэх мэдээллийг илгээлээ.")
+                    except Exception as email_error:
+                        messages.warning(request, f"Хэрэглэгч үүссэн ч и-мэйл илгээхэд алдаа гарлаа: {email_error}")
+
+                except Exception as e:
+                    messages.error(request, f"Хэрэглэгч үүсгэхэд алдаа гарлаа: {e}")
+
+                return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+
+        elif 'add_existing_user' in request.POST:
+            search_form = UserSearchForm()
+            add_user_form = AddUserForm()
+            user_id = request.POST.get('user_id')
+            user_to_add = get_object_or_404(User, id=user_id)
+            group.user_set.add(user_to_add)
+            messages.success(request, f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг сургуульд амжилттай нэмлээ.")
+            return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+
+        elif 'remove_user' in request.POST:
+            search_form = UserSearchForm()
+            add_user_form = AddUserForm()
+            user_id = request.POST.get('user_id')
+            user_to_remove = get_object_or_404(User, id=user_id)
+            group.user_set.remove(user_to_remove)
+            messages.info(request, f"'{user_to_remove.get_full_name() or user_to_remove.username}' хэрэглэгчийг сургуулиас хаслаа.")
+            return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+
+        else:
+            # Танигдаагүй POST хүсэлт ирвэл формуудыг хоосон харуулах
+            search_form = UserSearchForm()
+            add_user_form = AddUserForm()
+
+    else:
+        # GET хүсэлтийн үед бүх формыг хоосон үүсгэх
+        search_form = UserSearchForm()
+        add_user_form = AddUserForm()
 
     context = {
         'school': school,

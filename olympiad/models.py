@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
-from accounts.models import Author, Province, Zone, Grade, Level
+from accounts.models import Author, Province, Zone, School, Grade, Level
 from datetime import datetime, timezone, timedelta
 
 # Create your models here.
@@ -376,9 +376,9 @@ class OlympiadGroup(models.Model):
     def __str__(self):
         return self.name
 
-
 class ScoreSheet(models.Model):
     user = models.ForeignKey(User, related_name='results', on_delete=models.CASCADE, null=True, blank=True)
+    school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True)
     olympiad = models.ForeignKey(Olympiad, related_name='score_sheets', on_delete=models.CASCADE)
 
     s1 = models.FloatField(default=0, blank=True, null=True)
@@ -418,5 +418,6 @@ class ScoreSheet(models.Model):
 
     def save(self, *args, **kwargs):
         # Calculate the total score
+        self.school = self.user.data.get_school_object()
         self.total = sum(getattr(self, f"s{i+1}") or 0 for i in range(20))  # Using `or 0` to handle None values
         super().save(*args, **kwargs)

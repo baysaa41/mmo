@@ -1,8 +1,7 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 import os
 from django.utils.text import slugify
-from django.conf import settings
 import uuid
 
 
@@ -62,6 +61,31 @@ class UserMeta(models.Model):
             # Add more indexes as needed
         ]
 
+    def get_school_object(self):
+        """
+        Хэрэв хэрэглэгч бүртгэлтэй сургуульд харьяалагддаг бол
+        тухайн School объектыг буцаана. Үгүй бол None буцаана.
+        """
+        try:
+            # Хэрэглэгчийн харьяалагддаг бүлгүүдийг олох
+            user_groups = self.user.groups.all()
+
+            # Тэр бүлгүүдтэй холбоотой School моделыг хайх.
+            # .first() нь олдвол эхний объектыг, олдохгүй бол None буцаадаг.
+            school_obj = School.objects.filter(group__in=user_groups).first()
+
+            return school_obj
+        except Exception:
+            # Ямар нэг алдаа гарвал None буцаана.
+            return None
+
+    @property
+    def school_display_name(self):
+        school_obj = self.get_school_object()
+        if school_obj:
+            return school_obj.name
+        return self.school or ""
+
     def __str__(self):
         return '{}'.format(self.user.username)
 
@@ -106,6 +130,9 @@ class School(models.Model):
     name = models.CharField(max_length=120, null=True)
     province = models.ForeignKey(Province, on_delete=models.SET_NULL, null=True)
     contact = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    # ЭНЭ ТАЛБАРЫГ НЭМЭХ
+    group = models.OneToOneField(Group, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Хамаарах бүлэг")
 
     class Meta:
         permissions = [

@@ -1,6 +1,7 @@
 from ..models import Olympiad, Result, ScoreSheet
 from django.contrib.auth.models import User
 import json
+from itertools import groupby
 
 
 def adjusted_int_name(number, size=2):
@@ -37,10 +38,35 @@ def prepare_json_results(olympiad_id):
     olympiad.save()
     return olympiad.json_results
 
+
 def to_scoresheet(olympiad_id):
-    results = Result.objects.filter(olympiad_id=olympiad_id)
-    for result in results:
-        ss, created = ScoreSheet.objects.get_or_create(user=result.contestant, olympiad_id=olympiad_id)
-        exec(f"ss.s{result.problem.order} = {result.score or 0}")
-        ss.total += result.score or 0
-        ss.save()
+    """
+    Generates or updates ScoreSheets from Results.
+    This version is highly optimized to reduce database queries.
+    """
+    # 1. Шаардлагатай бүх Result-ийг нэг дор татах
+    all_results = Result.objects.filter(olympiad_id=olympiad_id, contestant_id__isnull=False).select_related(
+        'contestant__data', 'problem'
+    ).order_by('contestant_id')
+
+    # 2. Оролцогч тус бүрээр нь үр дүнг бүлэглэх
+    for contestant_id, results_group in groupby(all_results, key=lambda r: r.contestant_id):
+        results_list = list(results_group)
+        contestant = results_list[0].contestant
+
+        school_obj = contestant.data.get_school_object()
+
+        score_fields = {'school': school_obj}
+        # Онооны талбаруудыг тэглэх (21 гэж хатуу бичихийн оронд)
+        for i in range(1, 21):
+            score_fields[f's{i}'] = 0
+
+        for result in results_list:
+            if result.score is not None and result.problem:
+                score_fields[f's{result.problem.order}'] = result.score
+
+        ScoreSheet.objects.update_or_create(
+            user_id=contestant_id,
+            olympiad_id=olympiad_id,
+            defaults=score_fields
+        )

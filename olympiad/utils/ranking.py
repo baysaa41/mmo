@@ -1,4 +1,4 @@
-from .models import Olympiad, Result, ScoreSheet
+from ..models import Olympiad, Result, ScoreSheet
 
 
 def update_rankings_a(olympiad_id):
