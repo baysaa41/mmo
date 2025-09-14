@@ -1,18 +1,21 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
-from accounts.models import Province
+from django.db.models import UniqueConstraint
 
 
 class School(models.Model):
     user = models.ForeignKey(User, related_name='moderating', on_delete=models.CASCADE)
     group = models.OneToOneField(Group, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Хамаарах бүлэг")
-    province = models.ForeignKey(Province, related_name='moderators', on_delete=models.CASCADE)
+    province = models.ForeignKey("accounts.Province", related_name='moderators', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, default='ЕБС')
     is_sent_confirmation = models.BooleanField(default=False)
     is_received_confirmation = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ('user', 'group')  # Prevent duplicate moderator assignments
+        # unique_together-ийн оронд constraints ашиглах
+        constraints = [
+            UniqueConstraint(fields=['user', 'group'], name='unique_user_group_combination')
+        ]
 
     def __str__(self):
         return "{}, {}".format(self.group.name, self.user.first_name)

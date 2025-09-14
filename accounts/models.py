@@ -35,7 +35,8 @@ class UserMeta(models.Model):
     photo = models.ImageField(upload_to=user_directory_path, blank=True)
     reg_num = models.CharField(max_length=12)
     province = models.ForeignKey("Province", on_delete=models.SET_NULL, null=True, blank=True)
-    school = models.CharField(max_length=255, blank=True, null=True)
+    # school = models.CharField(max_length=255, blank=True, null=True)
+    # school = models.ForeignKey("schools.School", on_delete=models.SET_NULL, null=True, blank=True)
     grade = models.ForeignKey("Grade", on_delete=models.SET_NULL, null=True, blank=True)
     level = models.ForeignKey("Level", on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -55,36 +56,11 @@ class UserMeta(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['school']),
+            # models.Index(fields=['school']),
             models.Index(fields=['reg_num']),
             models.Index(fields=['mobile']),
             # Add more indexes as needed
         ]
-
-    def get_school_object(self):
-        """
-        Хэрэв хэрэглэгч бүртгэлтэй сургуульд харьяалагддаг бол
-        тухайн School объектыг буцаана. Үгүй бол None буцаана.
-        """
-        try:
-            # Хэрэглэгчийн харьяалагддаг бүлгүүдийг олох
-            user_groups = self.user.groups.all()
-
-            # Тэр бүлгүүдтэй холбоотой School моделыг хайх.
-            # .first() нь олдвол эхний объектыг, олдохгүй бол None буцаадаг.
-            school_obj = School.objects.filter(group__in=user_groups).first()
-
-            return school_obj
-        except Exception:
-            # Ямар нэг алдаа гарвал None буцаана.
-            return None
-
-    @property
-    def school_display_name(self):
-        school_obj = self.get_school_object()
-        if school_obj:
-            return school_obj.name
-        return self.school or ""
 
     def __str__(self):
         return '{}'.format(self.user.username)

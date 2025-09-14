@@ -25,11 +25,11 @@ class UserForm(forms.ModelForm):
 class UserMetaForm(forms.ModelForm):
     class Meta:
         model = UserMeta
-        fields = ['photo', 'province', 'school', 'grade', 'level', 'gender', 'mobile', 'is_valid']
+        fields = ['photo', 'province', 'grade', 'level', 'gender', 'mobile', 'is_valid']
         widgets = {
             # 'reg_num': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Регистрийн дугаар'}),
             'province': forms.Select(attrs={'class': 'form-control'}),
-            'school': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Сургууль'}),
+            # 'school': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Сургууль'}),
             'mobile': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Гар утас'}),
             'is_valid': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -41,7 +41,7 @@ class UserMetaForm(forms.ModelForm):
             'photo': 'Зураг',
              # 'reg_num': 'Регистрийн дугаар',
             'province': 'Аймаг',
-            'school': 'Сургууль',
+            # 'school': 'Сургууль',
             'grade': 'Анги',
             'level': 'Ангилал',
             'gender': 'Хүйс',

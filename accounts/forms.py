@@ -125,11 +125,11 @@ class UserForm(ModelForm):
 class UserMetaForm(ModelForm):
     class Meta:
         model = UserMeta
-        fields = ['reg_num', 'province', 'school', 'grade', 'level', 'gender', 'mobile', 'is_valid']
+        fields = ['reg_num', 'province', 'grade', 'level', 'gender', 'mobile', 'is_valid']
         labels = {
             'reg_num': 'Регистрийн дугаар:',
             'province': 'Аймаг, дүүрэг (сургуулийн):',
-            'school': 'Сургууль:',
+             # 'school': 'Сургууль:',
             'grade': 'Анги:',
             'level': 'Ангилал',
             'gender': 'Хүйс:',
