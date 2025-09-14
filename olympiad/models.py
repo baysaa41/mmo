@@ -189,7 +189,7 @@ class Problem(models.Model):
 
 
 class AnswerChoice(models.Model):
-    problem = models.ForeignKey(Problem, on_delete=models.CASCADE)
+    problem = models.ForeignKey(Problem, on_delete=models.CASCADE, null=True, blank=True)
     order = models.IntegerField()
     label = models.CharField(max_length=8)
     value = models.TextField(null=False, default='')
