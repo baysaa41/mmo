@@ -217,7 +217,7 @@ class Result(models.Model):
     contestant = models.ForeignKey(User, related_name='contest_results', on_delete=models.CASCADE, null=True, blank=True)
     user_grade = models.IntegerField(default=0)
     olympiad = models.ForeignKey(Olympiad, on_delete=models.SET_NULL, null=True, blank=True)
-    problem = models.ForeignKey(Problem, on_delete=models.CASCADE)
+    problem = models.ForeignKey(Problem, on_delete=models.CASCADE, null=True)
     answer = models.BigIntegerField(null=True, blank=True)
     coordinator = models.ForeignKey(User, related_name='coordinated_results', on_delete=models.SET_NULL, null=True, blank=True)
     confirmed_by = models.ForeignKey(User, related_name='confirmed_results', on_delete=models.SET_NULL, null=True, blank=True)
@@ -297,8 +297,8 @@ class Upload(models.Model):
 
 
 class Comment(models.Model):
-    result = models.ForeignKey(Result, on_delete=models.CASCADE)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    result = models.ForeignKey(Result, on_delete=models.CASCADE, null=True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     comment = models.TextField(blank=False)
     recommendation = models.FloatField(null=True, blank=True)
 
