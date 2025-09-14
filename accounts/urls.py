@@ -4,7 +4,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 
 # Import the new view modules
-from .views import auth, display, email
+from .views import auth, display, email, ajax
 
 urlpatterns = [
     # Display Views
@@ -25,4 +25,6 @@ urlpatterns = [
     path('track-email/<uuid:token>/', email.track_email_open, name='track_email_open'),
     path('send-to-schools/', email.send_email_to_schools, name='send_email_to_schools'),
 
+    # ... таны бусад url-ууд
+    path('ajax/load-schools/', ajax.load_schools, name='ajax_load_schools'), # Шинэ URL нэмэх
 ]

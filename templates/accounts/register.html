@@ -3,19 +3,65 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-    <h3>{{ request.user.username }} (ID: {{ request.user.id }}) хэрэглэгчийн бүртгэлийн мэдээлэл</h3>
-    <div>
-        ММОХ-оос зохион байгуулах аливаа уралдаан, тэмцээнд оролцохын тулд дараах мэдээллийг
-        үнэн зөв бөгөөд гүйцэд бөглөнө үү.
+    <div class="container">
+        <h3>{{ request.user.username }} (ID: {{ request.user.id }}) хэрэглэгчийн бүртгэлийн мэдээлэл</h3>
+        <div>
+            ММОХ-оос зохион байгуулах аливаа уралдаан, тэмцээнд оролцохын тулд дараах мэдээллийг
+            үнэн зөв бөгөөд гүйцэд бөглөнө үү.
+        </div>
+        <div>Бид таны хувийн мэдээллийг зөвхөн олимпиад зохион байгуулах ажлын хэрэгцээнд ашиглах болно.</div>
+        <hr>
+
+        {# --- ЭНЭ ХЭСЭГТ ЗАСВАР ОРСОН --- #}
+        {# JavaScript-д ашиглагдах id болон data-schools-url-г form тагт нэмж өгөх #}
+        <form method="post" enctype='multipart/form-data' id="user-meta-form"
+              data-schools-url="{% url 'ajax_load_schools' %}">
+            {% csrf_token %}
+
+            {# crispy-forms нь form-ын алдааг автоматаар харуулна #}
+            {{ form1|crispy }}
+            {{ form2|crispy }}
+
+            <input type="submit" class="btn btn-success" value="Хадгалах">
+        </form>
+        <hr>
+
+        <div>Хэрвээ та нууц үгээ солих бол: <a href="{% url 'user_password' %}" class="btn btn-secondary">Нууц үг
+            солих</a></div>
     </div>
-    <div>Бид таны хувийн мэдээллийг зөвхөн олимпиад зохион байгуулах ажлын хэрэгцээнд ашиглах болно.</div>
-    <hr>
-    <form method="post" enctype='multipart/form-data'>
-        {% csrf_token %}
-        {{ form1|crispy }}
-        {{ form2|crispy }}
-        <input type="submit" class="btn btn-success" value="Хадгалах">
-    </form>
-    <hr>
-    <div>Хэрвээ та нууц үгээ солих бол: <a href="{% url 'user_password' %}" class="btn btn-secondary">Нууц үг солих</a></div>
+    {# JavaScript код хэвээрээ үлдэнэ #}
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const provinceSelect = document.querySelector("#id_province");
+            const schoolSelect = document.querySelector("#id_school");
+            const form = document.querySelector("#user-meta-form"); // Энэ мөр одоо зөв ажиллана
+            const url = form.dataset.schoolsUrl; // Энэ мөр одоо зөв ажиллана
+
+            provinceSelect.addEventListener("change", function () {
+                const provinceId = this.value;
+
+                if (provinceId) {
+                    fetch(`${url}?province_id=${provinceId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            schoolSelect.innerHTML = '<option value="">---------</option>'; // Сонголтыг цэвэрлэх
+                            data.forEach(function (school) {
+                                const option = new Option(school.name, school.id);
+                                schoolSelect.add(option);
+                            });
+                            schoolSelect.disabled = false;
+                        });
+                } else {
+                    schoolSelect.innerHTML = '<option value="">Эхлээд аймаг сонгоно уу</option>';
+                    schoolSelect.disabled = true;
+                }
+            });
+
+            // Хуудас ачааллахад анхны төлвийг шалгах
+            if (!provinceSelect.value) {
+                schoolSelect.disabled = true;
+                schoolSelect.innerHTML = '<option value="">Эхлээд аймаг сонгоно уу</option>';
+            }
+        });
+    </script>
 {% endblock %}

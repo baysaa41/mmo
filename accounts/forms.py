@@ -11,6 +11,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template import loader
 from olympiad.widgets import MultiFileInput
 from django_select2.forms import ModelSelect2MultipleWidget
+from schools.models import School
 
 class AddRemoveUsersToGroupForm(forms.Form):
     users = forms.ModelMultipleChoiceField(
@@ -121,21 +122,37 @@ class UserForm(ModelForm):
             'email': 'Цахим шуудан:'
         }
 
-
-class UserMetaForm(ModelForm):
+class UserMetaForm(forms.ModelForm):
     class Meta:
         model = UserMeta
-        fields = ['reg_num', 'province', 'grade', 'level', 'gender', 'mobile', 'is_valid']
+        fields = ['reg_num', 'province', 'school', 'grade', 'level', 'gender', 'mobile', 'is_valid']
         labels = {
             'reg_num': 'Регистрийн дугаар:',
             'province': 'Аймаг, дүүрэг (сургуулийн):',
-             # 'school': 'Сургууль:',
+            'school': 'Сургууль:',
             'grade': 'Анги:',
             'level': 'Ангилал',
             'gender': 'Хүйс:',
             'mobile': 'Холбогдох утас:',
             'is_valid': 'Ашиглах нөхцөлийг зөвшөөрөх'
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # 'school' талбарын сонголтыг эхэндээ хоосон болгох
+        self.fields['school'].queryset = School.objects.none()
+
+        # Хэрэв form-г засах горимд (instance-тэй) ачааллаж байвал
+        if 'province' in self.data:
+            try:
+                province_id = int(self.data.get('province'))
+                self.fields['school'].queryset = School.objects.filter(province_id=province_id).order_by('name')
+            except (ValueError, TypeError):
+                pass  # Хэрэглэгч буруу утга оруулсан бол алдаа заахгүй өнгөрөх
+        elif self.instance.pk and self.instance.province:
+            # Өмнө нь сонгогдсон аймаг байвал түүнд хамаарах сургуулиудыг харуулах
+            self.fields['school'].queryset = School.objects.filter(province=self.instance.province).order_by('name')
 
 
 class LoginForm(forms.Form):
