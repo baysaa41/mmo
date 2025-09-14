@@ -35,7 +35,6 @@ class UserMeta(models.Model):
     photo = models.ImageField(upload_to=user_directory_path, blank=True)
     reg_num = models.CharField(max_length=12)
     province = models.ForeignKey("Province", on_delete=models.SET_NULL, null=True, blank=True)
-    # school = models.CharField(max_length=255, blank=True, null=True)
     school = models.ForeignKey("schools.School", on_delete=models.SET_NULL, null=True, blank=True)
     grade = models.ForeignKey("Grade", on_delete=models.SET_NULL, null=True, blank=True)
     level = models.ForeignKey("Level", on_delete=models.SET_NULL, null=True, blank=True)
