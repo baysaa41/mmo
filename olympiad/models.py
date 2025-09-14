@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
-from accounts.models import Author, Province, Zone, School, Grade, Level
+from accounts.models import Author, Province, Zone, Grade, Level
 from datetime import datetime, timezone, timedelta
+from schools.models import School
 
 # Create your models here.
 

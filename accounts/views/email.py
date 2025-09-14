@@ -5,8 +5,9 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.core.mail import get_connection, EmailMultiAlternatives, EmailMessage
 
-from ..models import UserMails, School
+from ..models import UserMails
 from ..forms import EmailForm
+from schools.models import School
 
 import re
 

@@ -5,7 +5,7 @@ from accounts.models import Province
 
 class School(models.Model):
     user = models.ForeignKey(User, related_name='moderating', on_delete=models.CASCADE)
-    group = models.ForeignKey(Group, related_name='moderator', on_delete=models.CASCADE)
+    group = models.OneToOneField(Group, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Хамаарах бүлэг")
     province = models.ForeignKey(Province, related_name='moderators', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, default='ЕБС')
     is_sent_confirmation = models.BooleanField(default=False)
@@ -16,4 +16,3 @@ class School(models.Model):
 
     def __str__(self):
         return "{}, {}".format(self.group.name, self.user.first_name)
-

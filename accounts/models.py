@@ -125,24 +125,6 @@ class Zone(models.Model):
     def __str__(self):
         return '{}'.format(self.name)
 
-
-class School(models.Model):
-    name = models.CharField(max_length=120, null=True)
-    province = models.ForeignKey(Province, on_delete=models.SET_NULL, null=True)
-    contact = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-
-    # ЭНЭ ТАЛБАРЫГ НЭМЭХ
-    group = models.OneToOneField(Group, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Хамаарах бүлэг")
-
-    class Meta:
-        permissions = [
-            ("edit_school", "Сургуулийн мэдээлэл оруулах")
-        ]
-
-    def __str__(self):
-        return '{}, {}'.format(self.province.name, self.name)
-
-
 class Grade(models.Model):
     name = models.CharField(max_length=60)
 
