@@ -651,11 +651,14 @@ def upload_file(request):
         return render(request, 'olympiad/upload_file.html', context)
 
 def get_school_display_name(user):
-    school_object=user.data.get_school_object()
-    if school_object:
-        return school_object.name
-    else:
-        return user.data.school or ''
+    try:
+        school_object=user.data.school
+        if school_object:
+            return school_object.name
+        else:
+            return user.data.school or ''
+    except:
+        return ''
 
 
 def olympiad_scores(request, olympiad_id):
