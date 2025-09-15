@@ -4,7 +4,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 
 # Import the new view modules
-from .views import auth, display, email, ajax
+from .views import auth, display, email, ajax, admin
 
 urlpatterns = [
     # Display Views
@@ -27,4 +27,7 @@ urlpatterns = [
 
     # ... таны бусад url-ууд
     path('ajax/load-schools/', ajax.load_schools, name='ajax_load_schools'), # Шинэ URL нэмэх
+
+    # dashboard
+    path('commands-guide/', admin.command_guide_view, name='commands_guide'),
 ]

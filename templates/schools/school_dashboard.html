@@ -1,30 +1,85 @@
 {% extends 'base.html' %}
 
-{% block title %}Удирдах самбар: {{ school.name }}{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Удирдах самбар: {{ school.name }}</h1>
-    <p class="lead">Сурагчдыг удирдах ангилалаа сонгоно уу.</p>
-
-    <div class="list-group">
-        {% for level in student_counts_by_level %}
-            <a href="{% url 'manage_school_by_level' school_id=school.id level_id=level.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                {{ level.name }}
-                <span class="badge bg-primary rounded-pill">{{ level.student_count }}</span>
+<div class="container">
+    <h2 class="mb-1">{{ school.name }}</h2>
+    <p class="lead text-muted">{{ school.province.name }}</p>
+    <a href="{% url 'school_moderators_list' %}" class="btn btn-secondary btn-sm mb-4">&larr; Сургуулийн жагсаалт руу буцах</a>
+    <hr>
+    
+    <h4>Сурагчдын тоо (Ангиллаар)</h4>
+    <p>Дэлгэрэнгүй мэдээлэл харахын тулд ангиллын нэр дээр дарна уу.</p>
+    <div class="list-group mb-4">
+        {% for count_info in student_counts_by_level %}
+            <a href="{% url 'manage_school_by_level' school.id count_info.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                {{ count_info.name }}
+                <span class="badge bg-primary rounded-pill">{{ count_info.student_count }}</span>
             </a>
+        {% empty %}
+             <div class="list-group-item">
+                <p class="text-muted mb-0">Бүртгэлтэй ангилал алга байна.</p>
+            </div>
         {% endfor %}
-        
+
         {% if uncategorized_count > 0 %}
-            <a href="{% url 'manage_school_by_level' school_id=school.id level_id=0 %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center list-group-item-warning">
-                <strong>Ангилалгүй сурагчид</strong>
-                <span class="badge bg-danger rounded-pill">{{ uncategorized_count }}</span>
+             <a href="{% url 'manage_school_by_level' school.id 0 %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                Ангилалгүй
+                <span class="badge bg-secondary rounded-pill">{{ uncategorized_count }}</span>
             </a>
         {% endif %}
     </div>
-    
-    <div class="mt-4">
-         <a href="{% url 'school_moderators_list' %}" class="btn btn-secondary">« Сургуулиудын жагсаалт руу буцах</a>
+
+<hr class="my-4">
+
+<h4>Элсэх хүсэлттэй сурагчид</h4>
+<p>Эдгээр сурагчид өөрийн профайл дээр танай сургуулийг сонгосон боловч сургуулийн бүлэгт хараахан ороогүй байна.</p>
+
+{% if pending_students %}
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Сурагч</th>
+                    <th>Ангилал</th>
+                    <th>Үйлдэл</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for student in pending_students %}
+                <tr>
+                    <td>{{ student.get_full_name }} (ID: {{ student.id }})</td>
+                    <td>{{ student.data.level.name|default:"Тодорхойгүй" }}</td>
+                    <td>
+                        <a href="{% url 'add_student_to_group' school.id student.id %}" class="btn btn-sm btn-success">Бүлэгт нэмэх</a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p class="text-muted">Шинээр элсэх хүсэлттэй сурагч байхгүй байна.</p>
+{% endif %}
+
+    <hr class="my-4">
+
+    <div>
+        <h4>Сургуулийн I давааны тестүүд</h4>
+        <p>Удирдахыг хүссэн олимпиадынхаа нэр дээр дарж дэлгэрэнгүй хуудас руу орно уу.</p>
+        <div class="list-group">
+            {% for olympiad in olympiads %}
+                <a href="{% url 'school_level_olympiad_view' school.id olympiad.level.id olympiad.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ olympiad.name }}, {{ olympiad.get_level }} ангилал</h5>
+                        <small>{{ olympiad.start_time|date:"Y-m-d" }}</small>
+                    </div>
+                </a>
+            {% empty %}
+                <div class="list-group-item">
+                    <p class="text-muted mb-0">Одоогоор идэвхтэй олимпиад байхгүй байна.</p>
+                </div>
+            {% endfor %}
+        </div>
     </div>
 </div>
 {% endblock %}

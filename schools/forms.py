@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.db.models import Q
 from accounts.models import UserMeta
+from django.contrib.auth.forms import SetPasswordForm
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -86,4 +87,19 @@ class AddUserForm(forms.ModelForm):
         if commit:
             user.save()
         return user, password  # Return both user and the generated password
+
+
+class SchoolAdminPasswordChangeForm(SetPasswordForm):
+    """
+    Сургуулийн админд зориулсан нууц үг солих форм.
+    Энэ нь SetPasswordForm-г өвлөж авсан тул нууц үгийн шалгалтыг автоматаар хийнэ.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['new_password1'].widget.attrs.update({'class': 'form-control'})
+        self.fields['new_password2'].widget.attrs.update({'class': 'form-control'})
+
+# --- ЭНЭ ХЭСГИЙГ НЭМЖ ӨГНӨ ҮҮ ---
+class UploadExcelForm(forms.Form):
+    file = forms.FileField(label="Дүнгийн Excel файл оруулах")
 

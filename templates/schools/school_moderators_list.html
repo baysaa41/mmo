@@ -1,68 +1,28 @@
 {% extends 'base.html' %}
 
-{% block title %}Сургуулиудын жагсаалт{% endblock %}
-
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Сургуулиудын Жагсаалт</h1>
-    </div>
+<div class="container">
+    <h2 class="mb-4">Миний удирдах сургуулиуд</h2>
+    <p>Та доорх сургуулиудын мэдээллийг удирдах боломжтой. Сургуулийн нэр дээр дарж удирдлагын самбар луу орно уу.</p>
 
-    {% include 'selection_menu.html' %}
-
-    <div class="table-responsive mt-3">
-        <table class="table table-bordered table-striped align-middle">
-            <thead class="table-light text-center">
-                <tr>
-                    <th>#</th>
-                    <th>Аймаг/Дүүрэг</th>
-                    <th>Сургуулийн нэр</th>
-                    <th>Сурагчдын тоо</th>
-                    <th>Бүртгэлийн ажилтан</th>
-                    <th>Нэвтрэх нэр</th>
-                    {% if request.user.is_staff %}
-                        <th>Холбогдох утас</th>
-                        <th>Сүүлийн нэвтрэлт</th>
-                        <th>Имэйл хаяг</th>
-                    {% endif %}
-                    <th>Удирдах</th>
-                    {% for olympiad in olympiads %}
-                        <th>{{ olympiad.description }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for school in schools %}
-                <tr>
-                    <td class="text-center">{{ forloop.counter }}</td>
-                    <td>{{ school.province.name }}</td>
-                    <td>{{ school.name }}</td>
-                    <td class="text-center">{{ school.group.user_set.count }}</td>
-                    <td>{{ school.user.get_full_name|default:school.user.username }}</td>
-                    <td>{{ school.user.username }}</td>
-
-                    {% if request.user.is_staff %}
-                        <td>{{ school.user.data.mobile }}</td>
-                        <td>{{ school.user.last_login|date:"Y.m.d H:i" }}</td>
-                        <td>{{ school.user.email }}</td>
-                    {% endif %}
-
-                    <td class="text-center">
-                        <a href="{% url 'school_dashboard' school.id %}" class="btn btn-sm btn-primary">Удирдах</a>
-                    </td>
-                    {% for olympiad in olympiads %}
-                        <td class="text-center">
-                            <a class="btn btn-warning btn-sm" href="{% url 'olympiad_group_answer_view' olympiad_id=olympiad.id group_id=school.group.id %}" target="_blank">Хариулт</a>
-                        </td>
-                    {% endfor %}
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="10" class="text-center">Сургууль олдсонгүй.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    {% if schools %}
+        <div class="list-group">
+            {% for school in schools %}
+                <a href="{% url 'school_dashboard' school.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ school.name }}</h5>
+                        <small>{{ school.province.name }}</small>
+                    </div>
+                    <p class="mb-1">
+                        <strong>Модератор:</strong> {{ school.user.get_full_name }}
+                    </p>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Таны удирдлагад бүртгэлтэй сургууль одоогоор байхгүй байна.
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

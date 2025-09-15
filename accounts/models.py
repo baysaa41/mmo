@@ -81,11 +81,6 @@ class UserMeta(models.Model):
             except UserMeta.DoesNotExist:
                 pass # Шинэ обьект бол алгасах
 
-        # Шинэ сургуулийн группт нэмэх (хэрэв сургууль сонгогдсон бол)
-        if self.school and self.school.group:
-            print(self.school.group.name)
-            self.school.group.user_set.add(self.user)
-
         super().save(*args, **kwargs) # Үндсэн хадгалах үйлдлийг дуудах
 
 class TeacherStudent(models.Model):

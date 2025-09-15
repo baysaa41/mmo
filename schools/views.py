@@ -8,10 +8,27 @@ from django.core.mail import send_mail
 import random
 import string
 
+import pandas as pd
+import numpy as np
+from django_pandas.io import read_frame
+
+# Шаардлагатай import-ууд
+import io
+import pandas as pd
+from django.http import HttpResponse
+from datetime import date
+from openpyxl.styles import Border, Side, Font, Alignment
+
 from .models import School
-from .forms import UserSearchForm, AddUserForm, UserForm, UserMetaForm
-from accounts.models import UserMeta, Level
-from olympiad.models import Olympiad
+from .forms import UserSearchForm, AddUserForm, UserForm, UserMetaForm, UploadExcelForm
+from accounts.models import UserMeta, Level, Province
+from olympiad.models import Olympiad, SchoolYear, Problem, Result
+
+import pandas as pd
+from django.db import transaction
+from olympiad.models import Problem, Result
+from .forms import UploadExcelForm
+
 
 @login_required
 def school_moderators_view(request):
@@ -33,43 +50,93 @@ def school_moderators_view(request):
         schools_qs = schools_qs.filter(province__zone_id=zid)
 
     final_schools = schools_qs.order_by('province__name', 'name')
-    olympiads = Olympiad.objects.filter(round=1, school_year=61)
 
     context = {
         'schools': final_schools,
-        'olympiads': olympiads
     }
     return render(request, 'schools/school_moderators_list.html', context)
 
 @login_required
 def school_dashboard(request, school_id):
     """
-    Displays the management dashboard for a single school.
-    It shows a list of student categories and their counts.
+    Сургуулийн удирдлагын самбар. Сурагчдын тоо болон боломжит
+    олимпиадуудын жагсаалтыг харуулна.
     """
     school = get_object_or_404(School, id=school_id)
     if not request.user.is_staff and school not in request.user.moderating.all():
         messages.error(request, 'Та энэ сургуулийг удирдах эрхгүй.')
         return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
 
+    # Сурагчдын тоог ангиллаар гаргах
     student_counts = Level.objects.annotate(
         student_count=Count('usermeta__user', filter=Q(usermeta__user__groups=school.group))
     ).order_by('name')
 
     uncategorized_count = school.group.user_set.filter(data__level__isnull=True).count()
 
+    # Одоогийн хичээлийн жилийн, 1-р давааны тестүүдийг шүүх
+    today = date.today()
+    current_school_year = SchoolYear.objects.filter(start__lte=today, end__gte=today).first()
+
+    olympiads = Olympiad.objects.none()
+    if current_school_year:
+        olympiads = Olympiad.objects.filter(
+            round=1,
+            school_year=current_school_year
+        ).order_by('level__name')
+
+    # --- ШИНЭЭР НЭМЭГДСЭН ЛОГИК ---
+    # Тухайн сургуулийг сонгосон боловч группт нь ороогүй сурагчдыг олох
+    pending_students = User.objects.filter(
+        data__school=school
+    ).exclude(
+        groups=school.group
+    )
+
     context = {
         'school': school,
         'student_counts_by_level': student_counts,
         'uncategorized_count': uncategorized_count,
+        'pending_students': pending_students, # <-- context-д нэмэх
+        'olympiads': olympiads,
     }
     return render(request, 'schools/school_dashboard.html', context)
+
+@login_required
+def school_olympiad_list_view(request, school_id):
+    """
+    Сонгосон нэг сургуулийн оролцох боломжтой олимпиадуудыг жагсааж,
+    дүнтэй ажиллах үйлдлүүдийг харуулна.
+    """
+    school = get_object_or_404(School, id=school_id)
+    if not request.user.is_staff and school not in request.user.moderating.all():
+        messages.error(request, 'Та энэ сургуулийг удирдах эрхгүй.')
+        return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
+
+    today = date.today()
+    current_school_year = SchoolYear.objects.filter(start__lte=today, end__gte=today).first()
+
+    olympiads = Olympiad.objects.none()
+    if current_school_year:
+        olympiads = Olympiad.objects.filter(
+            round=1,
+            school_year=current_school_year,
+            type=1
+        )
+
+    upload_form = UploadExcelForm()
+
+    context = {
+        'school': school,
+        'olympiads': olympiads,
+        'upload_form': upload_form
+    }
+    return render(request, 'schools/school_olympiad_list.html', context)
 
 @login_required
 def manage_school_by_level(request, school_id, level_id):
     """
     Сонгогдсон нэг ангиллын (эсвэл ангилалгүй) сурагчдыг удирдах хуудас.
-    Энэ функц нь хайх, шинээр нэмэх, одоо байгааг нэмэх, хасах үйлдлүүдийг боловсруулна.
     """
     school = get_object_or_404(School, id=school_id)
     if not request.user.is_staff and school not in request.user.moderating.all():
@@ -78,7 +145,6 @@ def manage_school_by_level(request, school_id, level_id):
 
     group = school.group
 
-    # level_id == 0 байвал "Ангилалгүй" гэж үзнэ
     if level_id == 0:
         selected_level = {'id': 0, 'name': 'Ангилалгүй'}
         users_in_level = group.user_set.filter(data__level__isnull=True).select_related('data__grade')
@@ -88,16 +154,15 @@ def manage_school_by_level(request, school_id, level_id):
 
     search_results = None
     if request.method == 'POST':
-        # Аль үйлдэл хийгдсэнээс хамаарч зөвхөн тухайн формыг боловсруулна
         if 'search_users' in request.POST:
             search_form = UserSearchForm(request.POST)
-            add_user_form = AddUserForm() # Нөгөө формыг хоосон үлдээх
+            add_user_form = AddUserForm()
             if search_form.is_valid():
                 search_results = search_form.search_users()
 
         elif 'add_user' in request.POST:
             add_user_form = AddUserForm(request.POST)
-            search_form = UserSearchForm() # Нөгөө формыг хоосон үлдээх
+            search_form = UserSearchForm()
             if add_user_form.is_valid():
                 try:
                     with transaction.atomic():
@@ -107,7 +172,6 @@ def manage_school_by_level(request, school_id, level_id):
                         new_user.username = f'u{new_user.id}'
                         new_user.save()
 
-                        # Шинэ хэрэглэгчийн UserMeta-г үүсгэх
                         meta_data = {
                             'user': new_user,
                             'school': request.user.data.school,
@@ -120,8 +184,6 @@ def manage_school_by_level(request, school_id, level_id):
                         new_user.groups.add(group)
 
                     try:
-                        # TODO: Plaintext password илгээх нь аюулгүй байдлын эрсдэлтэй.
-                        # Нууц үг сэргээх холбоос илгээдэг болгож сайжруулах хэрэгтэй.
                         subject = 'ММОХ - Шинэ бүртгэл'
                         message = f'Сайн байна уу, {new_user.first_name}.\n\nТаны хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}'
                         send_mail(subject, message, 'baysa@mmo.mn', [new_user.email])
@@ -142,18 +204,26 @@ def manage_school_by_level(request, school_id, level_id):
             user_to_add = get_object_or_404(User, id=user_id)
 
             # --- ШИНЭЭР НЭМЭГДСЭН ШАЛГАЛТ ---
-            # Хэрэглэгч өөр сургуулийн группт байгаа эсэхийг шалгах
-            # Django-ийн админ (is_staff) болон тухайн сургуулийн группээс бусад группыг шалгана.
-            existing_school_groups = user_to_add.groups.exclude(name=group.name).filter(school__isnull=False)
+            # Нэмэх гэж буй сурагч өөр сургуулийн группт байгаа эсэхийг шалгах
+            existing_school_groups = user_to_add.groups.filter(school__isnull=False)
 
-            if existing_school_groups.exists():
-                other_school_name = existing_school_groups.first().school.name
-                messages.error(request, f"'{user_to_add.get_full_name()}' хэрэглэгч '{other_school_name}' сургуульд аль хэдийн бүртгэлтэй байна.")
+            # Хэрэв хүсэлт илгээгч staff биш бөгөөд сурагч өөр сургуульд бүртгэлтэй бол
+            if not request.user.is_staff and existing_school_groups.exists():
+                other_school_name = existing_school_groups.first().school
+                messages.error(request, f"'{user_to_add.get_full_name()}' хэрэглэгч '{other_school_name}' сургуульд аль хэдийн бүртгэлтэй тул нэмэх боломжгүй. Зөвхөн системийн админ шилжүүлэг хийх боломжтой. Эсвэл хэрэглэгч өөрийн бүртгэлд өөрчлөлт оруулж болно.")
             else:
+                # Staff эрхтэй хэрэглэгч эсвэл ямар нэг сургуульд харьяалалгүй сурагчийг нэмэх
                 group.user_set.add(user_to_add)
-                messages.success(request, f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг сургуульд амжилттай нэмлээ.")
 
-            return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+                # Хэрэв сурагч өөр сургуулиас шилжиж ирж байгаа бол (staff хийсэн бол) хуучин группээс хасах
+                if request.user.is_staff and existing_school_groups.exists():
+                    for g in existing_school_groups:
+                        g.user_set.remove(user_to_add)
+                    messages.success(request, f"'{user_to_add.get_full_name()}' хэрэглэгчийг хуучин сургуулиас нь хасаж, энэ сургуульд амжилттай нэмлээ.")
+                else:
+                    messages.success(request, f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг сургуульд амжилттай нэмлээ.")
+
+            return redirect('manage_school_by_level', school_id=school_id, level_id=user_to_add.data.level_id)
 
         elif 'remove_user' in request.POST:
             search_form = UserSearchForm()
@@ -164,13 +234,7 @@ def manage_school_by_level(request, school_id, level_id):
             messages.info(request, f"'{user_to_remove.get_full_name() or user_to_remove.username}' хэрэглэгчийг сургуулиас хаслаа.")
             return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
-        else:
-            # Танигдаагүй POST хүсэлт ирвэл формуудыг хоосон харуулах
-            search_form = UserSearchForm()
-            add_user_form = AddUserForm()
-
     else:
-        # GET хүсэлтийн үед бүх формыг хоосон үүсгэх
         search_form = UserSearchForm()
         add_user_form = AddUserForm()
 
@@ -186,25 +250,274 @@ def manage_school_by_level(request, school_id, level_id):
     return render(request, 'schools/manage_school.html', context)
 
 @login_required
+def school_level_olympiad_view(request, school_id, level_id, olympiad_id):
+    school = get_object_or_404(School, id=school_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if level_id == 0:
+        selected_level = {'id': 0, 'name': 'Ангилалгүй'}
+    else:
+        selected_level = get_object_or_404(Level, id=level_id)
+
+    upload_form = UploadExcelForm()
+    context = {
+        'school': school,
+        'olympiad': olympiad,
+        'selected_level': selected_level,
+        'upload_form': upload_form,
+    }
+    return render(request, 'schools/school_level_olympiad_detail.html', context)
+
+
+@login_required
+def generate_school_answer_sheet(request, school_id, olympiad_id):
+    """Сонгосон сургууль, олимпиадын хариултын хуудсыг үүсгэж, шууд download хийлгэнэ."""
+    school = get_object_or_404(School, pk=school_id)
+    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+
+    # Эрхийн шалгалт
+    if not request.user.is_staff and school not in request.user.moderating.all():
+        messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй.')
+        return redirect('school_dashboard', school_id=school_id)
+
+    # Дата бэлдэх
+    level = olympiad.level
+    contestants = User.objects.filter(groups=school.group, data__level=level).order_by('last_name', 'first_name')
+    problems = olympiad.problem_set.all().order_by('order')
+
+    # 1-р Sheet: Хариулт
+    answers_data = []
+    for c in contestants:
+        answers_data.append({
+            'ID': c.id,
+            'Овог': c.last_name,
+            'Нэр': c.first_name,
+            **{f'№{p.order}': '' for p in problems}
+        })
+    header = ['ID', 'Овог', 'Нэр'] + [f'№{p.order}' for p in problems]
+    answers_df = pd.DataFrame(answers_data, columns=header)
+
+    # 2-р Sheet: Мэдээлэл
+    info_data = {
+        'Түлхүүр': ['olympiad_id', 'olympiad_name', 'school_id', 'school_name', 'level_id', 'level_name'],
+        'Утга': [olympiad.id, olympiad.name, school.id, school.name, level.id, level.name]
+    }
+    info_df = pd.DataFrame(info_data)
+
+    # Excel файлыг санах ойд үүсгэх
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        answers_df.to_excel(writer, sheet_name='Хариулт', index=False)
+        info_df.to_excel(writer, sheet_name='Мэдээлэл', index=False)
+
+        # Style-г тохируулах workbook болон worksheet-г авах
+        workbook = writer.book
+        worksheet = writer.sheets['Хариулт']
+
+        # Style-уудыг тодорхойлох
+        thin_border = Border(left=Side(style='thin'),
+                             right=Side(style='thin'),
+                             top=Side(style='thin'),
+                             bottom=Side(style='thin'))
+        bold_font = Font(bold=True)
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        # Header буюу эхний мөрийг загварчлах
+        for cell in worksheet["1:1"]:
+            cell.font = bold_font
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Үндсэн өгөгдлийн нүднүүдэд хүрээ нэмэх
+        for row in worksheet.iter_rows(min_row=2,
+                                       max_row=worksheet.max_row,
+                                       max_col=worksheet.max_column):
+            for cell in row:
+                cell.border = thin_border
+
+        # Баганын өргөнийг тохируулах
+        for i, column_cells in enumerate(worksheet.columns):
+            column_letter = column_cells[0].column_letter
+            if i < 3: # ID, Овог, Нэр баганууд
+                length = max(len(str(cell.value)) for cell in column_cells)
+                worksheet.column_dimensions[column_letter].width = length + 2
+            else: # Хариултын баганууд
+                worksheet.column_dimensions[column_letter].width = 5
+
+    output.seek(0)
+
+    # Хэрэглэгчид файл болгож буцаах
+    filename = f"answer_sheet_{olympiad.id}_{school.id}.xlsx"
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+
+@login_required
+def import_school_answer_sheet(request, school_id, olympiad_id):
+    """Бөглөсөн хариултын хуудсыг хүлээн авч, шууд импорт хийнэ."""
+    school = get_object_or_404(School, pk=school_id)
+    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+
+    if request.method == 'POST':
+        form = UploadExcelForm(request.POST, request.FILES)
+        if form.is_valid():
+            excel_file = request.FILES['file']
+
+            try:
+                # --- ФАЙЛ БОЛОВСРУУЛАХ ҮНДСЭН ЛОГИК ---
+                df_info = pd.read_excel(excel_file, sheet_name='Мэдээлэл')
+                info_dict = pd.Series(df_info.Утга.values, index=df_info.Түлхүүр).to_dict()
+
+                # Файл зөв олимпиад, сургуульд зориулагдсан эсэхийг шалгах
+                if int(info_dict.get('olympiad_id')) != olympiad.id or int(info_dict.get('school_id')) != school.id:
+                    messages.error(request, "Та буруу олимпиад эсвэл сургуульд зориулсан файл хуулахыг оролдлоо.")
+                    return redirect('school_dashboard', school_id=school_id)
+
+                df = pd.read_excel(excel_file, sheet_name='Хариулт')
+                problems_map = {p.order: p for p in Problem.objects.filter(olympiad=olympiad)}
+
+                updated_count, created_count, skipped_rows, errors = 0, 0, 0, []
+
+                for index, row in df.iterrows():
+                    user_id = row.get('ID')
+                    if pd.isna(user_id):
+                        skipped_rows += 1
+                        continue
+
+                    try:
+                        user = User.objects.get(pk=int(user_id))
+                        # Сурагч тухайн сургуульд харьяалагддаг эсэхийг шалгах
+                        if not user.groups.filter(pk=school.group.id).exists():
+                            skipped_rows += 1
+                            errors.append(f"Мөр {index + 2}: {user.first_name} хэрэглэгч энэ сургуульд харьяалагддаггүй.")
+                            continue
+
+                        with transaction.atomic():
+                            for order, problem in problems_map.items():
+                                column_name = f'№{order}'
+                                if column_name in df.columns:
+                                    answer = row[column_name]
+                                    if pd.notna(answer) and str(answer).strip() != '':
+                                        try:
+                                            submitted_answer = int(float(answer))
+                                            if submitted_answer <= 0: raise ValueError
+
+                                            _, created = Result.objects.update_or_create(
+                                                contestant=user, olympiad=olympiad, problem=problem,
+                                                defaults={'answer': submitted_answer}
+                                            )
+                                            if created: created_count += 1
+                                            else: updated_count += 1
+                                        except (ValueError, TypeError):
+                                            pass # Буруу форматтай хариултыг алгасах
+
+                    except User.DoesNotExist:
+                        skipped_rows += 1
+                        errors.append(f"Мөр {index + 2}: ID={int(user_id)} хэрэглэгч олдсонгүй.")
+                        continue
+
+                summary = f"Амжилттай боловсрууллаа. Үүссэн: {created_count}, Шинэчлэгдсэн: {updated_count}, Алгассан: {skipped_rows}."
+                messages.success(request, summary)
+                if errors:
+                    messages.warning(request, "Дараах алдаанууд гарлаа: " + " | ".join(errors[:3])) # Эхний 3 алдааг харуулах
+
+            except Exception as e:
+                messages.error(request, f"Файл боловсруулахад алдаа гарлаа: {e}")
+
+            return redirect('school_dashboard', school_id=school_id)
+        else:
+            messages.error(request, "Файл хуулахад алдаа гарлаа. Та зөв файл сонгосон эсэхээ шалгана уу.")
+
+    return redirect('school_dashboard', school_id=school_id)
+
+
+@login_required
+def view_school_olympiad_results(request, school_id, olympiad_id):
+    """Тухайн сургуулийн, тухайн олимпиадын дүнг харуулна."""
+    school = get_object_or_404(School, pk=school_id)
+    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+
+    # --- Эрхийн шалгалт ---
+    if not request.user.is_staff and school not in request.user.moderating.all():
+        messages.error(request, 'Та энэ сургуулийн дүнг харах эрхгүй.')
+        return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
+
+    # --- Дүн боловсруулах логик (result_views.py-аас авсан) ---
+
+    # Тухайн сургуулийн группт хамаарах хэрэглэгчдийг олох
+    users_in_school = school.group.user_set.all()
+
+    # Тухайн олимпиад болон сургуулийн хэрэглэгчдэд хамаарах дүнгийн мэдээллийг шүүх
+    results_qs = Result.objects.filter(olympiad_id=olympiad_id, contestant__in=users_in_school)
+
+    if not results_qs.exists():
+        messages.info(request, 'Энэ олимпиадад танай сургуулиас оролцсон сурагчийн дүн олдсонгүй.')
+        # Дүнгүй үед харуулах хуудсыг буцааж болно, эсвэл dashboard руу буцаана.
+        # Энд түр dashboard руу буцаах сонголтыг хийлээ.
+        return redirect('school_dashboard', school_id=school_id)
+
+    # Pandas DataFrame болгох
+    results_df = read_frame(results_qs, fieldnames=['contestant_id', 'problem_id', 'score'])
+    users_df = read_frame(users_in_school, fieldnames=['id', 'last_name', 'first_name', 'data__grade__name'])
+
+    # Pivot table үүсгэж, бодлого бүрийн оноог багана болгох
+    pivot = results_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
+
+    # Нийт оноог тооцоолох
+    pivot["Дүн"] = pivot.sum(axis=1)
+
+    # Хэрэглэгчийн мэдээлэлтэй нэгтгэх
+    final_results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='inner')
+
+    # Дүнгээр нь эрэмбэлэх
+    final_results.sort_values(by='Дүн', ascending=False, inplace=True)
+
+    # Хүснэгтийн баганын нэрсийг ойлгомжтой болгох
+    final_results.rename(columns={
+        'id': 'ID',
+        'first_name': 'Нэр',
+        'last_name': 'Овог',
+        'data__grade__name': 'Анги',
+    }, inplace=True)
+
+    # Бодлогын ID-г №1, №2 гэх мэтээр солих
+    for problem in olympiad.problem_set.all().order_by('order'):
+        final_results.rename(columns={problem.id: f'№{problem.order}'}, inplace=True)
+
+    # Байр эзлүүлэх (index-г ашиглах)
+    final_results.index = np.arange(1, len(final_results) + 1)
+
+    # Хүснэгтийг HTML болгож хувиргах
+    results_html = final_results.to_html(classes='table table-bordered table-striped table-hover', na_rep="-", escape=False)
+
+    context = {
+        'school': school,
+        'olympiad': olympiad,
+        'results_html': results_html,
+    }
+    return render(request, 'schools/school_olympiad_results.html', context)
+
+@login_required
 def edit_user_in_group(request, user_id):
     """
     Handles editing a student's profile information by a school moderator.
-    Provides context for the "back" links in the template.
     """
     target_user = get_object_or_404(User, id=user_id)
 
-    # --- ШИНЭЧИЛСЭН ЛОГИК ---
     if request.user.is_staff:
-        # Хэрэв staff бол сурагчийн харьяалагддаг эхний сургуулийг олно
         school = School.objects.filter(group__user=target_user).first()
     else:
-        # Хэрэв энгийн модератор бол өөрийн удирддаг сургууль мөн эсэхийг шалгана
         school = School.objects.filter(group__user=target_user, user=request.user).first()
         if not school:
             messages.error(request, 'Та энэ хэрэглэгчийг засах эрхгүй.')
             return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
 
-    # Ensure the user has a UserMeta profile.
     user_meta = get_object_or_404(UserMeta, user=target_user)
 
     if request.method == 'POST':
@@ -227,15 +540,13 @@ def edit_user_in_group(request, user_id):
         'user_meta_form': user_meta_form,
         'target_user': target_user,
         'school': school,
-        'level': user_meta.level, # Pass the level for the back link
+        'level': user_meta.level,
     }
-    print(context['school'], context['level'])
     return render(request, 'schools/edit_user_in_group.html', context)
 
 @login_required
 def edit_profile(request):
-    # This view is for users editing their own profile.
-    # It doesn't need the back link logic.
+    """This view is for users editing their own profile."""
     user = request.user
     user_meta, created = UserMeta.objects.get_or_create(user=user)
 
@@ -257,3 +568,72 @@ def edit_profile(request):
     }
     return render(request, 'schools/edit_profile.html', context)
 
+@login_required
+def add_student_to_group_view(request, school_id, user_id):
+    school = get_object_or_404(School, id=school_id)
+    student = get_object_or_404(User, id=user_id)
+
+    # Эрхийн шалгалт
+    if not request.user.is_staff and school not in request.user.moderating.all():
+        messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй.')
+        return redirect('school_dashboard', school_id=school.id)
+
+    # Сурагчийг сургуулийн группт нэмэх
+    if school.group:
+        # Шалгалт: Сурагч үнэхээр энэ сургуулийг сонгосон эсэх
+        if student.data.school == school:
+            school.group.user_set.add(student)
+            messages.success(request, f"'{student.get_full_name()}' сурагчийг сургуулийн бүлэгт амжилттай нэмлээ.")
+        else:
+            messages.warning(request, f"'{student.get_full_name()}' сурагч энэ сургуулийг сонгоогүй байна.")
+    else:
+        messages.error(request, "Энэ сургуульд групп оноогоогүй тул сурагч нэмэх боломжгүй.")
+
+    return redirect('school_dashboard', school_id=school.id)
+
+# ... (import-ууд) ...
+from .forms import SchoolAdminPasswordChangeForm
+
+@login_required
+def change_student_password_view(request, user_id):
+    """
+    Сургуулийн модератор нь сурагчийн нууц үгийг солих хуудас.
+    """
+    target_user = get_object_or_404(User, id=user_id)
+    moderator = request.user
+
+    # --- АЮУЛГҮЙ БАЙДЛЫН ШАЛГАЛТУУД ---
+    # 1. Засварлах гэж буй хэрэглэгч нь staff/superuser биш байх ёстой.
+    if target_user.is_staff or target_user.is_superuser:
+        messages.error(request, "Та staff эрхтэй хэрэглэгчийн нууц үгийг солих боломжгүй.")
+        return redirect('school_dashboard', school_id=moderator.data.school.id) # Өөрийнх нь dashboard руу буцаах
+
+    # 2. Модератор нь тухайн сурагчийн сургуульд хамааралтай эсэхийг шалгах.
+    try:
+        # Сурагчийн сургуулийг олох
+        student_school = target_user.data.school
+        # Модераторын удирддаг сургуулиудыг олох
+        moderator_schools = School.objects.filter(user=moderator)
+
+        if (not student_school or not moderator_schools.filter(pk=student_school.pk).exists()) and not request.user.is_staff:
+            messages.error(request, "Та энэ сурагчийн нууц үгийг солих эрхгүй.")
+            return redirect('school_dashboard', school_id=moderator.data.school.id)
+    except UserMeta.DoesNotExist:
+        messages.error(request, "Сурагчийн профайлын мэдээлэл олдсонгүй.")
+        return redirect('school_dashboard', school_id=moderator.data.school.id)
+
+    if request.method == 'POST':
+        form = SchoolAdminPasswordChangeForm(user=target_user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн нууц үгийг амжилттай солилоо.")
+            # Буцах замыг зөв тодорхойлох
+            return redirect('manage_school_by_level', school_id=student_school.id, level_id=target_user.data.level.id)
+    else:
+        form = SchoolAdminPasswordChangeForm(user=target_user)
+
+    context = {
+        'form': form,
+        'target_user': target_user,
+    }
+    return render(request, 'schools/change_student_password.html', context)

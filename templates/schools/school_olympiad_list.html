@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-1">Олимпиадын удирдлага: {{ school.name }}</h2>
+    <a href="{% url 'school_dashboard' school.id %}" class="btn btn-secondary btn-sm mb-4">&larr; Удирдлагын самбар луу буцах</a>
+    <hr>
+
+    <p>Олимпиад бүрийн хувьд хариултын хуудасны загвар үүсгэх, бөглөсөн файлаа импортлох, оруулсан дүнгээ харах боломжтой.</p>
+
+    {% for olympiad in olympiads %}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ olympiad.name }} ({{ olympiad.get_level }})</h5>
+            <small>{{ olympiad.start_time|date:"Y-m-d" }} - {{ olympiad.end_time|date:"Y-m-d" }}</small>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <a href="{% url 'generate_school_answer_sheet' school.id olympiad.id %}" class="btn btn-primary w-100">
+                        <i class="fas fa-file-excel"></i> Загвар татах
+                    </a>
+                </div>
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <form action="{% url 'import_school_answer_sheet' school.id olympiad.id %}" method="post" enctype="multipart/form-data" class="d-flex">
+                        {% csrf_token %}
+                        {{ upload_form.file }}
+                        <button type="submit" class="btn btn-success ms-2">
+                            <i class="fas fa-upload"></i> Хуулах
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-4">
+                    <a href="{% url 'view_school_olympiad_results' school.id olympiad.id %}" class="btn btn-info w-100">
+                        <i class="fas fa-chart-bar"></i> Дүн харах
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Одоогоор идэвхтэй олимпиад байхгүй байна.</div>
+    {% endfor %}
+</div>
+{% endblock %}

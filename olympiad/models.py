@@ -4,8 +4,6 @@ from accounts.models import Author, Province, Zone, Grade, Level
 from datetime import datetime, timezone, timedelta
 from schools.models import School
 
-# Create your models here.
-
 
 class SchoolYear(models.Model):
     id = models.AutoField(primary_key=True)
@@ -101,15 +99,6 @@ class Olympiad(models.Model):
 
     class Meta:
         ordering = ['-school_year_id','-id']
-
-
-class Round(models.Model):
-    name = models.CharField(max_length=100)
-    descr = models.TextField(null=True, blank=True)
-    is_official = models.BooleanField(default=True)
-
-    def __str__(self):
-        return '{}'.format(self.name)
 
 
 class Topic(models.Model):

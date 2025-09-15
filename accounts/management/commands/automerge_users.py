@@ -28,7 +28,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if options['all']:
             self._handle_all_duplicates(options)
-        elif options['reg-num']:
+        elif options['reg_num']:
             self._handle_single_reg_num(options)
         else:
             raise CommandError('Та --reg-num эсвэл --all параметрийн аль нэгийг заавал ашиглах ёстой.')
