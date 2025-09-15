@@ -14,7 +14,7 @@ class UserForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Имэйл'}),
         }
         help_texts = {
-            'email': 'Итгэмжлэгдсэн имэйл хаягаа оруулна уу.',
+            'email': 'Итгэмжлэгдсэн имэйл хаяг.',
         }
         labels = {
             'last_name': 'Овог',
@@ -25,23 +25,15 @@ class UserForm(forms.ModelForm):
 class UserMetaForm(forms.ModelForm):
     class Meta:
         model = UserMeta
-        fields = ['photo', 'province', 'grade', 'level', 'gender', 'mobile', 'is_valid']
+        fields = ['grade', 'level', 'gender', 'mobile', 'is_valid']
         widgets = {
-            # 'reg_num': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Регистрийн дугаар'}),
-            'province': forms.Select(attrs={'class': 'form-control'}),
-            # 'school': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Сургууль'}),
             'mobile': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Гар утас'}),
             'is_valid': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         help_texts = {
-            # 'reg_num': 'Регистрийн дугаараа оруулна уу.',
             'mobile': 'Гар утасны дугаар оруулна уу.',
         }
         labels = {
-            'photo': 'Зураг',
-             # 'reg_num': 'Регистрийн дугаар',
-            'province': 'Аймаг',
-            # 'school': 'Сургууль',
             'grade': 'Анги',
             'level': 'Ангилал',
             'gender': 'Хүйс',
@@ -67,7 +59,7 @@ class UserSearchForm(forms.Form):
             Q(first_name__icontains=query) |
             Q(last_name__icontains=query) |
             Q(email__icontains=query) |
-            Q(data__school__icontains=query) |
+            Q(data__school__name__icontains=query) |
             Q(data__reg_num__icontains=query) |
             Q(data__mobile__icontains=query)
         )

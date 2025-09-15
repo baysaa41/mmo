@@ -154,7 +154,6 @@ class UserMetaForm(forms.ModelForm):
             # Өмнө нь сонгогдсон аймаг байвал түүнд хамаарах сургуулиудыг харуулах
             self.fields['school'].queryset = School.objects.filter(province=self.instance.province).order_by('name')
 
-
 class LoginForm(forms.Form):
     username = forms.CharField(label='Хэрэглэгчийн нэр (Username):')
     password = forms.CharField(

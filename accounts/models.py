@@ -64,6 +64,30 @@ class UserMeta(models.Model):
     def __str__(self):
         return '{}'.format(self.user.username)
 
+    def save(self, *args, **kwargs):
+        # --- ШИНЭЭР НЭМЭГДСЭН ЛОГИК ---
+        # Хэрэв обьект шинээр үүсээгүй (засагдаж байгаа) бол хуучин сургуулийг шалгах
+        if self.pk:
+            try:
+                # Мэдээллийн сангаас хуучин хувилбарыг авах
+                old_meta = UserMeta.objects.get(pk=self.pk)
+                old_school = old_meta.school
+                new_school = self.school
+
+                # Хэрэв сургууль солигдсон бөгөөд хуучин сургууль нь групптэй бол
+                if old_school != new_school and old_school and old_school.group:
+                    # Хэрэглэгчийг хуучин сургуулийн группээс хасах
+                    old_school.group.user_set.remove(self.user)
+            except UserMeta.DoesNotExist:
+                pass # Шинэ обьект бол алгасах
+
+        # Шинэ сургуулийн группт нэмэх (хэрэв сургууль сонгогдсон бол)
+        if self.school and self.school.group:
+            print(self.school.group.name)
+            self.school.group.user_set.add(self.user)
+
+        super().save(*args, **kwargs) # Үндсэн хадгалах үйлдлийг дуудах
+
 class TeacherStudent(models.Model):
     teacher = models.ForeignKey(User, related_name='students', on_delete=models.CASCADE)
     student = models.ForeignKey(User, related_name='teachers', on_delete=models.CASCADE)

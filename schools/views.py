@@ -140,8 +140,19 @@ def manage_school_by_level(request, school_id, level_id):
             add_user_form = AddUserForm()
             user_id = request.POST.get('user_id')
             user_to_add = get_object_or_404(User, id=user_id)
-            group.user_set.add(user_to_add)
-            messages.success(request, f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг сургуульд амжилттай нэмлээ.")
+
+            # --- ШИНЭЭР НЭМЭГДСЭН ШАЛГАЛТ ---
+            # Хэрэглэгч өөр сургуулийн группт байгаа эсэхийг шалгах
+            # Django-ийн админ (is_staff) болон тухайн сургуулийн группээс бусад группыг шалгана.
+            existing_school_groups = user_to_add.groups.exclude(name=group.name).filter(school__isnull=False)
+
+            if existing_school_groups.exists():
+                other_school_name = existing_school_groups.first().school.name
+                messages.error(request, f"'{user_to_add.get_full_name()}' хэрэглэгч '{other_school_name}' сургуульд аль хэдийн бүртгэлтэй байна.")
+            else:
+                group.user_set.add(user_to_add)
+                messages.success(request, f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг сургуульд амжилттай нэмлээ.")
+
             return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
         elif 'remove_user' in request.POST:
