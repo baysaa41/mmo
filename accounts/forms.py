@@ -129,7 +129,7 @@ class UserMetaForm(forms.ModelForm):
         labels = {
             'reg_num': 'Регистрийн дугаар:',
             'province': 'Аймаг, дүүрэг (сургуулийн):',
-            'school': 'Сургууль:',
+            'school': 'Үндсэн сургууль:',
             'grade': 'Анги:',
             'level': 'Ангилал',
             'gender': 'Хүйс:',

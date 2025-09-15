@@ -3,9 +3,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from olympiad.models import Olympiad, ScoreSheet
 from accounts.models import Province, Zone
-# data.py файлаас to_scoresheet функцийг импортлох
 from olympiad.utils.data import to_scoresheet
-# ranking.py файлаас эрэмбэ тооцоолох функцүүдийг импортлох
 from olympiad.utils.ranking import (
     update_rankings_a, update_rankings_b,
     update_rankings_a_p, update_rankings_b_p,
@@ -13,62 +11,54 @@ from olympiad.utils.ranking import (
 )
 
 class Command(BaseCommand):
-    help = 'Generates ScoreSheet entries using to_scoresheet function and then calculates all rankings.'
+    help = 'Онооны хуудсыг үүсгэж, бүх эрэмбийг тооцоолно.'
 
     def add_arguments(self, parser):
-            parser.add_argument('olympiad_id', type=int, help='...')
-            # Устгах үйлдлийг алгасах --no-delete гэсэн сонголт нэмэх
-            parser.add_argument(
-                '--no-delete',
-                action='store_true',
-                help='Do not delete existing scoresheets before generating new ones.',
-            )
+        parser.add_argument('--olympiad-id', type=int, required=True, help='Онооны хуудас үүсгэх Олимпиадын ID')
+        parser.add_argument(
+            '--force-delete',
+            action='store_true',
+            help='Шинээр үүсгэхийн өмнө хуучин онооны хуудсыг баталгаажуулалтгүйгээр устгана.',
+        )
 
     def handle(self, *args, **options):
         olympiad_id = options['olympiad_id']
-        # ...
 
-        # --no-delete сонголт хийгээгүй үед л устгах
-        if not options['no_delete']:
-            self.stdout.write(self.style.WARNING('Deleting old scoresheets to prevent stale data...'))
-
-            # Баталгаажуулалт асуух
-            confirmation = input('Are you sure you want to delete all scoresheets for this olympiad? (yes/no): ')
-            if confirmation.lower() != 'yes':
-                self.stdout.write(self.style.ERROR('Operation cancelled by user.'))
-                return
-
+        if options['force_delete']:
+            self.stdout.write(self.style.WARNING(f'--force-delete туг ашигласан тул Олимпиад ID={olympiad_id}-д хамаарах хуучин онооны хуудсыг устгаж байна...'))
             deleted_count, _ = ScoreSheet.objects.filter(olympiad_id=olympiad_id).delete()
-            self.stdout.write(self.style.SUCCESS(f'Deleted {deleted_count} old scoresheet entries.'))
+            self.stdout.write(self.style.SUCCESS(f'{deleted_count} хуучин онооны хуудас устгагдлаа.'))
 
-        # 1. to_scoresheet функцийг дуудаж ScoreSheet-үүдийг үүсгэх
-        self.stdout.write('Generating scoresheets using to_scoresheet function...')
+        # 1. Сайжруулсан to_scoresheet функцийг дуудах
+        self.stdout.write('Онооны хуудсыг үүсгэж/шинэчилж байна...')
         try:
             to_scoresheet(olympiad_id)
-            self.stdout.write(self.style.SUCCESS('All scoresheets generated/updated successfully.'))
+            self.stdout.write(self.style.SUCCESS('Онооны хуудсууд амжилттай үүслээ.'))
         except Exception as e:
-            raise CommandError(f'An error occurred during scoresheet generation: {e}')
+            raise CommandError(f'Онооны хуудас үүсгэхэд алдаа гарлаа: {e}')
 
-        # 2. Эрэмбийг тооцоолох (ranking.py-г ашиглах)
-        self.stdout.write('Calculating rankings...')
+        # 2. Эрэмбийг тооцоолох
+        self.stdout.write('Эрэмбэ тооцоолж байна...')
 
         # Нийт эрэмбэ
         update_rankings_a(olympiad_id)
         update_rankings_b(olympiad_id)
-        self.stdout.write(self.style.SUCCESS('... Overall rankings updated.'))
+        self.stdout.write(self.style.SUCCESS('... Улсын нийт эрэмбэ шинэчлэгдлээ.'))
 
-        # Аймгийн эрэмбэ
-        provinces = Province.objects.all()
-        for province in provinces:
-            update_rankings_a_p(olympiad_id, province.id)
-            update_rankings_b_p(olympiad_id, province.id)
-        self.stdout.write(self.style.SUCCESS('... Provincial rankings updated.'))
+        # Зөвхөн оролцогчид байгаа аймаг, бүсүүдийг олж авах
+        active_provinces = ScoreSheet.objects.filter(olympiad_id=olympiad_id, user__data__province__isnull=False).values_list('user__data__province_id', flat=True).distinct()
+        active_zones = ScoreSheet.objects.filter(olympiad_id=olympiad_id, user__data__province__zone__isnull=False).values_list('user__data__province__zone_id', flat=True).distinct()
 
-        # Бүсийн эрэмбэ
-        zones = Zone.objects.all()
-        for zone in zones:
-            update_rankings_a_z(olympiad_id, zone.id)
-            update_rankings_b_z(olympiad_id, zone.id)
-        self.stdout.write(self.style.SUCCESS('... Zonal rankings updated.'))
+        # Аймгийн эрэмбэ (зөвхөн оролцогчтой аймгуудаар)
+        for province_id in active_provinces:
+            update_rankings_a_p(olympiad_id, province_id)
+            update_rankings_b_p(olympiad_id, province_id)
+        self.stdout.write(self.style.SUCCESS(f'... {len(active_provinces)} аймгийн эрэмбэ шинэчлэгдлээ.'))
 
-        self.stdout.write(self.style.SUCCESS('All tasks completed!'))
+        # Бүсийн эрэмбэ (зөвхөн оролцогчтой бүсүүдээр)
+        for zone_id in active_zones:
+            update_rankings_a_z(olympiad_id, zone_id)
+            update_rankings_b_z(olympiad_id, zone_id)
+        self.stdout.write(self.style.SUCCESS(f'... {len(active_zones)} бүсийн эрэмбэ шинэчлэгдлээ.'))
+
+        self.stdout.write(self.style.SUCCESS('\nҮйлдэл амжилттай дууслаа!'))

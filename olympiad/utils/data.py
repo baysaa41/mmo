@@ -54,7 +54,7 @@ def to_scoresheet(olympiad_id):
         results_list = list(results_group)
         contestant = results_list[0].contestant
 
-        school_obj = contestant.data.get_school_object()
+        school_obj = contestant.data.school
 
         score_fields = {'school': school_obj}
         # Онооны талбаруудыг тэглэх (21 гэж хатуу бичихийн оронд)

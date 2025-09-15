@@ -419,6 +419,6 @@ class ScoreSheet(models.Model):
 
     def save(self, *args, **kwargs):
         # Calculate the total score
-        self.school = self.user.data.get_school_object()
+        self.school = self.user.data.school
         self.total = sum(getattr(self, f"s{i+1}") or 0 for i in range(20))  # Using `or 0` to handle None values
         super().save(*args, **kwargs)
