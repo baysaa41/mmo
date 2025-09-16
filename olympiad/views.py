@@ -363,6 +363,7 @@ def get_result_form(request):
 
 def result_viewer(request):
     result_id = int(request.GET.get('result_id', 0))
+    result = get_object_or_404(Result, pk=result_id)
     if result_id > 0:
         return render(request, "olympiad/result_view.html", {'result': result})
 
