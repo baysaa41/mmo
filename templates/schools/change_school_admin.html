@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">'{{ school.name }}' сургуулийн админ солих</h2>
+    <a href="{% url 'manage_all_schools' %}" class="btn btn-secondary btn-sm mb-4">&larr; Бүх сургуулийн жагсаалт руу буцах</a>
+    <hr>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Шинэ админ хайх</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ search_form|crispy }}
+                        <button type="submit" class="btn btn-primary mt-2">Хайх</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            {% if search_results %}
+                <h5>Хайлтын үр дүн:</h5>
+                <ul class="list-group">
+                    {% for user in search_results %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ user.get_full_name }}</strong> ({{ user.username }})<br>
+                                <small class="text-muted">{{ user.email }}</small>
+                            </div>
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                <button type="submit" name="assign_admin" class="btn btn-sm btn-success">Энэ хэрэглэгчийг сонгох</button>
+                            </form>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">Хайлтад тохирох хэрэглэгч олдсонгүй.</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

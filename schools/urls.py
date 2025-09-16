@@ -11,10 +11,18 @@ from .views import (
     school_level_olympiad_view,
     add_student_to_group_view,
     change_student_password_view,
+    manage_all_schools_view,
+    change_school_admin_view,
+    edit_school_admin_view,
+    change_school_admin_password_view,
 )
 
 urlpatterns = [
     path('', school_moderators_view, name='school_moderators_list'),
+    path('manage-all/', manage_all_schools_view, name='manage_all_schools'),
+    path('<int:school_id>/change-admin/', change_school_admin_view, name='change_school_admin'),
+    path('edit-admin/<int:user_id>/', edit_school_admin_view, name='edit_school_admin'),
+    path('change-admin-password/<int:user_id>/', change_school_admin_password_view, name='change_school_admin_password'),
     path('<int:school_id>/', school_dashboard, name='school_dashboard'),
     path('<int:school_id>/level/<int:level_id>/', manage_school_by_level, name='manage_school_by_level'),
 

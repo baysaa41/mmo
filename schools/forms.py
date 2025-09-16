@@ -4,6 +4,7 @@ User = get_user_model()
 from django.db.models import Q
 from accounts.models import UserMeta
 from django.contrib.auth.forms import SetPasswordForm
+from schools.models import School
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -103,3 +104,25 @@ class SchoolAdminPasswordChangeForm(SetPasswordForm):
 class UploadExcelForm(forms.Form):
     file = forms.FileField(label="Дүнгийн Excel файл оруулах")
 
+
+class SchoolModeratorChangeForm(forms.Form):
+    # Зөвхөн модератор байх боломжтой хэрэглэгчдийг шүүж харуулах нь зүйтэй.
+    user = forms.ModelChoiceField(
+        queryset=User.objects.order_by('last_name', 'first_name'),
+        label="Шинэ модератор сонгох",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+
+class ChangeSchoolAdminForm(forms.Form):
+    school = forms.ModelChoiceField(
+        queryset=School.objects.select_related('province').order_by('province__name', 'name'),
+        label="Сургууль сонгох",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    user = forms.ModelChoiceField(
+        # Staff биш хэрэглэгчдийг жагсаах нь илүү тохиромжтой
+        queryset=User.objects.filter(is_staff=False).order_by('last_name', 'first_name'),
+        label="Шинэ админ (модератор) сонгох",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )

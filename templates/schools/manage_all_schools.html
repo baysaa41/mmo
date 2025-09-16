@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container">
+        <h2 class="mb-4">Сургуулиудын нэгдсэн удирдлага</h2>
+        <p>Энэ хуудаснаас бүх сургуулийн мэдээллийг харж, модераторыг солих боломжтой.</p>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th>Сургууль</th>
+                    <th>Модератор</th>
+                    <th>Утас</th>
+                    <th>Сүүлд нэвтэрсэн</th>
+                    <th class="text-center" colspan="3">Үйлдэл</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for school in schools %}
+                    <tr>
+                        <td><h5>{{ school.province.name }}</h5><span class="me-2">{{ school.name }}</span><span class="badge bg-primary rounded-pill">{{ school.student_count }}</span></td>
+                        <td>{{ school.user.first_name }}, {{ school.user.username }}</td>
+                        <td>{{ school.user.data.mobile|default:"-" }}</td>
+                        <td>{{ school.user.last_login|date:"Y-m-d" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-warning me-2">
+                                <i class="fas fa-user-edit"></i> Админ
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary m2-2">
+                                <i class="fas fa-user-edit"></i> Профайл
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'change_school_admin_password' school.user.id %}"
+                               class="btn btn-sm btn-secondary">
+                                <i class="fas fa-key"></i> Нууц&nbsp;үг
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

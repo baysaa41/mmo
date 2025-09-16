@@ -29,6 +29,10 @@ from django.db import transaction
 from olympiad.models import Problem, Result
 from .forms import UploadExcelForm
 
+from django.contrib.admin.views.decorators import staff_member_required
+from .forms import SchoolModeratorChangeForm
+from .forms import ChangeSchoolAdminForm
+
 
 @login_required
 def school_moderators_view(request):
@@ -54,7 +58,7 @@ def school_moderators_view(request):
     context = {
         'schools': final_schools,
     }
-    return render(request, 'schools/school_list.html', context)
+    return render(request, 'schools/user_school_list.html', context)
 
 @login_required
 def school_dashboard(request, school_id):
@@ -606,3 +610,128 @@ def change_student_password_view(request, user_id):
         'target_user': target_user,
     }
     return render(request, 'schools/change_student_password.html', context)
+
+
+@staff_member_required
+def manage_all_schools_view(request):
+    """
+    Бүх сургуулийн жагсаалтыг дэлгэрэнгүй мэдээлэлтэй харуулж,
+    модератор солих үйлдэл хийдэг хуудас.
+    """
+    if request.method == 'POST':
+        school_id = request.POST.get('school_id')
+        school_to_change = get_object_or_404(School, id=school_id)
+        form = SchoolModeratorChangeForm(request.POST)
+
+        if form.is_valid():
+            new_moderator = form.cleaned_data['user']
+            school_to_change.user = new_moderator
+            school_to_change.save()
+            messages.success(request, f"'{school_to_change.name}' сургуулийн модераторыг амжилттай солилоо.")
+        else:
+            messages.error(request, "Модератор солиход алдаа гарлаа.")
+
+        return redirect('manage_all_schools')
+
+    # Сургуулиудын жагсаалтыг бүх мэдээлэлтэй нь авах
+    all_schools = School.objects.select_related(
+        'province', 'user', 'user__data'
+    ).annotate(
+        student_count=Count('group__user')
+    ).order_by('province__name', 'name')
+
+    change_form = SchoolModeratorChangeForm()
+
+    context = {
+        'schools': all_schools,
+        'change_form': change_form,
+    }
+    return render(request, 'schools/manage_all_schools.html', context)
+
+@staff_member_required
+def change_school_admin_view(request, school_id):
+    """
+    Сургуулийн админыг хайж олоод солих хуудас.
+    """
+    school = get_object_or_404(School, id=school_id)
+    search_results = None
+
+    if request.method == 'POST':
+        # Хэрэв "assign_admin" үйлдэл хийгдэж байвал
+        if 'assign_admin' in request.POST:
+            user_id = request.POST.get('user_id')
+            new_admin = get_object_or_404(User, id=user_id)
+            school.user = new_admin
+            school.save()
+            messages.success(request, f"'{school.name}' сургуулийн админыг '{new_admin.get_full_name()}' хэрэглэгчээр амжилттай солилоо.")
+            return redirect('manage_all_schools')
+
+        # Хэрэв "search_users" үйлдэл хийгдэж байвал
+        search_form = UserSearchForm(request.POST)
+        if search_form.is_valid():
+            search_results = search_form.search_users()
+
+    else:
+        search_form = UserSearchForm()
+
+    context = {
+        'school': school,
+        'search_form': search_form,
+        'search_results': search_results,
+    }
+    return render(request, 'schools/change_school_admin.html', context)
+
+
+@staff_member_required
+def edit_school_admin_view(request, user_id):
+    """Сургуулийн админы профайлыг засах хуудас."""
+    target_user = get_object_or_404(User, id=user_id)
+    # Админ хэрэглэгчид UserMeta байхгүй бол үүсгэх
+    user_meta, created = UserMeta.objects.get_or_create(user=target_user)
+
+    if request.method == 'POST':
+        user_form = UserForm(request.POST, instance=target_user)
+        user_meta_form = UserMetaForm(request.POST, request.FILES, instance=user_meta)
+        if user_form.is_valid() and user_meta_form.is_valid():
+            user_form.save()
+            user_meta_form.save()
+            messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн мэдээллийг амжилттай шинэчиллээ.")
+            return redirect('manage_all_schools')
+    else:
+        user_form = UserForm(instance=target_user)
+        user_meta_form = UserMetaForm(instance=user_meta)
+
+    context = {
+        'user_form': user_form,
+        'user_meta_form': user_meta_form,
+        'target_user': target_user,
+    }
+    return render(request, 'schools/edit_school_admin.html', context)
+
+
+@staff_member_required
+def change_school_admin_password_view(request, user_id):
+    """Сургуулийн админы нууц үгийг солих хуудас."""
+    target_user = get_object_or_404(User, id=user_id)
+
+    # Аюулгүй байдлын шалгалт: staff хэрэглэгч өөр staff-ийн нууц үгийг солихыг хориглох
+    if target_user.is_staff or target_user.is_superuser:
+        # Өөрийнхөөс бусад staff-ийн нууц үгийг солихгүй
+        if target_user != request.user:
+            messages.error(request, "Та өөр staff эрхтэй хэрэглэгчийн нууц үгийг эндээс солих боломжгүй.")
+            return redirect('manage_all_schools')
+
+    if request.method == 'POST':
+        form = SchoolAdminPasswordChangeForm(user=target_user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн нууц үгийг амжилттай солилоо.")
+            return redirect('manage_all_schools')
+    else:
+        form = SchoolAdminPasswordChangeForm(user=target_user)
+
+    context = {
+        'form': form,
+        'target_user': target_user,
+    }
+    return render(request, 'schools/change_student_password.html', context) # Өмнөх template-г дахин ашиглаж болно

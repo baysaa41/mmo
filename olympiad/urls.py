@@ -57,9 +57,6 @@ urlpatterns = [
     path('update/<int:olympiad_id>/', result_views.update_results, name='update_result_views'),
     # Нэгдүгээр шатны дүнг импортлох
     path('results/import/', result_views.firstRoundResults, name='olympiad_import_first_round'),
-    # Сургуулийн оролцох боломжтой олимпиадын жагсаалт
-    path('quizzes/list/<int:school_id>', views.quiz_list_view, name='quiz_list_view'),
-
 
     # === 5. Нэмэлт Материалтай Холбоотой Замууд ===
     # Сурагч нэмэлт материал илгээх

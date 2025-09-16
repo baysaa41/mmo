@@ -343,13 +343,6 @@ def quiz_staff_view(request, quiz_id, contestant_id):
                                                    'results': results})
 
 
-def quiz_list_view(request, school_id):
-    school = School.objects.get(pk=school_id)
-    quizzes = Olympiad.objects.filter(is_open=True, is_grading=True)
-    return render(request, 'schools/olympiad_list.html', {'contestants': school.group.user_set.all(),
-                                                          'quizzes': quizzes})
-
-
 def get_result_form(request):
     result_id = int(request.GET.get('result_id', 0))
     if result_id > 0:
@@ -362,6 +355,7 @@ def get_result_form(request):
 
 
 def result_viewer(request):
+    # needs fix
     result_id = int(request.GET.get('result_id', 0))
     result = get_object_or_404(Result, pk=result_id)
     if result_id > 0:
