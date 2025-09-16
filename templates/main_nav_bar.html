@@ -1,80 +1,103 @@
 {% load static %}
 {% block main_nav_bar %}
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="{% url 'posts:home' %}">
-            <img src="{% static 'logo.png' %}" alt="logo" style="width: 36px;" class="img-fluid">
-        </a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'posts:home' %}">
+                <img src="{% static 'logo.png' %}" alt="logo" style="width: 36px;" class="img-fluid">
+            </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbarCollapse"
-                aria-controls="mainNavbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbarCollapse"
+                    aria-controls="mainNavbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-        <div class="collapse navbar-collapse" id="mainNavbarCollapse">
+            <div class="collapse navbar-collapse" id="mainNavbarCollapse">
 
-            <ul class="navbar-nav flex-grow-1">
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownOlympiad" role="button"
-                       data-bs-toggle="dropdown" aria-expanded="false">
-                       <i class="fas fa-trophy"></i> ОЛИМПИАД
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="navbarDropdownOlympiad">
-                        <li><a class="dropdown-item" href="{% url 'olympiad_home' %}"><i class="fas fa-calendar-alt fa-fw me-2"></i>Олимпиадын хуваарь</a></li>
-                        <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}"><i class="fas fa-poll fa-fw me-2"></i>Олимпиадын дүн</a>
-                        </li>
-                        <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}"><i class="fas fa-book fa-fw me-2"></i>Олимпиадын
-                            бодлогууд</a></li>
-                        <li><a class="dropdown-item" href="{% url 'posts:post_view' %}?id=435"><i class="fas fa-stream fa-fw me-2"></i>Олимпиадын
-                            цувралууд</a></li>
+                <ul class="navbar-nav flex-grow-1">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownOlympiad" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-trophy me-1"></i> ОЛИМПИАД
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownOlympiad">
+                            <li><a class="dropdown-item" href="{% url 'olympiad_home' %}"><i
+                                    class="fas fa-calendar-alt fa-fw me-2"></i>Олимпиадын хуваарь</a></li>
+                            <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}"><i
+                                    class="fas fa-poll fa-fw me-2"></i>Олимпиадын дүн</a>
+                            </li>
+                            <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}"><i
+                                    class="fas fa-book fa-fw me-2"></i>Олимпиадын
+                                бодлогууд</a></li>
+                            <li><a class="dropdown-item" href="{% url 'posts:post_view' %}?id=435"><i
+                                    class="fas fa-stream fa-fw me-2"></i>Олимпиадын
+                                цувралууд</a></li>
 
-                        {% if user.is_authenticated %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}"><i class="fas fa-upload fa-fw me-2"></i>Материал нэмж
-                                оруулах</a></li>
-                        {% endif %}
-                    </ul>
-                </li>
-
-                {% if user.is_staff or user.moderating.exists %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'school_moderators_list' %}"><i class="fas fa-school"></i> СУРГУУЛИЙН УДИРДЛАГА</a>
-                    </li>
-                {% endif %}
-
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'posts:post_view' %}?id=142" title="Танд тусалъя"><i class="fas fa-question-circle"></i> ТУСЛАМЖ</a>
-                </li>
-            </ul>
-
-            <div class="navbar-nav mx-auto d-none d-lg-block">
-                <img src="/media/banner.gif" class="img-fluid" style="max-height: 50px;">
-            </div>
-
-            <div class="navbar-nav flex-grow-1 justify-content-end">
-                <div class="d-flex align-items-center">
-                    {% if user.is_authenticated %}
-                        <div class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownUser"
-                               role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user-circle"></i> {{ user.first_name|default:user.username }}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
-                                <li><a class="dropdown-item" href="{% url 'user_profile' %}"><i class="fas fa-user-edit fa-fw me-2"></i>Миний профайл</a></li>
+                            {% if user.is_authenticated %}
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
-                                <li><a class="dropdown-item text-danger" href="{% url 'user_logout' %}"><i class="fas fa-sign-out-alt fa-fw me-2"></i>Гарах</a>
-                                </li>
-                            </ul>
-                        </div>
-                    {% else %}
-                        <a href="{% url 'django_registration_register' %}" class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
-                        <a href="{% url 'user_login' %}" class="btn btn-sm btn-warning text-dark">Нэвтрэх</a>
+                                <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}"><i
+                                        class="fas fa-upload fa-fw me-2"></i>Материал нэмж
+                                    оруулах</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+
+                    {% if user.is_staff or user.moderating.exists %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'school_moderators_list' %}"><i
+                                    class="fas fa-school me-1"></i>
+                                СУРГУУЛИЙН УДИРДЛАГА</a>
+                        </li>
                     {% endif %}
+                    {% if not user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'posts:post_view' %}?id=142" title="Танд тусалъя"><i
+                                    class="fas fa-question-circle"></i> ТУСЛАМЖ</a>
+                        </li>
+                    {% endif %}
+                </ul>
+
+                <div class="navbar-nav position-absolute top-50 start-50 translate-middle d-none d-lg-block">
+                    <img src="/media/banner.gif" class="img-fluid" style="max-height: 50px;">
+                </div>
+
+                <div class="navbar-nav flex-grow-1 justify-content-end">
+                    <button class="btn btn-outline-light ms-2 d-none d-lg-block me-2" data-bs-toggle="modal"
+                            data-bs-target="#calendarModal">
+                        📅 Календар
+                    </button>
+                    <div class="d-flex align-items-center">
+                        {% if user.is_authenticated %}
+                            <div class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownUser"
+                                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-circle me-1"></i> {{ user.first_name|default:user.username }}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
+                                    <li><a class="dropdown-item" href="{% url 'user_profile' %}"><i
+                                            class="fas fa-user-edit fa-fw me-2"></i>Миний профайл</a></li>
+                                    {% if user.is_authenticated %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'posts:post_view' %}?id=142"
+                                               title="Танд тусалъя"><i class="fas fa-question-circle me-2"></i> ТУСЛАМЖ</a>
+                                        </li>
+                                    {% endif %}
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li><a class="dropdown-item text-danger" href="{% url 'user_logout' %}"><i
+                                            class="fas fa-sign-out-alt fa-fw me-2"></i>Гарах</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        {% else %}
+                            <a href="{% url 'django_registration_register' %}" class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
+                            <a href="{% url 'user_login' %}" class="btn btn-sm btn-warning text-dark">Нэвтрэх</a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</nav>
+    </nav>
 {% endblock %}
