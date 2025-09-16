@@ -81,7 +81,7 @@ def quiz_view(request, quiz_id):
         if form.is_valid():
             form.save()
             results = Result.objects.filter(contestant=user, olympiad_id=quiz_id).order_by('problem__order')
-            return render(request, 'olympiad/confirm.html', {'results': results, 'olympiad': olympiad})
+            return render(request, 'olympiad/quiz_view_confirm.html', {'results': results, 'olympiad': olympiad})
     else:
         if olympiad.is_active():
             form = ResultsFormSet(
@@ -196,7 +196,7 @@ def exam_student_view(request, olympiad_id):
 
         results = Result.objects.filter(contestant_id=contestant_id, olympiad_id=olympiad_id).order_by('problem__order')
 
-        return render(request, 'olympiad/exam.html',
+        return render(request, 'olympiad/olympiad_exam_view.html',
                       {'results': results, 'olympiad': olympiad, 'contestant': contestant})
     elif not olympiad.is_started():
         messages.info(request, 'Бодолт эхлээгүй байна.')
@@ -281,7 +281,7 @@ def exam_staff_view(request, olympiad_id, contestant_id):
 
         results = Result.objects.filter(contestant_id=contestant_id, olympiad_id=olympiad_id).order_by('problem__order')
 
-        return render(request, 'olympiad/exam.html',
+        return render(request, 'olympiad/olympiad_exam_view.html',
                       {'results': results, 'olympiad': olympiad, 'contestant': contestant})
     else:
         return HttpResponse("handah erhgui bna.")
@@ -364,9 +364,7 @@ def get_result_form(request):
 def result_viewer(request):
     result_id = int(request.GET.get('result_id', 0))
     if result_id > 0:
-        result = Result.objects.get(pk=result_id)
-        if result.contestant_id == request.user.id:
-            return render(request, "olympiad/result_view.html", {'result': result})
+        return render(request, "olympiad/result_view.html", {'result': result})
 
     return JsonResponse({'status': 'failed'})
 
@@ -408,7 +406,7 @@ def grade(request):
                 url = url + '#result{}'.format(result.id)
                 return redirect(url)
         form = ResultsGraderForm(instance=result)
-        return render(request, "olympiad/result_form.html", {'form': form, 'result': result})
+        return render(request, "olympiad/grading_result_form.html", {'form': form, 'result': result})
     else:
         return HttpResponse("Ийм хариулт олдсонгүй.")
 
@@ -419,7 +417,7 @@ def student_exam_materials_view(request):
     title = "ID: {}, {}, {} сурагчийн илгээсэн материалууд".format(request.user.id, request.user.first_name,
                                                                    request.user.last_name)
 
-    return render(request, 'olympiad/exam_materials.html', {'results': results, 'title': title})
+    return render(request, 'olympiad/student_exam_materials_view.html', {'results': results, 'title': title})
 
 
 @login_required

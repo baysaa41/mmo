@@ -138,7 +138,7 @@ def results_home(request):
         'prev': prev,
         'next': next
     }
-    return render(request, 'olympiad/results_home.html', context=context)
+    return render(request, 'olympiad/scoresheets_list.html', context=context)
 
 def get_contestant_ids(results):
     ids = []
