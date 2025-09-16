@@ -5,7 +5,6 @@ from .views import (
     manage_school_by_level,
     edit_profile,
     edit_user_in_group,
-    school_olympiad_list_view,
     generate_school_answer_sheet,
     import_school_answer_sheet,
     view_school_olympiad_results,
@@ -17,7 +16,6 @@ from .views import (
 urlpatterns = [
     path('', school_moderators_view, name='school_moderators_list'),
     path('<int:school_id>/', school_dashboard, name='school_dashboard'),
-    path('<int:school_id>/olympiads/', school_olympiad_list_view, name='school_olympiad_list'),
     path('<int:school_id>/level/<int:level_id>/', manage_school_by_level, name='manage_school_by_level'),
 
     path('<int:school_id>/level/<int:level_id>/olympiad/<int:olympiad_id>/', school_level_olympiad_view, name='school_level_olympiad_view'),

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Монголын Математикийн Олимпиадын Хороо{% endblock %}
+
+{% block content %}
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    
+    {# Давхардсан кодын оронд include ашиглах #}
+    {% include 'posts/_post_card.html' with post=post is_link=False %}
+    
+{% endblock %}

@@ -1,0 +1,18 @@
+<div class="article card p-3 mt-2 bg-light text-dark">
+    <h4 class="my-3">
+        {# Хэрэв is_link хувьсагч True байвал гарчгийг холбоос болгоно #}
+        {% if is_link %}
+            <a href="{% url 'posts:post_view' %}?id={{ post.id }}" class="text-info">{{ post.title }}</a>
+        {% else %}
+            <span class="text-info">{{ post.title }}</span>
+        {% endif %}
+    </h4>
+
+    {% autoescape off %}{{ post.descr }} {% endautoescape %}
+
+    <p>Сүүлийн засвар: {{ post.updatedate | date:'Y-m-d' }}, Нийтэлсэн: {{ post.startdate | date:'Y-m-d' }}
+        {% if request.user.is_staff and mode %}
+            &nbsp;&nbsp;<a href="{% url 'admin:posts_post_change' post.id %}" target="_blank"><i class="fas fa-edit text-secondary"></i></a>
+        {% endif %}
+    </p>
+</div>

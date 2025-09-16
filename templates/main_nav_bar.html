@@ -1,82 +1,74 @@
 {% load static %}
-{% block "main-nav-bar" %}
-    <nav class="navbar navbar-expand-sm navbar-dark bg-dark fixed-top">
-        <div class="container-fluid d-flex justify-content-between align-items-center">
-            <!-- Зүүн тал: Logo + Nav -->
-            <div class="d-flex align-items-center">
-                <!-- Logo -->
-                <a class="navbar-brand me-3" href="{% url 'posts:home' %}">
-                    <img src="{% static 'logo.png' %}" alt="logo" style="width: 36px;" class="img-fluid">
-                </a>
+{% block main_nav_bar %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'posts:home' %}">
+            <img src="{% static 'logo.png' %}" alt="logo" style="width: 36px;" class="img-fluid">
+        </a>
 
-                <!-- Navigation menu -->
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav">
-                        <!-- Олимпиад -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown1" role="button"
-                               data-bs-toggle="dropdown" aria-expanded="false">ОЛИМПИАД</a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown1">
-                                <li><a class="dropdown-item" href="http://www.mmo.mn/post/?id=381">Удирдамж</a></li>
-                                <li><a class="dropdown-item" href="{% url 'olympiad_home' %}">Олимпиадын хуваарь</a></li>
-                                <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a>
-                                </li>
-                                <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}">Олимпиадын
-                                    бодлогууд</a></li>
-                                <li><a class="dropdown-item" href="/post/?id=435">Олимпиадын
-                                    цувралууд</a></li>
-                                <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}">Материал нэмж
-                                    оруулах</a></li>
-                            </ul>
-                        </li>
-                        <!-- Сургуулиуд -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown2" role="button"
-                               data-bs-toggle="dropdown" aria-expanded="false">СУРГУУЛЬ</a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown2">
-                                <li><a class="dropdown-item" href="{% url 'school_moderators_list' %}">Бүртгэл</a></li>
-                            </ul>
-                        </li>
-                        <!-- Static link -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="http://www.mmo.mn/post/?id=142" title="Танд тусалъя">АСУУЛТ</a>
-                        </li>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbarCollapse" aria-controls="mainNavbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavbarCollapse">
+
+            <ul class="navbar-nav flex-grow-1">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownOlympiad" role="button" data-bs-toggle="dropdown" aria-expanded="false">ОЛИМПИАД</a>
+                    <ul class="dropdown-menu" aria-labelledby="navbarDropdownOlympiad">
+                        <li><a class="dropdown-item" href="{% url 'olympiad_home' %}">Олимпиадын хуваарь</a></li>
+                        <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a></li>
+                        <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}">Олимпиадын бодлогууд</a></li>
+                        <li><a class="dropdown-item" href="{% url 'posts:post_view' %}?id=435">Олимпиадын цувралууд</a></li>
+
+                        {% if user.is_authenticated %}
+                        <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}">Материал нэмж оруулах</a></li>
+                        {% endif %}
                     </ul>
-                </div>
-            </div>
+                </li>
 
+                {% if user.is_staff or user.moderating.exists %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSchool" role="button" data-bs-toggle="dropdown" aria-expanded="false">СУРГУУЛЬ</a>
+                    <ul class="dropdown-menu" aria-labelledby="navbarDropdownSchool">
+                        <li><a class="dropdown-item" href="{% url 'school_moderators_list' %}">Миний сургууль</a></li>
+                    </ul>
+                </li>
+                {% endif %}
 
-            <!-- Гол: Banner -->
-            <div class="d-none d-lg-block text-center">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'posts:post_view'  %}?id=142" title="Танд тусалъя">АСУУЛТ</a>
+                </li>
+            </ul>
+
+            <div class="navbar-nav mx-auto d-none d-lg-block">
                 <img src="/media/banner.gif" class="img-fluid" style="max-height: 50px;">
             </div>
 
-            <!-- Баруун тал: Login / Calendar -->
-            <div class="d-flex mr-2 align-items-center">
-                {% block userlogin %}
+            <div class="navbar-nav flex-grow-1 justify-content-end">
+                <div class="d-flex align-items-center">
                     {% if user.is_authenticated %}
-                        <span class="mx-2 text-white">Сайн уу,
-                            <a href="{% url 'user_profile' %}" class="text-white">{{ user.username }}</a> /
-                            <a href="{% url 'user_logout' %}" class="text-warning">Гарах</a>
-                        </span>
+                        <div class="nav-item dropdown">
+                             <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Сайн уу, {{ user.first_name|default:user.username }}
+                             </a>
+                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
+                                 <li><a class="dropdown-item" href="{% url 'user_profile' %}">Миний профайл</a></li>
+                                 <li><hr class="dropdown-divider"></li>
+                                 <li><a class="dropdown-item text-danger" href="{% url 'user_logout' %}">Гарах</a></li>
+                             </ul>
+                        </div>
                     {% else %}
-                        <a href="{% url 'django_registration_register' %}"
-                           class="btn btn-sm btn-light mx-2">Бүртгүүлэх</a>
+                        <a href="{% url 'django_registration_register' %}" class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
                         <a href="{% url 'user_login' %}" class="btn btn-sm btn-warning text-dark">Нэвтрэх</a>
                     {% endif %}
-                {% endblock %}
 
-                <button class="btn btn-outline-light mx-2 d-none d-lg-block" data-bs-toggle="modal"
-                        data-bs-target="#calendarModal">
-                    📅 Календар
-                </button>
-                <!-- Toggler -->
-                <button class="navbar-toggler ml-2" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#navbarNav" aria-controls="navbarNav"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                    <button class="btn btn-outline-light ms-2 d-none d-lg-block" data-bs-toggle="modal" data-bs-target="#calendarModal">
+                        📅 Календар
+                    </button>
+                </div>
             </div>
         </div>
-    </nav>
+    </div>
+</nav>
 {% endblock %}

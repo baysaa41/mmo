@@ -29,7 +29,6 @@ urlpatterns = ([
     path('files/', include('file_management.urls')),
     path('', include('posts.urls')),  # Homepage now points to the posts app
     path('admin/clearcache/', include('clearcache.urls')),
-    path('post/', olympiad.views.post, name='post_view'),
     path('admin/', admin.site.urls),
     path('tinymce/', include('tinymce.urls')),
     path('ckeditor/', include('ckeditor_uploader.urls')),

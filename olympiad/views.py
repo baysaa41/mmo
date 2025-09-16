@@ -102,12 +102,7 @@ def mmo2021(request):
     return render(request, "accounts/site_home.html")
 
 
-def post(request):
-    id = int(request.GET.get('id', 0))
-    mode = int(request.GET.get('mode', 0))
-    if id > 0:
-        article = Post.objects.filter(pk=id).first()
-        return render(request, 'accounts/post.html', {'article': article, 'mode': mode})
+
 
 @cache_page(60 * 60)
 def problems_home(request):

@@ -54,7 +54,7 @@ def school_moderators_view(request):
     context = {
         'schools': final_schools,
     }
-    return render(request, 'schools/school_moderators_list.html', context)
+    return render(request, 'schools/school_list.html', context)
 
 @login_required
 def school_dashboard(request, school_id):
@@ -101,37 +101,6 @@ def school_dashboard(request, school_id):
         'olympiads': olympiads,
     }
     return render(request, 'schools/school_dashboard.html', context)
-
-@login_required
-def school_olympiad_list_view(request, school_id):
-    """
-    Сонгосон нэг сургуулийн оролцох боломжтой олимпиадуудыг жагсааж,
-    дүнтэй ажиллах үйлдлүүдийг харуулна.
-    """
-    school = get_object_or_404(School, id=school_id)
-    if not request.user.is_staff and school not in request.user.moderating.all():
-        messages.error(request, 'Та энэ сургуулийг удирдах эрхгүй.')
-        return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
-
-    today = date.today()
-    current_school_year = SchoolYear.objects.filter(start__lte=today, end__gte=today).first()
-
-    olympiads = Olympiad.objects.none()
-    if current_school_year:
-        olympiads = Olympiad.objects.filter(
-            round=1,
-            school_year=current_school_year,
-            type=1
-        )
-
-    upload_form = UploadExcelForm()
-
-    context = {
-        'school': school,
-        'olympiads': olympiads,
-        'upload_form': upload_form
-    }
-    return render(request, 'schools/school_olympiad_list.html', context)
 
 @login_required
 def manage_school_by_level(request, school_id, level_id):
@@ -247,7 +216,7 @@ def manage_school_by_level(request, school_id, level_id):
         'add_user_form': add_user_form,
         'search_results': search_results,
     }
-    return render(request, 'schools/manage_school.html', context)
+    return render(request, 'schools/manage_school_users_level.html', context)
 
 @login_required
 def school_level_olympiad_view(request, school_id, level_id, olympiad_id):

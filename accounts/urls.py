@@ -18,15 +18,14 @@ urlpatterns = [
     path('password/', auth_views.PasswordChangeView.as_view(template_name='registration/change-password.html'), name='user_password'),
     path('login/', auth.login_view, name='user_login'),
     path('logout/', auth.logout_view, name='user_logout'),
+    # profile-d surguuli songoh
+    path('ajax/load-schools/', ajax.load_schools, name='ajax_load_schools'), # Шинэ URL нэмэх
 
     # Email Views
     path('createmails/', email.create_mails, name='user_createmails'),
     path('sendmails/', email.send_mass_html_mail, name='user_sendmails'),
     path('track-email/<uuid:token>/', email.track_email_open, name='track_email_open'),
     path('send-to-schools/', email.send_email_to_schools, name='send_email_to_schools'),
-
-    # ... таны бусад url-ууд
-    path('ajax/load-schools/', ajax.load_schools, name='ajax_load_schools'), # Шинэ URL нэмэх
 
     # dashboard
     path('commands-guide/', admin.command_guide_view, name='commands_guide'),
