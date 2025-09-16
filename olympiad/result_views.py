@@ -67,7 +67,7 @@ def olympiad_group_result_view(request,group_id):
             'quiz': '',
             'title': 'Оролцсон сурагч байхгүй.',
         }
-        return render(request, 'olympiad/pandas3.html', context)
+        return render(request, 'olympiad/pandas_results_view.html', context)
 
     if olympiad_group.group_id:
         users = olympiad_group.group.user_set.all()
@@ -115,7 +115,7 @@ def olympiad_group_result_view(request,group_id):
         },
         'title': title,
     }
-    return render(request, 'olympiad/pandas3.html', context)
+    return render(request, 'olympiad/pandas_results_view.html', context)
 
 def results_home(request):
     # return HttpResponse("Zasvartai")

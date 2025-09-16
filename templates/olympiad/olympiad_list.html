@@ -9,15 +9,10 @@
 
 {% block content %}
     <div class="justify-content-center">
-        {% if messages %}
-            {% for message in messages %}
-                <h5 class="alert alert-danger">{% autoescape on %}{{ message }}{% endautoescape %}</h5>
-            {% endfor %}
-        {% endif %}
         <div id="time">Улаанбаатарын цаг: {{ now | date:'Y-m-d H:i' }}</div>
         <h3>Таны оролцох ангилал: {{ request.user.data.level.name }}</h3>
-        <p class="alert alert-danger">Өөрийн оролцох ангиллаа зөв эсэхийг шалгаад буруу бол
-            <a href="{% url 'user_profile' %}" class="btn btn-sm btn-danger">Профайл засах</a> ашиглан солиорой.</p>
+
+        <hr class="my-3">
         <table class="table table-hover">
             <tr>
                 <th>Олимпиад</th>
@@ -36,9 +31,9 @@
                     <td>{{ olympiad.group.name }}</td>
                     <td>
                         {% if olympiad.type == 0 %}
-                        <a class="btn btn-info" href="{% url 'olympiad_exam' olympiad_id=olympiad.id %}">Эхлэх</a>
+                        <a class="btn btn-success" href="{% url 'olympiad_exam' olympiad_id=olympiad.id %}">Оролцох</a>
                         {% else %}
-                        <a class="btn btn-info" href="{% url 'olympiad_quiz' quiz_id=olympiad.id %}">Эхлэх</a>
+                        <a class="btn btn-success" href="{% url 'olympiad_quiz' quiz_id=olympiad.id %}">Оролцох</a>
                         {% endif %}
                     </td>
                 </tr>

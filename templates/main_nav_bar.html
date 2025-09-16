@@ -6,7 +6,8 @@
             <img src="{% static 'logo.png' %}" alt="logo" style="width: 36px;" class="img-fluid">
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbarCollapse" aria-controls="mainNavbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbarCollapse"
+                aria-controls="mainNavbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -14,30 +15,35 @@
 
             <ul class="navbar-nav flex-grow-1">
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownOlympiad" role="button" data-bs-toggle="dropdown" aria-expanded="false">ОЛИМПИАД</a>
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownOlympiad" role="button"
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                       <i class="fas fa-trophy"></i> ОЛИМПИАД
+                    </a>
                     <ul class="dropdown-menu" aria-labelledby="navbarDropdownOlympiad">
-                        <li><a class="dropdown-item" href="{% url 'olympiad_home' %}">Олимпиадын хуваарь</a></li>
-                        <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}">Олимпиадын дүн</a></li>
-                        <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}">Олимпиадын бодлогууд</a></li>
-                        <li><a class="dropdown-item" href="{% url 'posts:post_view' %}?id=435">Олимпиадын цувралууд</a></li>
+                        <li><a class="dropdown-item" href="{% url 'olympiad_home' %}"><i class="fas fa-calendar-alt fa-fw me-2"></i>Олимпиадын хуваарь</a></li>
+                        <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}"><i class="fas fa-poll fa-fw me-2"></i>Олимпиадын дүн</a>
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}"><i class="fas fa-book fa-fw me-2"></i>Олимпиадын
+                            бодлогууд</a></li>
+                        <li><a class="dropdown-item" href="{% url 'posts:post_view' %}?id=435"><i class="fas fa-stream fa-fw me-2"></i>Олимпиадын
+                            цувралууд</a></li>
 
                         {% if user.is_authenticated %}
-                        <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}">Материал нэмж оруулах</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}"><i class="fas fa-upload fa-fw me-2"></i>Материал нэмж
+                                оруулах</a></li>
                         {% endif %}
                     </ul>
                 </li>
 
                 {% if user.is_staff or user.moderating.exists %}
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownSchool" role="button" data-bs-toggle="dropdown" aria-expanded="false">СУРГУУЛЬ</a>
-                    <ul class="dropdown-menu" aria-labelledby="navbarDropdownSchool">
-                        <li><a class="dropdown-item" href="{% url 'school_moderators_list' %}">Миний сургууль</a></li>
-                    </ul>
-                </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'school_moderators_list' %}"><i class="fas fa-school"></i> СУРГУУЛИЙН УДИРДЛАГА</a>
+                    </li>
                 {% endif %}
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'posts:post_view'  %}?id=142" title="Танд тусалъя">АСУУЛТ</a>
+                    <a class="nav-link" href="{% url 'posts:post_view' %}?id=142" title="Танд тусалъя"><i class="fas fa-question-circle"></i> ТУСЛАМЖ</a>
                 </li>
             </ul>
 
@@ -49,23 +55,23 @@
                 <div class="d-flex align-items-center">
                     {% if user.is_authenticated %}
                         <div class="nav-item dropdown">
-                             <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Сайн уу, {{ user.first_name|default:user.username }}
-                             </a>
-                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
-                                 <li><a class="dropdown-item" href="{% url 'user_profile' %}">Миний профайл</a></li>
-                                 <li><hr class="dropdown-divider"></li>
-                                 <li><a class="dropdown-item text-danger" href="{% url 'user_logout' %}">Гарах</a></li>
-                             </ul>
+                            <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownUser"
+                               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle"></i> {{ user.first_name|default:user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownUser">
+                                <li><a class="dropdown-item" href="{% url 'user_profile' %}"><i class="fas fa-user-edit fa-fw me-2"></i>Миний профайл</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item text-danger" href="{% url 'user_logout' %}"><i class="fas fa-sign-out-alt fa-fw me-2"></i>Гарах</a>
+                                </li>
+                            </ul>
                         </div>
                     {% else %}
                         <a href="{% url 'django_registration_register' %}" class="btn btn-sm btn-light me-2">Бүртгүүлэх</a>
                         <a href="{% url 'user_login' %}" class="btn btn-sm btn-warning text-dark">Нэвтрэх</a>
                     {% endif %}
-
-                    <button class="btn btn-outline-light ms-2 d-none d-lg-block" data-bs-toggle="modal" data-bs-target="#calendarModal">
-                        📅 Календар
-                    </button>
                 </div>
             </div>
         </div>

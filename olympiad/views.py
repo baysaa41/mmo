@@ -29,7 +29,7 @@ def index(request):
     end = datetime.now(timezone.utc) + timedelta(days=1)
     olympiads = Olympiad.objects.filter(start_time__gt=start, start_time__lte=end, level_id=request.user.data.level_id)
 
-    return render(request, 'olympiad/index.html', {'olympiads': olympiads, 'now': now})
+    return render(request, 'olympiad/olympiad_list.html', {'olympiads': olympiads, 'now': now})
 
 
 @login_required()
@@ -483,7 +483,7 @@ def list_upcomming_olympiads(request):
         # Идэвхтэй хичээлийн жил олдоогүй бол хоосон жагсаалт буцаах
         olympiads = Olympiad.objects.none()
 
-    return render(request, 'olympiad/index.html', {'olympiads': olympiads, 'now': now})
+    return render(request, 'olympiad/olympiad_list.html', {'olympiads': olympiads, 'now': now})
 
 
 def read_worksheet(worksheet, problems):
