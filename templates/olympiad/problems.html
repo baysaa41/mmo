@@ -5,26 +5,63 @@
 {% block title %}Бодлогууд{% endblock %}
 
 {% block content %}
+<div class="container">
     {% autoescape off %}
-        <h3>{{ olympiad.name }}, {{ olympiad.level.name }} ангилал</h3>
+        <h3 class="my-3">{{ olympiad.name }}, {{ olympiad.level.name }} ангилал</h3>
         {% if problems|length > 0 %}
             {% for p in problems %}
-                <div class="border-top">
-                    <p class="bg-light p-2">{% autoescape off %}<b><a href="{% url 'problem_stats' problem_id=p.id %}">{{ p.order }}.</a></b> {{ p.statement|latex|linebreaksbr }}{% endautoescape %}</p>
-                {% if p.numerical_answer is not null %}
-                    <p><span class="text-danger">Хариу: {{ p.numerical_answer }}</span></p>{% endif %}
-                {% if p.solution_set %}
-                    {% for s in p.solution_set.all %}
-                        <div>
-                            <p><b>Бодолт {{ forloop.counter }}.</b></p>
-                            {{ s.content|latex|linebreaksbr }}
+                <div class="border-top py-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        {# Бодлогын нөхцөл #}
+                        <div class="bg-light p-2 flex-grow-1">
+                            {% autoescape off %}
+                                <b><a href="{% url 'problem_stats' problem_id=p.id %}">{{ p.order }}.</a></b> {{ p.statement|latex|linebreaksbr }}
+                            {% endautoescape %}
                         </div>
-                    {% endfor %}
-                {% endif %}
+
+                        {# --- 1. БОДЛОГО ЗАСАХ ЛИНК (зөвхөн staff-д) --- #}
+                        {% if request.user.is_staff %}
+                            <a href="{% url 'admin:olympiad_problem_change' p.id %}" class="btn btn-sm btn-outline-secondary ms-3" target="_blank" title="Бодлого засах">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    {% if p.numerical_answer is not null %}
+                        <p class="mt-2"><span class="text-danger">Хариу: {{ p.numerical_answer }}</span></p>
+                    {% endif %}
+
+                    {# Бодолтуудыг харуулах хэсэг #}
+                    {% if p.solution_set.all %}
+                        {% for s in p.solution_set.all %}
+                            <div class="mt-2 ps-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <p class="mb-0"><b>Бодолт {{ forloop.counter }}.</b></p>
+                                    {# --- 2. БОДОЛТ ЗАСАХ ЛИНК (зөвхөн staff-д) --- #}
+                                    {% if request.user.is_staff %}
+                                        <a href="{% url 'admin:olympiad_solution_change' s.id %}" class="btn btn-sm btn-outline-secondary" target="_blank" title="Бодолт засах">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                                {{ s.content|latex|linebreaksbr }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {# --- 3. БОДОЛТ НЭМЭХ ЛИНК (зөвхөн staff-д) --- #}
+                    {% if request.user.is_staff %}
+                        <div class="mt-3">
+                            <a href="{% url 'admin:olympiad_solution_add' %}?problem={{ p.id }}" class="btn btn-sm btn-success" target="_blank">
+                                <i class="fas fa-plus"></i> Бодолт нэмэх
+                            </a>
+                        </div>
+                    {% endif %}
                 </div>
             {% endfor %}
         {% else %}
             <div class="card p-3 mt-2 bg-light text-dark">Бодлогуудыг үзэх боломжгүй.</div>
         {% endif %}
     {% endautoescape %}
+</div>
 {% endblock %}

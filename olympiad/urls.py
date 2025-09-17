@@ -33,8 +33,6 @@ urlpatterns = [
     path('result/<int:olympiad_id>/<int:contestant_id>/', result_views.student_result_view, name='olympiad_student_result'),
     # Оролцогчдын өгсөн хариултуудын жагсаалт (админд зориулсан)
     path('answers/<int:olympiad_id>/', result_views.answers_view, name='olympiad_answer_view'),
-    # Тодорхой бүлгийн сурагчдын хариултыг харах
-    path('answers/<int:olympiad_id>/<int:group_id>/', result_views.answers_view2, name='olympiad_group_answer_view'),
     # Нэгдсэн олимпиадын бүлгийн дүнг харах
     path('results/g/<int:group_id>/', result_views.olympiad_group_result_view, name='olympiad_group_result_view'),
     # Тухайн олимпиадын бодлогуудыг харах

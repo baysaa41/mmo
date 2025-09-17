@@ -104,7 +104,7 @@ def mmo2021(request):
 
 
 
-@cache_page(60 * 60)
+#@cache_page(60 * 60)
 def problems_home(request):
     now = datetime.now(timezone.utc)
     mode = request.GET.get('mode', 0)
@@ -127,7 +127,7 @@ def problems_home(request):
     }
     return render(request, 'olympiad/problems_home.html', context=context)
 
-@cache_page(60 * 60)
+#@cache_page(60 * 60)
 def problems_view(request, olympiad_id):
     probidden = [16, 17, 18, 19, 24, 25, 26]
 

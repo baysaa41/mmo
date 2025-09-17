@@ -1,0 +1,31 @@
+<form method="GET" action="">
+    <div class="row align-items-end mb-4">
+
+        <div class="col-md-6 form-group">
+            <label for="province-select" class="form-label">Аймаг/Дүүрэг:</label>
+            <select name="p" id="province-select" class="form-control" onchange="this.form.submit()">
+                <option value="0">--- Сонгоно уу ---</option>
+                {% for province in provinces %}
+                    <option value="{{ province.id }}" {% if province.id == selected_pid %}selected{% endif %}>
+                        {{ province.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if selected_pid > 0 %}
+            <div class="col-md-6 form-group">
+                <label for="school-select" class="form-label">Сургууль:</label>
+                <select name="s" id="school-select" class="form-control" onchange="this.form.submit()">
+                    <option value="0">--- Сонгоно уу ---</option>
+                    {% for school in schools %}
+                        <option value="{{ school.id }}" {% if school.id == selected_sid %}selected{% endif %}>
+                            {{ school.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endif %}
+
+    </div>
+</form>

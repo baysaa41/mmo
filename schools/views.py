@@ -640,6 +640,22 @@ def manage_all_schools_view(request):
         student_count=Count('group__user')
     ).order_by('province__name', 'name')
 
+        # URL-аас шүүлтүүрийн утгуудыг авах
+    name_query = request.GET.get('q', '')
+    province_id = request.GET.get('p', '')
+    zone_id = request.GET.get('z', '')
+
+    # Шүүлтүүрүүдийг хийх
+    if name_query:
+        all_schools = all_schools.filter(name__icontains=name_query)
+    if province_id:
+        all_schools = all_schools.filter(province_id=province_id)
+    if zone_id:
+        all_schools = all_schools.filter(province__zone_id=zone_id)
+
+    # Эрэмбэлэх
+    all_schools = all_schools.order_by('province__name', 'name')
+
     change_form = SchoolModeratorChangeForm()
 
     context = {
