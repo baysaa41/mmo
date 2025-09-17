@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Сургуулиудын жагсаалт
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2>Сургуулиудын жагсаалт</h2>
+        <p class="lead">Сургуулийн админы имэйл хаягаар хайлт хийнэ үү.</p>
+
+        <form method="GET" action="" class="mb-4">
+            <div class="form-group">
+                <label for="email-textarea">Имэйл хаягууд:</label>
+                <textarea name="q" id="email-textarea" class="form-control" rows="4" 
+                          placeholder="Имэйл хаягуудыг зай, таслал, эсвэл мөрөөр тусгаарлан оруулна уу...">{{ search_query }}</textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">Хайх</button>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th>№</th>
+                        <th>Аймаг/Дүүрэг</th>
+                        <th>Сургуулийн нэр</th>
+                        <th>Админы нэр</th>
+                        <th>Админы имэйл</th>
+                        <th>Админы утас</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for school in schools %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ school.province.name }}</td>
+                            <td>{{ school.name }}</td>
+                            <td>{{ school.user.first_name }} {{ school.user.last_name }}</td>
+                            <td>{{ school.user.email }}</td>
+                            <td>{{ school.user.data.mobile }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">Илэрц олдсонгүй.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

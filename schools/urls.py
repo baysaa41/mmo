@@ -15,6 +15,7 @@ from .views import (
     change_school_admin_view,
     edit_school_admin_view,
     change_school_admin_password_view,
+    school_list_view
 )
 
 urlpatterns = [
@@ -23,6 +24,7 @@ urlpatterns = [
     path('<int:school_id>/change-admin/', change_school_admin_view, name='change_school_admin'),
     path('edit-admin/<int:user_id>/', edit_school_admin_view, name='edit_school_admin'),
     path('change-admin-password/<int:user_id>/', change_school_admin_password_view, name='change_school_admin_password'),
+    path('list/', school_list_view, name='school_list'),
     path('<int:school_id>/', school_dashboard, name='school_dashboard'),
     path('<int:school_id>/level/<int:level_id>/', manage_school_by_level, name='manage_school_by_level'),
 

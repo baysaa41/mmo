@@ -14,7 +14,7 @@ from django_pandas.io import read_frame
 
 # Шаардлагатай import-ууд
 import io
-import pandas as pd
+import re
 from django.http import HttpResponse
 from datetime import date
 from openpyxl.styles import Border, Side, Font, Alignment
@@ -26,7 +26,6 @@ from olympiad.models import Olympiad, SchoolYear, Problem, Result
 
 import pandas as pd
 from django.db import transaction
-from olympiad.models import Problem, Result
 from .forms import UploadExcelForm
 
 from django.contrib.admin.views.decorators import staff_member_required
@@ -751,3 +750,26 @@ def change_school_admin_password_view(request, user_id):
         'target_user': target_user,
     }
     return render(request, 'schools/change_student_password.html', context) # Өмнөх template-г дахин ашиглаж болно
+
+
+def school_list_view(request):
+    # Textarea-аас орж ирсэн түүхий текстийг авах
+    query_string = request.GET.get('q', '')
+
+    # Орж ирсэн текстийг зай, таслал, эсвэл мөрийн төгсгөлөөр нь салгаж цэвэрлэх
+    # Жишээ: "a@a.com, b@b.com\nc@c.com" -> ['a@a.com', 'b@b.com', 'c@c.com']
+    emails = [email for email in re.split(r'[\s,;]+', query_string) if email]
+
+    # Үндсэн шүүлт хийгээгүй үеийн бүх сургуулийн жагсаалт
+    schools = School.objects.select_related('user', 'province').order_by('name')
+
+    # Хэрэв имэйл хаягууд орж ирсэн бол шүүлт хийх
+    if emails:
+        # __in шүүлтүүр нь жагсаалтад байгаа ямар нэг утгатай таарч байвал шүүнэ
+        schools = schools.filter(user__email__in=emails)
+
+    context = {
+        'schools': schools,
+        'search_query': query_string,  # Хэрэглэгчийн оруулсан утгыг буцааж харуулах
+    }
+    return render(request, 'schools/school_list.html', context)

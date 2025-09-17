@@ -11,7 +11,6 @@
                 <tr>
                     <th>Сургууль</th>
                     <th>Модератор</th>
-                    <th>Утас</th>
                     <th>Сүүлд нэвтэрсэн</th>
                     <th class="text-center" colspan="3">Үйлдэл</th>
                 </tr>
@@ -19,9 +18,8 @@
                 <tbody>
                 {% for school in schools %}
                     <tr>
-                        <td><h5>{{ school.province.name }}</h5><span class="me-2">{{ school.name }}</span><span class="badge bg-primary rounded-pill">{{ school.student_count }}</span></td>
-                        <td>{{ school.user.first_name }}, {{ school.user.username }}</td>
-                        <td>{{ school.user.data.mobile|default:"-" }}</td>
+                        <td><h5>{{ school.name }}</h5><span class="me-2">{{ school.province.name }}</span><span class="badge bg-primary rounded-pill">{{ school.student_count }}</span></td>
+                        <td>{{ school.user.first_name }}, {{ school.user.username }}, {{ school.user.data.mobile|default:"-" }}, {{ school.user.email }}</td>
                         <td>{{ school.user.last_login|date:"Y-m-d" }}</td>
                         <td class="text-center">
                             <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-warning me-2">
