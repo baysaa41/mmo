@@ -30,8 +30,21 @@ from .forms import UploadExcelForm
 
 from django.contrib.admin.views.decorators import staff_member_required
 from .forms import SchoolModeratorChangeForm
-from .forms import ChangeSchoolAdminForm
 
+def clean_surrogates(value):
+    """Strips surrogate characters from a string."""
+    if not isinstance(value, str):
+        return value
+    return value.encode('utf-8', 'surrogateescape').decode('utf-8', 'replace')
+
+def force_ascii(value):
+    """
+    Converts a string to ASCII, ignoring any characters that cannot be converted.
+    This will remove Cyrillic, emojis, etc.
+    """
+    if not isinstance(value, str):
+        return value
+    return value.encode('ascii', 'ignore').decode('ascii')
 
 @login_required
 def school_moderators_view(request):
@@ -136,6 +149,7 @@ def manage_school_by_level(request, school_id, level_id):
             add_user_form = AddUserForm(request.POST)
             search_form = UserSearchForm()
             if add_user_form.is_valid():
+                new_user = None
                 try:
                     with transaction.atomic():
                         new_user, password = add_user_form.save(commit=False)
@@ -158,11 +172,41 @@ def manage_school_by_level(request, school_id, level_id):
                     try:
                         subject = 'ММОХ - Шинэ бүртгэл'
                         message = f'Сайн байна уу, {new_user.first_name}.\n\nТаны хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}'
+
                         send_mail(subject, message, 'baysa@mmo.mn', [new_user.email])
+
                         level_name = selected_level['name'] if level_id == 0 else selected_level.name
                         messages.success(request, f"'{new_user.get_full_name()}' хэрэглэгчийг '{level_name}' хэсэгт амжилттай нэмж, нэвтрэх мэдээллийг илгээлээ.")
+
                     except Exception as email_error:
                         messages.warning(request, f"Хэрэглэгч үүссэн ч и-мэйл илгээхэд алдаа гарлаа: {email_error}")
+
+                        components_to_check = {
+                            "Subject (static text)": 'ММОХ - Шинэ бүртгэл',
+                            "Greeting (static text)": 'Сайн байна уу, ',
+                            "User First Name": new_user.first_name,
+                            "User Last Name": new_user.last_name,
+                            "Username": new_user.username,
+                            "Email": new_user.email,
+                            "Password": password
+                        }
+
+                        for name, text in components_to_check.items():
+                            print(f"\n--- Analyzing component: '{name}' ---")
+                            print(f"Value: {repr(text)}")
+                            found_surrogate = False
+                            if isinstance(text, str):
+                                for i, char in enumerate(text):
+                                    if 0xD800 <= ord(char) <= 0xDFFF:
+                                        print(f"!!! SURROGATE FOUND in '{name}' at position {i}: char='{char}', codepoint={hex(ord(char))}")
+                                        found_surrogate = True
+                            if not found_surrogate:
+                                print("No surrogates found in this component.")
+
+                        print("\n--- ANALYSIS FINISHED ---")
+                        # --- ОНОШЛОГОО ДУУСАВ ---
+
+                        messages.warning(request, f"И-мэйл илгээхэд кодчилолын алдаа гарлаа. Системийн админд хандана уу.")
 
                 except Exception as e:
                     messages.error(request, f"Хэрэглэгч үүсгэхэд алдаа гарлаа: {e}")
@@ -174,27 +218,18 @@ def manage_school_by_level(request, school_id, level_id):
             add_user_form = AddUserForm()
             user_id = request.POST.get('user_id')
             user_to_add = get_object_or_404(User, id=user_id)
-
-            # --- ШИНЭЭР НЭМЭГДСЭН ШАЛГАЛТ ---
-            # Нэмэх гэж буй сурагч өөр сургуулийн группт байгаа эсэхийг шалгах
             existing_school_groups = user_to_add.groups.filter(school__isnull=False)
-
-            # Хэрэв хүсэлт илгээгч staff биш бөгөөд сурагч өөр сургуульд бүртгэлтэй бол
             if not request.user.is_staff and existing_school_groups.exists():
                 other_school_name = existing_school_groups.first().school
                 messages.error(request, f"'{user_to_add.get_full_name()}' хэрэглэгч '{other_school_name}' сургуульд аль хэдийн бүртгэлтэй тул нэмэх боломжгүй. Зөвхөн системийн админ шилжүүлэг хийх боломжтой. Эсвэл хэрэглэгч өөрийн бүртгэлд өөрчлөлт оруулж болно.")
             else:
-                # Staff эрхтэй хэрэглэгч эсвэл ямар нэг сургуульд харьяалалгүй сурагчийг нэмэх
                 group.user_set.add(user_to_add)
-
-                # Хэрэв сурагч өөр сургуулиас шилжиж ирж байгаа бол (staff хийсэн бол) хуучин группээс хасах
                 if request.user.is_staff and existing_school_groups.exists():
                     for g in existing_school_groups:
                         g.user_set.remove(user_to_add)
                     messages.success(request, f"'{user_to_add.get_full_name()}' хэрэглэгчийг хуучин сургуулиас нь хасаж, энэ сургуульд амжилттай нэмлээ.")
                 else:
                     messages.success(request, f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг сургуульд амжилттай нэмлээ.")
-
             return redirect('manage_school_by_level', school_id=school_id, level_id=user_to_add.data.level_id)
 
         elif 'remove_user' in request.POST:
@@ -206,7 +241,7 @@ def manage_school_by_level(request, school_id, level_id):
             messages.info(request, f"'{user_to_remove.get_full_name() or user_to_remove.username}' хэрэглэгчийг сургуулиас хаслаа.")
             return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
-    else:
+    else: # GET request
         search_form = UserSearchForm()
         add_user_form = AddUserForm()
 

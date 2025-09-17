@@ -52,66 +52,86 @@ class CustomPasswordResetForm(PasswordResetForm):
         to_email,
         html_email_template_name=None,
     ):
-        # print(subject_template_name, email_template_name, context, from_email, to_email, html_email_template_name)
-        """
-        Send a django.core.mail.EmailMultiAlternatives to `to_email`.
-        """
         subject = loader.render_to_string(subject_template_name, context)
-        # Email subject *must not* contain newlines
         subject = "".join(subject.splitlines())
         body = loader.render_to_string(email_template_name, context)
 
-        email_message = EmailMultiAlternatives(subject, body, from_email, [to_email])
+        # --- ОНОШЛОГООНЫ ХЭСЭГ ---
+        # И-мэйл илгээхийн өмнө бүх хувьсагчийн утгыг түүхийгээр нь хэвлэж шалгах
+        # repr() функц нь үл үзэгдэгч тэмдэгтүүдийг (\uXXXX гэх мэт) харуулдаг.
+        print("\n--- DEBUGGING EMAIL DATA ---")
+        print(f"FROM: {repr(from_email)}")
+        print(f"TO: {repr(to_email)}")
+        print(f"SUBJECT: {repr(subject)}")
+        print(f"BODY: {repr(body)}")
+
+        html_email = None
         if html_email_template_name is not None:
             html_email = loader.render_to_string(html_email_template_name, context)
-            email_message.attach_alternative(html_email, "text/html")
+            print(f"HTML_BODY: {repr(html_email)}")
+        print("--- END DEBUGGING --- \n")
+        # --- ОНОШЛОГООНЫ ХЭСЭГ ДУУСАВ ---
 
-        email_message.send()
+        try:
+            email_message = EmailMultiAlternatives(subject, body, from_email, [to_email])
+            if html_email is not None:
+                email_message.attach_alternative(html_email, "text/html")
+
+            email_message.send()
+            print("Email sent successfully (according to Django).")
+
+        except Exception as e:
+            print(f"ERROR DURING SEND: {e}")
+            # Алдаа гарсан ч үргэлжлүүлэхгүйгээр зогсоох
+            raise e
+
     def save(
-        self,
-        domain_override=None,
-        subject_template_name="registration/password_reset_subject.txt",
-        email_template_name="registration/password_reset_email.html",
-        use_https=False,
-        token_generator=default_token_generator,
-        from_email=None,
-        request=None,
-        html_email_template_name=None,
-        extra_email_context=None,
-    ):
-        """
-        Generate a one-use only link for resetting password and send it to the
-        user.
-        """
-        email = self.cleaned_data["email"]
-        if not domain_override:
-            current_site = get_current_site(request)
-            site_name = current_site.name
-            domain = current_site.domain
-        else:
-            site_name = domain = domain_override
-        for user in self.get_users(email):
-            user_email = user.email
-            user_name = user.username
-            context = {
-                "email": user_email,
-                "domain": domain,
-                "site_name": site_name,
-                "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-                "user": user,
-                "user_name": user_name,
-                "token": token_generator.make_token(user),
-                "protocol": "https" if use_https else "http",
-                **(extra_email_context or {}),
-            }
-            self.send_mail(
-                subject_template_name,
-                email_template_name,
-                context,
-                from_email,
-                user_email,
-                html_email_template_name=html_email_template_name,
-            )
+            self,
+            domain_override=None,
+            subject_template_name="registration/password_reset_subject.txt",
+            email_template_name="registration/password_reset_email.html",
+            use_https=False,
+            token_generator=default_token_generator,
+            from_email=None,
+            request=None,
+            html_email_template_name=None,
+            extra_email_context=None,
+        ):
+            """
+            Generate a one-use only link for resetting password and send it to the
+            user.
+            """
+            email = self.cleaned_data["email"]
+            if not domain_override:
+                current_site = get_current_site(request)
+                site_name = current_site.name
+                domain = current_site.domain
+            else:
+                site_name = domain = domain_override
+
+            for user in self.get_users(email):
+                user_email = user.email
+                user_name = user.username
+                context = {
+                    "email": user_email,
+                    "domain": domain,
+                    "site_name": site_name,
+                    "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                    "user": user,
+                    "user_name": user_name,
+                    "token": token_generator.make_token(user),
+                    "protocol": "https" if use_https else "http",
+                    **(extra_email_context or {}),
+                }
+                self.send_mail(
+                    subject_template_name,
+                    email_template_name,
+                    context,
+                    from_email,
+                    user_email,
+                    html_email_template_name=html_email_template_name,
+                )
+
 class UserForm(ModelForm):
     class Meta:
         model = User
