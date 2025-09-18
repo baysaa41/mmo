@@ -193,6 +193,11 @@ class Command(BaseCommand):
             primary_meta.save()
 
             for dup_user in duplicate_users:
+                # --- ШИНЭЭР НЭМЭГДСЭН ХЭСЭГ: ГРУПП ШИЛЖҮҮЛЭХ ---
+                duplicate_user_groups = dup_user.groups.all()
+                primary_user.groups.add(*duplicate_user_groups)
+                self.stdout.write(f"  - {dup_user}-н групп гишүүнчлэлийг шилжүүллээ.")
+                # --- ШИНЭЧЛЭЛ ДУУСАВ ---
                 Result.objects.filter(contestant=dup_user).update(contestant=primary_user)
                 Award.objects.filter(contestant=dup_user).update(contestant=primary_user)
                 Comment.objects.filter(author=dup_user).update(author=primary_user)
