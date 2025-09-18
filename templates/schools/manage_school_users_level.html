@@ -4,6 +4,7 @@
 {% block content %}
 <div class="container">
     <h2 class="mb-1">{{ school.name }}: {{ selected_level.name }} ангилал</h2>
+    <p class="lead text-muted">{{ school.province.name }}</p>
     <a href="{% url 'school_dashboard' school.id %}" class="btn btn-secondary btn-sm mb-4">&larr; Удирдлагын самбар луу буцах</a>
     <hr>
 
@@ -17,7 +18,7 @@
             <form method="post" class="mb-3">
                 {% csrf_token %}
                 {{ search_form|crispy }}
-                <button type="submit" name="search_users" class="btn btn-info my-3">Хайх</button>
+                <button type="submit" name="search_users" class="btn btn-success my-3">Хайх</button>
             </form>
 
             {% if search_results %}
@@ -64,9 +65,10 @@
         <thead>
             <tr>
                 <th>ID</th>
+                <th>Хэрэглэгч</th>
                 <th>Овог</th>
                 <th>Нэр</th>
-                <th>Анги</th>
+                <th>Анги, үүрэг</th>
                 <th>Үйлдэл</th>
             </tr>
         </thead>
@@ -74,16 +76,17 @@
             {% for user in users_in_level %}
             <tr>
                 <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
                 <td>{{ user.last_name }}</td>
                 <td>{{ user.first_name }}</td>
                 <td>{{ user.data.grade.name|default:"Тодорхойгүй" }}</td>
                 <td>
-                    <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-sm btn-secondary">Засах</a>
-                    <a href="{% url 'change_student_password' user.id %}" class="btn btn-sm btn-warning">Нууц үг солих</a>
+                    <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-sm btn-outline-secondary">Засах</a>
+                    <a href="{% url 'change_student_password' user.id %}" class="btn btn-sm btn-outline-secondary">Нууц үг солих</a>
                     <form method="post" style="display: inline;">
                         {% csrf_token %}
                         <input type="hidden" name="user_id" value="{{ user.id }}">
-                        <button type="submit" name="remove_user" class="btn btn-sm btn-danger">Хасах</button>
+                        <button type="submit" name="remove_user" class="btn btn-sm btn-outline-danger">Хасах</button>
                     </form>
                 </td>
             </tr>
