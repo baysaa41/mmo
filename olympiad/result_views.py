@@ -251,7 +251,7 @@ def createCertificate(request, quiz_id, contestant_id):
     return FileResponse(open('{}.pdf'.format(name), 'rb'))
 
 
-@staff_member_required
+@login_required
 def answers_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     sid = int(request.GET.get('s', 0))
@@ -275,10 +275,12 @@ def answers_view(request, olympiad_id):
         results = Result.objects.filter(olympiad_id=olympiad_id, contestant__data__school_id=sid)
 
         if results.exists():
-            # Дэлгэрэнгүй хүснэгт үүсгэх хэсэг
             rows = list(results.values_list('contestant_id', 'problem_id', 'answer'))
             data = pd.DataFrame(rows, columns=['contestant_id', 'problem_id', 'answer'])
-            results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='answer', aggfunc='sum', fill_value=0).astype(int)
+
+            # --- ӨӨРЧЛӨЛТ 1: fill_value=0 болон .astype(int)-г устгах ---
+            # Ингэснээр NULL утгууд нь DataFrame дотор NaN (Not a Number) болж хадгалагдана.
+            results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='answer', aggfunc='sum')
 
             problem_ids = results_df.columns.values
             problem_orders = {p.id: f'№{p.order:02d}' for p in Problem.objects.filter(id__in=problem_ids)}
@@ -293,7 +295,22 @@ def answers_view(request, olympiad_id):
             user_results_df = pd.merge(user_df, results_df, left_on='ID', right_index=True, how='left')
             sorted_df = user_results_df.sort_values(by=['Овог', 'Нэр']).drop(columns=['ID'])
             sorted_df.index = np.arange(1, len(sorted_df) + 1)
-            context_data = sorted_df.style.set_table_attributes('class="table table-bordered table-hover"').to_html()
+
+            # --- ШИНЭЧИЛСЭН ХЭСЭГ ---
+            # 1. Тоон утгатай багануудын жагсаалтыг үүсгэх (нэр нь '№'-ээр эхэлсэн)
+            numeric_columns = [col for col in sorted_df.columns if str(col).startswith('№')]
+
+            # 2. Форматчилах функцээ тодорхойлох
+            formatter = lambda val: '{:.0f}'.format(val) if val > 0 else '---'
+
+            # 3. Зөвхөн тоон багануудад ('subset') форматчилах үйлдлийг хийх
+            styled_df = (sorted_df.style
+                                  .format(formatter, subset=numeric_columns, na_rep="-")
+                                  .set_table_attributes('class="table table-bordered table-hover"'))
+            context_data = styled_df.to_html()
+
+             # --- ОНОШЛОГОО 1: pivot_table-ийн дараах үр дүнг шалгах ---
+            results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='answer', aggfunc='sum')
 
     # Гарчиг болон бусад мэдээллийг бэлтгэх
     name = f"{olympiad.name}, {olympiad.level.name} ангилал"
@@ -319,18 +336,13 @@ def answers_view(request, olympiad_id):
         'olympiad_id': olympiad_id,
     }
 
-    return render(request, 'olympiad/results/results.html', context)
+    return render(request, 'olympiad/results/answers.html', context)
 
 
 def is_my_school_group(user_id, group_id):
     if School.objects.filter(user_id=user_id, group_id=group_id).exists():
         return True
     return False
-
-
-
-
-
 
 
 def problem_stats_view(request, problem_id):

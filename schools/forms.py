@@ -5,6 +5,7 @@ from django.db.models import Q
 from accounts.models import UserMeta
 from django.contrib.auth.forms import SetPasswordForm
 from schools.models import School
+from schools.models import UploadedExcel
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -100,9 +101,16 @@ class SchoolAdminPasswordChangeForm(SetPasswordForm):
         self.fields['new_password1'].widget.attrs.update({'class': 'form-control'})
         self.fields['new_password2'].widget.attrs.update({'class': 'form-control'})
 
-# --- ЭНЭ ХЭСГИЙГ НЭМЖ ӨГНӨ ҮҮ ---
-class UploadExcelForm(forms.Form):
-    file = forms.FileField(label="Дүнгийн Excel файл оруулах")
+
+
+class UploadExcelForm(forms.ModelForm):
+    class Meta:
+        model = UploadedExcel
+        fields = ['file']
+        labels = {
+            'file': 'Дүнгийн Excel файл оруулах'
+        }
+
 
 
 class SchoolModeratorChangeForm(forms.Form):

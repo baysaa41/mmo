@@ -8,28 +8,31 @@
     <hr>
     
     <div class="row">
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title">1. Загвар татах</h5>
-                    <p class="card-text">Сурагчдын жагсаалт бүхий бөглөхөд бэлэн Excel файлыг татаж авах.</p>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title text-center">1. Загвар татах</h5>
+                <p class="card-text text-center">Сурагчдын жагсаалт бүхий бөглөхөд бэлэн Excel файлыг татаж авах.</p>
+                <div class="mt-auto text-center">
                     <a href="{% url 'generate_school_answer_sheet' school.id olympiad.id %}" class="btn btn-primary">
                         <i class="fas fa-file-excel"></i> Загвар татах
                     </a>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title text-center">2. Дүн хуулах</h5>
-                    <p class="text-center">Бөглөсөн Excel файлаа сонгож системд оруулах.</p>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title text-center">2. Дүн хуулах</h5>
+                <p class="text-center">Бөглөсөн Excel файлаа сонгож системд оруулах.</p>
+                <div class="mt-auto">
                     <form action="{% url 'import_school_answer_sheet' school.id olympiad.id %}" method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="input-group">
                             <input type="file" name="file" class="form-control" required>
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-upload"></i>
                             </button>
                         </div>
@@ -37,13 +40,15 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title">3. Дүн харах</h5>
-                    <p class="card-text">Импорт хийсэн олимпиадын дүнг харах.</p>
-                    <a href="{% url 'view_school_olympiad_results' school.id olympiad.id %}" class="btn btn-info">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title text-center">3. Дүн харах</h5>
+                <p class="card-text text-center">Импорт хийсэн олимпиадын дүнг харах.</p>
+                <div class="mt-auto text-center">
+                    <a href="{% url 'view_school_olympiad_results' school.id olympiad.id %}" class="btn btn-primary">
                         <i class="fas fa-chart-bar"></i> Дүн харах
                     </a>
                 </div>

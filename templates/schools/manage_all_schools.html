@@ -18,11 +18,17 @@
                 <tbody>
                 {% for school in schools %}
                     <tr>
-                        <td><h5>{{ school.name }}</h5><span class="me-2">{{ school.province.name }}</span><span class="badge bg-primary rounded-pill">{{ school.student_count }}</span></td>
-                        <td>{{ school.user.first_name }}, {{ school.user.username }}, {{ school.user.data.mobile|default:"-" }}, {{ school.user.email }}</td>
+                        <td><h5>{{ school.name }}</h5><span>{{ school.province.name }}</span><span
+                                class="badge bg-secondary rounded-pill mx-2">{{ school.student_count }}</span></td>
+                        <td>
+                            <div><label>Хэрэглэгчийн нэр:</label> {{ school.user.username }}</div>
+                        <div><label>Овог, нэр:</label> {{ school.user.last_name }} {{ school.user.first_name }}</div>
+                        <div><label>Гар утас:</label> {{ school.user.data.mobile|default:"-" }}</div>
+                        <div><label>И-мэйл:</label> {{ school.user.email }}</div>
+                        </td>
                         <td>{{ school.user.last_login|date:"Y-m-d" }}</td>
                         <td class="text-center">
-                            <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-warning me-2">
+                            <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary me-2">
                                 <i class="fas fa-user-edit"></i> Админ
                             </a>
                         </td>
@@ -33,7 +39,7 @@
                         </td>
                         <td class="text-center">
                             <a href="{% url 'change_school_admin_password' school.user.id %}"
-                               class="btn btn-sm btn-secondary">
+                               class="btn btn-sm btn-primary">
                                 <i class="fas fa-key"></i> Нууц&nbsp;үг
                             </a>
                         </td>

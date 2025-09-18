@@ -652,6 +652,7 @@ def get_school_display_name(user):
 def olympiad_scores(request, olympiad_id):
     province_id = request.GET.get('p', '0')
     zone_id = request.GET.get('z', '0')
+    school_id = request.GET.get('s', '0')
     page_number = request.GET.get('page', '1')
     size = 500
 

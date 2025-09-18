@@ -7,6 +7,7 @@ from django.db import transaction
 from django.core.mail import send_mail
 import random
 import string
+from django.urls import reverse
 
 import pandas as pd
 import numpy as np
@@ -363,33 +364,52 @@ def generate_school_answer_sheet(request, school_id, olympiad_id):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
-
+# schools/views.py файлын дээд хэсэгт "time" модулийг импортлоно
+import time
+# ... (бусад import-ууд хэвээрээ) ...
 
 @login_required
 def import_school_answer_sheet(request, school_id, olympiad_id):
-    """Бөглөсөн хариултын хуудсыг хүлээн авч, шууд импорт хийнэ."""
+    """Excel-ээс бөглөсөн хариултын хуудсыг уншиж, Result руу импортлоно."""
     school = get_object_or_404(School, pk=school_id)
     olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+    level_id = olympiad.level_id
+
+    # Эрхийн шалгалт
+    if not request.user.is_staff and school not in request.user.moderating.all():
+        messages.error(request, "Та энэ үйлдлийг хийх эрхгүй.")
+        return redirect('school_dashboard', school_id=school_id)
 
     if request.method == 'POST':
         form = UploadExcelForm(request.POST, request.FILES)
         if form.is_valid():
-            excel_file = request.FILES['file']
+            uploaded_excel = form.save(commit=False)
+            uploaded_excel.uploaded_by = request.user
+            uploaded_excel.save()
+            excel_file = uploaded_excel.file.path
+
+            # --- Хугацаа хэмжиж эхлэх ---
+            start_time = time.time()
 
             try:
-                # --- ФАЙЛ БОЛОВСРУУЛАХ ҮНДСЭН ЛОГИК ---
+                # --- МЭДЭЭЛЭЛ sheet унших ---
                 df_info = pd.read_excel(excel_file, sheet_name='Мэдээлэл')
                 info_dict = pd.Series(df_info.Утга.values, index=df_info.Түлхүүр).to_dict()
 
-                # Файл зөв олимпиад, сургуульд зориулагдсан эсэхийг шалгах
+                # Зөв сургууль, зөв олимпиад эсэхийг шалгах
                 if int(info_dict.get('olympiad_id')) != olympiad.id or int(info_dict.get('school_id')) != school.id:
-                    messages.error(request, "Та буруу олимпиад эсвэл сургуульд зориулсан файл хуулахыг оролдлоо.")
-                    return redirect('school_dashboard', school_id=school_id)
+                    messages.error(request, "Файл өөр олимпиад/сургуульд зориулагдсан байна.")
+                    return redirect('school_level_olympiad_view', school_id=school_id, level_id=level_id, olympiad_id=olympiad_id)
 
+                # --- Хариулт sheet унших ---
                 df = pd.read_excel(excel_file, sheet_name='Хариулт')
                 problems_map = {p.order: p for p in Problem.objects.filter(olympiad=olympiad)}
 
-                updated_count, created_count, skipped_rows, errors = 0, 0, 0, []
+                if 'ID' not in df.columns:
+                    messages.error(request, "Excel-ийн 'Хариулт' sheet-д 'ID' багана байхгүй байна.")
+                    return redirect('school_dashboard', school_id=school_id)
+
+                updated_count = created_count = skipped_rows = invalid_format_count = 0
 
                 for index, row in df.iterrows():
                     user_id = row.get('ID')
@@ -399,116 +419,158 @@ def import_school_answer_sheet(request, school_id, olympiad_id):
 
                     try:
                         user = User.objects.get(pk=int(user_id))
-                        # Сурагч тухайн сургуульд харьяалагддаг эсэхийг шалгах
-                        if not user.groups.filter(pk=school.group.id).exists():
-                            skipped_rows += 1
-                            errors.append(f"Мөр {index + 2}: {user.first_name} хэрэглэгч энэ сургуульд харьяалагддаггүй.")
-                            continue
-
-                        with transaction.atomic():
-                            for order, problem in problems_map.items():
-                                column_name = f'№{order}'
-                                if column_name in df.columns:
-                                    answer = row[column_name]
-                                    if pd.notna(answer) and str(answer).strip() != '':
-                                        try:
-                                            submitted_answer = int(float(answer))
-                                            if submitted_answer <= 0: raise ValueError
-
-                                            _, created = Result.objects.update_or_create(
-                                                contestant=user, olympiad=olympiad, problem=problem,
-                                                defaults={'answer': submitted_answer}
-                                            )
-                                            if created: created_count += 1
-                                            else: updated_count += 1
-                                        except (ValueError, TypeError):
-                                            pass # Буруу форматтай хариултыг алгасах
-
-                    except User.DoesNotExist:
+                    except (User.DoesNotExist, ValueError, TypeError):
                         skipped_rows += 1
-                        errors.append(f"Мөр {index + 2}: ID={int(user_id)} хэрэглэгч олдсонгүй.")
                         continue
 
-                summary = f"Амжилттай боловсрууллаа. Үүссэн: {created_count}, Шинэчлэгдсэн: {updated_count}, Алгассан: {skipped_rows}."
-                messages.success(request, summary)
-                if errors:
-                    messages.warning(request, "Дараах алдаанууд гарлаа: " + " | ".join(errors[:3])) # Эхний 3 алдааг харуулах
+                    # Сурагч зөв сургуулийн group-д багтсан эсэх
+                    if not user.groups.filter(pk=school.group.id).exists():
+                        skipped_rows += 1
+                        continue
+
+                    with transaction.atomic():
+                        for order, problem in problems_map.items():
+                            col = f'№{order}'
+                            if col not in df.columns:
+                                continue
+
+                            answer = row[col]
+                            db_value = None
+                            valid = False
+
+                            if pd.notna(answer) and str(answer).strip() != '':
+                                try:
+                                    fa = float(answer)
+                                    if fa > 0 and fa.is_integer():
+                                        db_value = int(fa)
+                                        valid = True
+                                except (ValueError, TypeError):
+                                    pass
+
+                            if not valid and pd.notna(answer) and str(answer).strip() != '':
+                                invalid_format_count += 1
+
+                            obj, created = Result.objects.update_or_create(
+                                contestant=user, olympiad=olympiad, problem=problem,
+                                defaults={'answer': db_value}
+                            )
+                            if created:
+                                created_count += 1
+                            else:
+                                updated_count += 1
+
+
+                # --- Хугацаа хэмжиж дуусгах ---
+                elapsed_time = round(time.time() - start_time, 2)
+
+                messages.success(
+                    request,
+                    f"Excel боловсрууллаа ({elapsed_time} секунд). "
+                    f"Үүссэн: {created_count}, "
+                    f"Шинэчлэгдсэн: {updated_count}, "
+                    f"Буруу форматтай: {invalid_format_count}, "
+                    f"Алгассан: {skipped_rows}."
+                )
 
             except Exception as e:
-                messages.error(request, f"Файл боловсруулахад алдаа гарлаа: {e}")
+                messages.error(request, f"Файл боловсруулахад алдаа: {e}")
+                return redirect('school_dashboard', school_id=school_id)
 
-            return redirect('school_dashboard', school_id=school_id)
+            # Амжилтын дараа дүнгийн хуудас руу шилжих
+            target_url = reverse('olympiad_answer_view', args=[olympiad_id])
+            final_url = f"{target_url}?s={school_id}&p={school.province.id}"
+            return redirect(final_url)
+
         else:
-            messages.error(request, "Файл хуулахад алдаа гарлаа. Та зөв файл сонгосон эсэхээ шалгана уу.")
+            messages.error(request, "Файл хуулахад алдаа гарлаа.")
 
     return redirect('school_dashboard', school_id=school_id)
 
 
 @login_required
 def view_school_olympiad_results(request, school_id, olympiad_id):
-    """Тухайн сургуулийн, тухайн олимпиадын дүнг харуулна."""
-    school = get_object_or_404(School, pk=school_id)
-    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+    """
+    Сонгосон сургууль, олимпиадын хувьд сурагчдын авсан оноог харуулна.
+    Энэ хувилбарт аймгийн шүүлтүүр хасагдаж, нийт онооны багана нэмэгдсэн.
+    """
+    sid = school_id
+    context_data = ''
 
-    # --- Эрхийн шалгалт ---
-    if not request.user.is_staff and school not in request.user.moderating.all():
-        messages.error(request, 'Та энэ сургуулийн дүнг харах эрхгүй.')
-        return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
+    try:
+        # Олимпиад болон сургуулийн мэдээллийг татах
+        olympiad = Olympiad.objects.get(pk=olympiad_id)
+        school = School.objects.get(pk=sid)
+    except (Olympiad.DoesNotExist, School.DoesNotExist):
+        return render(request, 'olympiad/results/no_olympiad.html', {'message': 'Олимпиад эсвэл сургууль олдсонгүй.'})
 
-    # --- Дүн боловсруулах логик (result_views.py-аас авсан) ---
+    # Тухайн олимпиад, сургуульд хамаарах бүх дүнг татах
+    results = Result.objects.filter(olympiad_id=olympiad_id, contestant__data__school_id=sid)
 
-    # Тухайн сургуулийн группт хамаарах хэрэглэгчдийг олох
-    users_in_school = school.group.user_set.all()
+    if results.exists():
+        # Дүнгүүдээс pandas DataFrame үүсгэх (хариултын оронд оноог ашиглана)
+        rows = list(results.values_list('contestant_id', 'problem_id', 'score'))
+        data = pd.DataFrame(rows, columns=['contestant_id', 'problem_id', 'score'])
 
-    # Тухайн олимпиад болон сургуулийн хэрэглэгчдэд хамаарах дүнгийн мэдээллийг шүүх
-    results_qs = Result.objects.filter(olympiad_id=olympiad_id, contestant__in=users_in_school)
+        # Хүснэгтийг эргүүлж, сурагчдыг мөр, бодлогуудыг багана болгох
+        # Хэрэв тухайн бодлогод оноо аваагүй бол 0 гэж тооцно
+        results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='score', aggfunc='sum', fill_value=0)
 
-    if not results_qs.exists():
-        messages.info(request, 'Энэ олимпиадад танай сургуулиас оролцсон сурагчийн дүн олдсонгүй.')
-        # Дүнгүй үед харуулах хуудсыг буцааж болно, эсвэл dashboard руу буцаана.
-        # Энд түр dashboard руу буцаах сонголтыг хийлээ.
-        return redirect('school_dashboard', school_id=school_id)
+        # Баганын нэрийг бодлогын дугаараар солих
+        problem_ids = results_df.columns.values
+        problem_orders = {p.id: f'№{p.order}' for p in Problem.objects.filter(id__in=problem_ids)}
+        results_df.columns = [problem_orders.get(col, 'Unknown') for col in results_df.columns]
 
-    # Pandas DataFrame болгох
-    results_df = read_frame(results_qs, fieldnames=['contestant_id', 'problem_id', 'score'])
-    users_df = read_frame(users_in_school, fieldnames=['id', 'last_name', 'first_name', 'data__grade__name'])
+        # "Нийт" онооны багана нэмэх
+        results_df['Нийт'] = results_df.sum(axis=1)
 
-    # Pivot table үүсгэж, бодлого бүрийн оноог багана болгох
-    pivot = results_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
+        # Багануудыг эрэмбэлэх (Бодлогууд -> Нийт)
+        problem_cols = sorted([col for col in results_df.columns if col != 'Нийт'])
+        results_df = results_df[problem_cols + ['Нийт']]
 
-    # Нийт оноог тооцоолох
-    pivot["Дүн"] = pivot.sum(axis=1)
+        # Сурагчдын мэдээллийг авах
+        contestant_ids = list(results_df.index)
+        contestants_data = User.objects.filter(pk__in=contestant_ids).values('id', 'last_name', 'first_name')
+        user_df = pd.DataFrame(list(contestants_data))
+        user_df.columns = ['ID', 'Овог', 'Нэр']
 
-    # Хэрэглэгчийн мэдээлэлтэй нэгтгэх
-    final_results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='inner')
+        # Сурагчдын мэдээллийг онооны хүснэгттэй нэгтгэх
+        user_results_df = pd.merge(user_df, results_df, left_on='ID', right_index=True, how='left')
 
-    # Дүнгээр нь эрэмбэлэх
-    final_results.sort_values(by='Дүн', ascending=False, inplace=True)
+        # Нийт оноогоор буурахаар, дараа нь нэрээр өсөхөөр эрэмбэлэх
+        sorted_df = user_results_df.sort_values(
+            by=['Нийт', 'Овог', 'Нэр'],
+            ascending=[False, True, True]
+        ).drop(columns=['ID'])
 
-    # Хүснэгтийн баганын нэрсийг ойлгомжтой болгох
-    final_results.rename(columns={
-        'id': 'ID',
-        'first_name': 'Нэр',
-        'last_name': 'Овог',
-        'data__grade__name': 'Анги',
-    }, inplace=True)
+        # Индексийг 1-ээс эхлүүлэх
+        sorted_df.index = np.arange(1, len(sorted_df) + 1)
 
-    # Бодлогын ID-г №1, №2 гэх мэтээр солих
-    for problem in olympiad.problem_set.all().order_by('order'):
-        final_results.rename(columns={problem.id: f'№{problem.order}'}, inplace=True)
+        # Онооны багануудыг тодорхойлох
+        numeric_columns = [col for col in sorted_df.columns if str(col).startswith('№') or str(col) == 'Нийт']
 
-    # Байр эзлүүлэх (index-г ашиглах)
-    final_results.index = np.arange(1, len(final_results) + 1)
+        # Оноог нэг орны нарийвчлалтай форматлах
+        formatter = '{:.1f}'.format
 
-    # Хүснэгтийг HTML болгож хувиргах
-    results_html = final_results.to_html(classes='table table-bordered table-striped table-hover', na_rep="-", escape=False)
+        # HTML гаргалт руу хөрвүүлэхдээ style тохируулах
+        styled_df = (sorted_df.style
+                              .format(formatter, subset=numeric_columns, na_rep="-")
+                              .set_table_attributes('class="table table-bordered table-hover"'))
+        context_data = styled_df.to_html()
+
+    # Template-д дамжуулах мэдээллийг бэлтгэх
+    title = f"{school.name} - {olympiad.name}"
+    name = f"{olympiad.name}, {olympiad.level.name} ангилал"
 
     context = {
+        'title': f"{title} - Дүн",
+        'name': name,
+        'data': context_data,
         'school': school,
-        'olympiad': olympiad,
-        'results_html': results_html,
+        'selected_sid': sid,
+        'olympiad_id': olympiad_id,
     }
-    return render(request, 'schools/school_olympiad_results.html', context)
+
+    return render(request, 'olympiad/results/results.html', context)
 
 @login_required
 def edit_user_in_group(request, user_id):

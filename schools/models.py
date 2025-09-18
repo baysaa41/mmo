@@ -19,3 +19,12 @@ class School(models.Model):
 
     def __str__(self):
         return "{}, {}".format(self.group.name, self.user.first_name)
+
+
+class UploadedExcel(models.Model):
+    file = models.FileField(upload_to='excel_uploads/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.file.name} ({self.uploaded_at})"

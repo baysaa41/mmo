@@ -18,7 +18,6 @@ class Command(BaseCommand):
         if not os.path.isdir(directory_path):
             raise CommandError(f"Хавтас олдсонгүй: {directory_path}")
 
-        # Боловсруулсан файлуудыг зөөх хавтас
         processed_dir_path = os.path.join(directory_path, 'processed')
         os.makedirs(processed_dir_path, exist_ok=True)
 
@@ -32,7 +31,6 @@ class Command(BaseCommand):
             self.stdout.write(f"\n--- '{filename}' файлыг боловсруулж байна ---")
 
             try:
-                # --- Info Sheet-г уншиж, шалгах ---
                 df_info = pd.read_excel(file_path, sheet_name='Мэдээлэл')
                 info_dict = pd.Series(df_info.Утга.values,index=df_info.Түлхүүр).to_dict()
                 olympiad_id = int(info_dict['olympiad_id'])
@@ -45,7 +43,6 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(f"Алдаа: '{school.name}' сургуульд групп оноогоогүй тул файлыг алгасаж байна."))
                     continue
 
-                # --- Хариултын Sheet-г унших ---
                 df = pd.read_excel(file_path, sheet_name='Хариулт')
                 problems_map = {problem.order: problem for problem in Problem.objects.filter(olympiad=olympiad)}
 
@@ -56,8 +53,9 @@ class Command(BaseCommand):
                 updated_count = 0
                 created_count = 0
                 skipped_rows = 0
+                # --- ӨӨРЧЛӨЛТ 1: ШИНЭ ТООЛУУР НЭМЭХ ---
+                invalid_format_count = 0
 
-                # --- Мөр бүрийг боловсруулах ---
                 for index, row in df.iterrows():
                     user_id = row.get('ID')
                     if pd.isna(user_id):
@@ -72,13 +70,11 @@ class Command(BaseCommand):
                         skipped_rows += 1
                         continue
 
-                    # ШАЛГАЛТ 1: СУРАГЧ ТУХАЙН СУРГУУЛЬД ХАРЬЯАЛАГДДАГ ЭСЭХ
                     if not user.groups.filter(pk=school.group.id).exists():
                         self.stdout.write(self.style.WARNING(f"  Мөр {index + 2}: ID={user_id} ({user.first_name}) хэрэглэгч '{school.name}' сургуульд харьяалагддаггүй. Алгасаж байна."))
                         skipped_rows += 1
                         continue
 
-                    # ШАЛГАЛТ 2: НЭР ОВОГ ЗӨРҮҮТЭЙ ЭСЭХ
                     last_name_from_file = str(row.get('Овог', ''))
                     first_name_from_file = str(row.get('Нэр', ''))
                     if user.last_name != last_name_from_file or user.first_name != first_name_from_file:
@@ -91,28 +87,44 @@ class Command(BaseCommand):
                             column_name = f'№{order}'
                             if column_name in df.columns:
                                 answer = row[column_name]
+
+                                db_value_to_save = None
+                                is_valid_format = False
+
                                 if pd.notna(answer) and str(answer).strip() != '':
-                                    # ШАЛГАЛТ 3: НАТУРАЛ ТОО МӨН ЭСЭХ
                                     try:
-                                        submitted_answer = int(float(answer))
-                                        if submitted_answer <= 0:
-                                            raise ValueError("Эерэг тоо биш")
-
-                                        obj, created = Result.objects.update_or_create(
-                                            contestant=user, olympiad=olympiad, problem=problem,
-                                            defaults={'answer': submitted_answer}
-                                        )
-                                        if created: created_count += 1
-                                        else: updated_count += 1
-
+                                        float_answer = float(answer)
+                                        if float_answer > 0 and float_answer.is_integer():
+                                            db_value_to_save = int(float_answer)
+                                            is_valid_format = True
                                     except (ValueError, TypeError):
-                                        self.stdout.write(self.style.WARNING(f"    - {user.first_name}, {column_name}: Хариулт '{answer}' натурал тоо биш тул алгаслаа."))
+                                        pass
 
+                                if not is_valid_format and pd.notna(answer) and str(answer).strip() != '':
+                                    self.stdout.write(self.style.WARNING(
+                                        f"    - {user.first_name}, {column_name}: Хариулт '{answer}' буруу форматтай тул NULL болголоо."
+                                    ))
+                                    # --- ӨӨРЧЛӨЛТ 2: БУРУУ ФОРМАТТАЙ ХАРИУЛТЫГ ТООЛОХ ---
+                                    invalid_format_count += 1
+
+                                obj, created = Result.objects.update_or_create(
+                                    contestant=user, olympiad=olympiad, problem=problem,
+                                    defaults={'answer': db_value_to_save}
+                                )
+                                if created:
+                                    created_count += 1
+                                else:
+                                    updated_count += 1
+
+                # --- ӨӨРЧЛӨЛТ 3: ҮР ДҮНГИЙН МЭДЭЭЛЭЛД ШИНЭ ТООЛУУРЫГ НЭМЭХ ---
                 self.stdout.write(self.style.SUCCESS(
-                    f"'{filename}' файл амжилттай боловсруулагдлаа. Үүссэн: {created_count}, Шинэчлэгдсэн: {updated_count}, Алгассан: {skipped_rows}."
+                    f"'{filename}' файл амжилттай боловсруулагдлаа. "
+                    f"Үүссэн: {created_count}, "
+                    f"Шинэчлэгдсэн: {updated_count}, "
+                    f"Буруу форматтай (NULL болсон): {invalid_format_count}, "
+                    f"Алгассан мөр: {skipped_rows}."
                 ))
 
-                # Амжилттай боловсруулсан файлыг зөөх
                 processed_file_path = os.path.join(processed_dir_path, filename)
                 os.rename(file_path, processed_file_path)
 

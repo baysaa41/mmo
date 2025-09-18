@@ -7,37 +7,21 @@
 {% block content %}
 
     {% if school %}
-        <h2 class="mb-1">{{ school.name }}</h2>
-        <p class="lead text-muted">{{ school.province.name }}</p>
+        <h2 class="mb-1">Сурагчдын дүн</h2>
+        <p class="lead text-muted">{{ school.province.name }}, {{ school.name }}</p>
     {% else %}
         <h2>{{ title }}</h2>
     {% endif %}
 
     <p class="lead">{{ name }}</p>
 
-    {# Шүүлтүүрийн хэсэг #}
-    {% include './school_selection_menu.html' %}
-
     {# Үр дүнгийн хүснэгт эсвэл зааварчилгааг харуулах #}
     {% if data %}
         {{ data | safe }}
     {% else %}
-        {# Хэрэв аймаг сонгогдсон бол дараагийн алхмыг сануулах #}
-        {% if selected_pid > 0 and not selected_sid > 0 %}
-            <div class="alert alert-info mt-4">
-                Үр дүнг харахын тулд сургуулиа сонгоно уу.
-            </div>
-        {# Хэрэв сургууль сонгосон ч үр дүн олдсонгүй бол #}
-        {% elif selected_sid > 0 %}
-            <div class="alert alert-warning mt-4">
-                Сонгогдсон сургуулийн оролцогчдын мэдээлэл олдсонгүй.
-            </div>
-        {# Анхдагч зааварчилгаа #}
-        {% else %}
-             <div class="alert alert-light mt-4">
-                Үр дүнг харахын тулд эхлээд аймаг, дараа нь сургуулиа сонгоно уу.
-            </div>
-        {% endif %}
+         <div class="alert alert-light mt-4">
+            Дүн гараагүй байна.
+        </div>
     {% endif %}
 
 {% endblock %}
