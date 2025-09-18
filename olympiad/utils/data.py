@@ -54,6 +54,12 @@ def to_scoresheet(olympiad_id):
         results_list = list(results_group)
         contestant = results_list[0].contestant
 
+        # --- ADDED CHECK ---
+        # Skip user if they don't have a UserMeta (data) profile
+        if not hasattr(contestant, 'data') or contestant.data is None:
+            print(f"{contestant.id} хэрэглэгчийн бүртгэлийн мэдээлэл дутуу тул алгаслаа.")
+            continue
+
         school_obj = contestant.data.school
 
         score_fields = {'school': school_obj}
