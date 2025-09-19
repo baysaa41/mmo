@@ -230,6 +230,16 @@ def manage_school_by_level(request, school_id, level_id):
                 messages.error(request, "Энэ хэрэглэгчид профайл (UserMeta) бүртгэл алга байна.")
                 return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
+            # зөвхөн staff л staff-ийг нэмэх эрхтэй
+            if not request.user.is_staff and user_to_add.is_staff:
+                messages.error(request, "Танд энэ хэрэглэгчийг нэмэх эрх байхгүй.")
+                return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+
+            # админыг нэмж болохгүй
+            if user_to_add.is_superuser:
+                messages.error(request, "Танд энэ хэрэглэгчийг нэмэх эрх байхгүй.")
+                return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+
             # Хуучин сургууль нь өөр байвал зөвхөн staff эрхтэй хүн сольж чадна
             if user_meta.school and user_meta.school != school and not request.user.is_staff:
                 messages.error(
@@ -255,6 +265,9 @@ def manage_school_by_level(request, school_id, level_id):
                     request,
                     f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг '{school.name}' сургуульд амжилттай нэмлээ."
                 )
+
+            if user_to_add.data.level_id != level_id:
+                level_id = 100
 
             return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
