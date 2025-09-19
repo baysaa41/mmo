@@ -89,8 +89,9 @@
                         <td>{{ data.province }}</td>
                         {% if data.school %}
                         <td>{{ data.school }}</td>
+                        {% elif request.user.is_staff %}
+                        <td><a href="{% url 'user_profile_edit' data.id %}" target="_blank">Хэрэглэгч засах</a></td>
                         {% else %}
-                        <td><a href="{% url 'user_profile_edit' data.id %}">Хэрэглэгч засах</a></td>
                         {% endif %}
                         {% for score in data.scores %}
                             <td class="text-center">{{ score }}</td>
