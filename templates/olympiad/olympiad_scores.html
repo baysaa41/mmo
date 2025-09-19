@@ -90,7 +90,7 @@
                         {% if data.school %}
                         <td>{{ data.school }}</td>
                         {% else %}
-                        <td><a>{% url 'user_profile_edit' data.id %}Хэрэглэгч засах</a></td>
+                        <td><a href="{% url 'user_profile_edit' data.id %}">Хэрэглэгч засах</a></td>
                         {% endif %}
                         {% for score in data.scores %}
                             <td class="text-center">{{ score }}</td>
