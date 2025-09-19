@@ -223,19 +223,40 @@ def manage_school_by_level(request, school_id, level_id):
             add_user_form = AddUserForm()
             user_id = request.POST.get('user_id')
             user_to_add = get_object_or_404(User, id=user_id)
-            existing_school_groups = user_to_add.groups.filter(school__isnull=False)
-            if not request.user.is_staff and existing_school_groups.exists():
-                other_school_name = existing_school_groups.first().school
-                messages.error(request, f"'{user_to_add.get_full_name()}' хэрэглэгч '{other_school_name}' сургуульд аль хэдийн бүртгэлтэй тул нэмэх боломжгүй. Зөвхөн системийн админ шилжүүлэг хийх боломжтой. Эсвэл хэрэглэгч өөрийн бүртгэлд өөрчлөлт оруулж болно.")
+
+            user_meta = getattr(user_to_add, "data", None)
+
+            if not user_meta:
+                messages.error(request, "Энэ хэрэглэгчид профайл (UserMeta) бүртгэл алга байна.")
+                return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+
+            # Хуучин сургууль нь өөр байвал зөвхөн staff эрхтэй хүн сольж чадна
+            if user_meta.school and user_meta.school != school and not request.user.is_staff:
+                messages.error(
+                    request,
+                    f"'{user_to_add.get_full_name()}' хэрэглэгч '{user_meta.school.name}' сургуульд бүртгэлтэй тул нэмэх боломжгүй. "
+                    f"Зөвхөн системийн админ шилжүүлэг хийж чадна."
+                )
             else:
+                # Хуучин сургуульд байсан group-оос хасах (staff үед)
+                if request.user.is_staff and user_meta.school and user_meta.school != school:
+                    old_group = user_meta.school.group
+                    if old_group:
+                        old_group.user_set.remove(user_to_add)
+
+                # Шинэ сургуульд оноох
+                user_meta.school = school
+                if level_id != 0:
+                    user_meta.level = selected_level if isinstance(selected_level, Level) else None
+                user_meta.save()
+
                 group.user_set.add(user_to_add)
-                if request.user.is_staff and existing_school_groups.exists():
-                    for g in existing_school_groups:
-                        g.user_set.remove(user_to_add)
-                    messages.success(request, f"'{user_to_add.get_full_name()}' хэрэглэгчийг хуучин сургуулиас нь хасаж, энэ сургуульд амжилттай нэмлээ.")
-                else:
-                    messages.success(request, f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг сургуульд амжилттай нэмлээ.")
-            return redirect('manage_school_by_level', school_id=school_id, level_id=user_to_add.data.level_id)
+                messages.success(
+                    request,
+                    f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг '{school.name}' сургуульд амжилттай нэмлээ."
+                )
+
+            return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
         elif 'remove_user' in request.POST:
             search_form = UserSearchForm()
