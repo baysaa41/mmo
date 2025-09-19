@@ -122,6 +122,7 @@ def bulk_add_users_to_school_view(request):
                     # Хэрэглэгчийн сургууль тодорхойлогдоогүй бол тодорхойлох
                     if not user.data.school:
                         user.data.school = school
+                        user.save()
                     # Хэрэглэгч аль хэдийн гишүүн биш бол нэмэх
                     if not user.groups.filter(pk=school.group.id).exists() and user.data.school.id == school.id:
                         school.group.user_set.add(user)
