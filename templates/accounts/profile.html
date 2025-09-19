@@ -4,7 +4,7 @@
 
 {% block content %}
     <div class="container">
-        <h3>{{ request.user.username }} (ID: {{ request.user.id }}) хэрэглэгчийн бүртгэлийн мэдээлэл</h3>
+        <h3>{{ user.username }} (ID: {{ user.id }}) хэрэглэгчийн бүртгэлийн мэдээлэл</h3>
         <div>
             ММОХ-оос зохион байгуулах аливаа уралдаан, тэмцээнд оролцохын тулд дараах мэдээллийг
             үнэн зөв бөгөөд гүйцэд бөглөнө үү.
@@ -26,7 +26,7 @@
         </form>
         <hr>
 
-        <div>Хэрвээ та нууц үгээ солих бол: <a href="{% url 'user_password' %}" class="btn btn-secondary">Нууц үг
+        <div>Хэрвээ та нууц үгээ солих бол: <a href="{% url 'user_password' user_id=user.id %}" class="btn btn-secondary">Нууц үг
             солих</a></div>
     </div>
     {# JavaScript код хэвээрээ үлдэнэ #}

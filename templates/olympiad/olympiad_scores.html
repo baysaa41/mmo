@@ -87,7 +87,10 @@
                         <td>{{ data.first_name }}</td>
                         <td>{{ data.id }}</td>
                         <td>{{ data.province }}</td>
+                        {% if data.school %}
                         <td>{{ data.school }}</td>
+                        {% else %}
+                        <td><a>{% url 'user_profile_edit' data.id %}Хэрэглэгч засах</a></td>
                         {% for score in data.scores %}
                             <td class="text-center">{{ score }}</td>
                         {% endfor %}

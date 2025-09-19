@@ -76,7 +76,7 @@
             {% for olympiad in olympiads %}
                 <a href="{% url 'school_level_olympiad_view' school.id olympiad.level.id olympiad.id %}" class="list-group-item list-group-item-action">
                     <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">{{ olympiad.name }}, {{ olympiad.get_level }} ангилал</h5>
+                        <div class="mb-1">{{ olympiad.name }}, {{ olympiad.get_level }} ангилал</div>
                         <small>{{ olympiad.start_time|date:"Y-m-d" }}</small>
                     </div>
                 </a>

@@ -5,6 +5,7 @@ from django.contrib.auth import views as auth_views
 
 # Import the new view modules
 from .views import auth, display, email, ajax, admin
+from schools.views import change_student_password_view
 
 urlpatterns = [
     # Display Views
@@ -14,8 +15,9 @@ urlpatterns = [
 
     # Auth Views
     path('profile/', auth.profile, name='user_profile'),
+    path('profile/<int:user_id>/', auth.user_profile_edit, name='user_profile_edit'),
     path('profile/done/', auth.profile_ready, name='user_profile_done'),
-    path('password/', auth_views.PasswordChangeView.as_view(template_name='registration/change-password.html'), name='user_password'),
+    path('password/<int:user_id>/', change_student_password_view, name='user_password'),
     path('login/', auth.login_view, name='user_login'),
     path('logout/', auth.logout_view, name='user_logout'),
     # profile-d surguuli songoh

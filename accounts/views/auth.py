@@ -1,10 +1,11 @@
 # accounts/views/auth.py
-
+from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetView
 from django.contrib import messages
+from django.contrib.auth.models import User
 
 from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm
 from ..models import UserMeta
@@ -32,7 +33,33 @@ def profile(request):
         form1 = UserForm(instance=request.user)
         form2 = UserMetaForm(instance=user_meta)
 
-    return render(request, 'accounts/register.html', {'form1': form1, 'form2': form2})
+    return render(request, 'accounts/profile.html', {'user':request.user, 'form1': form1, 'form2': form2})
+
+@staff_member_required
+def user_profile_edit(request, user_id):
+    user = User.objects.get(pk=user_id)
+    user_meta, created = UserMeta.objects.get_or_create(user_id=user_id)
+
+    if request.method == 'POST':
+        form1 = UserForm(request.POST, request.FILES, instance=user)
+        form2 = UserMetaForm(request.POST, instance=user_meta)
+
+        # <<< 2. Формууд зөв бөглөгдсөн эсэхийг шалгах
+        if form1.is_valid() and form2.is_valid():
+            form1.save()
+            form2.save()
+            # <<< 3. Амжилттай болсон тухай мэдээлэл нэмэх
+            messages.success(request, 'Хэрэглэгчийн мэдээлэл амжилттай шинэчлэгдлээ.')
+            return redirect('user_profile_edit', user_id=user_id)
+        else:
+            # Хэрэв алдаатай бол алдааны мэдээллийг хэрэглэгчид харуулах
+            messages.error(request, 'Мэдээллийг хадгалахад алдаа гарлаа. Талбаруудыг зөв бөглөнө үү.')
+
+    else: # GET request үед
+        form1 = UserForm(instance=user)
+        form2 = UserMetaForm(instance=user_meta)
+
+    return render(request, 'accounts/profile.html', {'user': user, 'form1': form1, 'form2': form2})
 
 def profile_ready(request):
     return render(request, 'accounts/profile_ready.html')
