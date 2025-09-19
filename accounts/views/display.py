@@ -1,5 +1,5 @@
 # accounts/views/display.py
-
+from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib.auth.models import Group, User
@@ -61,6 +61,7 @@ def group_users(request, group_id):
     }
     return render(request, 'accounts/group-users.html', context)
 
+@staff_member_required
 def staff(request):
     users = User.objects.filter(is_staff=1).order_by('data__province__zone')
     return render(request, 'accounts/staff.html', {'users': users})
