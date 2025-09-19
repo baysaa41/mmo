@@ -131,7 +131,11 @@ def manage_school_by_level(request, school_id, level_id):
 
     group = school.group
 
-    if level_id == 0:
+    # --- ШИНЭЧИЛСЭН ЛОГИК ---
+    if level_id == 100: # 10 нь "Бүх сурагчид" гэсэн утгатай
+        selected_level = {'id': 100, 'name': 'Бүх сурагчид'}
+        users_in_level = group.user_set.all().select_related('data__grade')
+    elif level_id == 0:
         selected_level = {'id': 0, 'name': 'Ангилалгүй'}
         users_in_level = group.user_set.filter(data__level__isnull=True).select_related('data__grade')
     else:

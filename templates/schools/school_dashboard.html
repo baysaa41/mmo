@@ -10,6 +10,12 @@
     <h4>Сурагчдын тоо (Ангиллаар)</h4>
     <p>Дэлгэрэнгүй мэдээлэл харахын тулд ангиллын нэр дээр дарна уу.</p>
     <div class="list-group mb-4">
+            {# --- ШИНЭ ХОЛБООС --- #}
+        <a href="{% url 'manage_school_by_level' school.id 100 %}" class="list-group-item list-group-item-action list-group-item-primary d-flex justify-content-between align-items-center">
+            <strong>Бүх сурагчид</strong>
+            {# Нийт сурагчдын тоог group-ийн гишүүдээр тооцоолох #}
+            <span class="badge bg-primary rounded-pill">{{ school.group.user_set.count }}</span>
+        </a>
         {% for count_info in student_counts_by_level %}
             <a href="{% url 'manage_school_by_level' school.id count_info.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                 {{ count_info.name }}
