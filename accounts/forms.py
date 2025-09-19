@@ -201,3 +201,16 @@ class EmailForm(forms.Form):
     subject = forms.CharField(max_length=100)
     message = forms.CharField(widget=forms.Textarea)
     attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
+
+
+class BulkAddUsersToSchoolForm(forms.Form):
+    school = forms.ModelChoiceField(
+        queryset=School.objects.select_related('province').order_by('province__name', 'name'),
+        label="Сургууль сонгох",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    user_ids = forms.CharField(
+        label="Сурагчдын ID-г оруулах (таслал, зай, эсвэл шинэ мөрөөр тусгаарлана уу)",
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 10}),
+        help_text="Жишээ: 101, 105, 215"
+    )

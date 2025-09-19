@@ -22,6 +22,7 @@ urlpatterns = [
     path('logout/', auth.logout_view, name='user_logout'),
     # profile-d surguuli songoh
     path('ajax/load-schools/', ajax.load_schools, name='ajax_load_schools'), # Шинэ URL нэмэх
+    path('bulk-add-users/', auth.bulk_add_users_to_school_view, name='bulk_add_users_to_school'),
 
     # Email Views
     path('createmails/', email.create_mails, name='user_createmails'),

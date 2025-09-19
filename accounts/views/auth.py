@@ -7,8 +7,9 @@ from django.contrib.auth.views import PasswordResetView
 from django.contrib import messages
 from django.contrib.auth.models import User
 
-from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm
+from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, BulkAddUsersToSchoolForm
 from ..models import UserMeta
+import re
 
 @login_required(login_url='/accounts/login/')
 def profile(request):
@@ -96,3 +97,49 @@ class CustomPasswordResetView(PasswordResetView):
     form_class = CustomPasswordResetForm
     email_template_name = 'registration/password_reset_email.html'
     success_url = '/password_reset/done/'
+
+@staff_member_required
+def bulk_add_users_to_school_view(request):
+    """
+    Textarea-д оруулсан ID-тай хэрэглэгчдийг сонгосон сургуульд
+    бөөнөөр нь нэмэх хуудас.
+    """
+    if request.method == 'POST':
+        form = BulkAddUsersToSchoolForm(request.POST)
+        if form.is_valid():
+            school = form.cleaned_data['school']
+            user_ids_raw = form.cleaned_data['user_ids']
+
+            # Оруулсан текстийг задалж, тоон ID болгох
+            # re.split ашиглан таслал, зай, шинэ мөрийг бүгдийг нь танина
+            cleaned_ids = [int(uid) for uid in re.split(r'[\s,;]+', user_ids_raw) if uid.isdigit()]
+
+            users_to_add = User.objects.filter(id__in=cleaned_ids)
+
+            added_count = 0
+            if school.group:
+                for user in users_to_add:
+                    # Хэрэглэгчийн сургууль тодорхойлогдоогүй бол тодорхойлох
+                    if not user.data.school:
+                        user.data.school = school
+                    # Хэрэглэгч аль хэдийн гишүүн биш бол нэмэх
+                    if not user.groups.filter(pk=school.group.id).exists() and user.data.school.id == school.id:
+                        school.group.user_set.add(user)
+                        added_count += 1
+
+            found_ids = users_to_add.values_list('id', flat=True)
+            not_found_ids = set(cleaned_ids) - set(found_ids)
+
+            messages.success(request, f"'{school.name}' сургуульд {added_count} шинэ сурагчийг амжилттай нэмлээ.")
+            if not_found_ids:
+                messages.warning(request, f"Дараах ID-тай хэрэглэгчид олдсонгүй: {', '.join(map(str, not_found_ids))}")
+
+            return redirect('bulk_add_users_to_school')
+
+    else:
+        form = BulkAddUsersToSchoolForm()
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'accounts/bulk_add_users.html', context)
