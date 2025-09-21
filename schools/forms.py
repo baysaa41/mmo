@@ -122,15 +122,15 @@ class SchoolModeratorChangeForm(forms.Form):
     )
 
 
-class ChangeSchoolAdminForm(forms.Form):
-    school = forms.ModelChoiceField(
-        queryset=School.objects.select_related('province').order_by('province__name', 'name'),
-        label="Сургууль сонгох",
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-    user = forms.ModelChoiceField(
-        # Staff биш хэрэглэгчдийг жагсаах нь илүү тохиромжтой
-        queryset=User.objects.filter(is_staff=False).order_by('last_name', 'first_name'),
-        label="Шинэ админ (модератор) сонгох",
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
+class EditSchoolInfoForm(forms.ModelForm):
+    class Meta:
+        model = School
+        fields = ['name', 'province']
+        labels = {
+            'name': 'Сургуулийн нэр',
+            'province': 'Аймаг/Дүүрэг',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'province': forms.Select(attrs={'class': 'form-select'}),
+        }

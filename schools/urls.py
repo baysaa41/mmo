@@ -15,12 +15,14 @@ from .views import (
     change_school_admin_view,
     edit_school_admin_view,
     change_school_admin_password_view,
-    school_list_view
+    school_list_view,
+    edit_school_info_view
 )
 
 urlpatterns = [
     path('', school_moderators_view, name='school_moderators_list'),
     path('manage-all/', manage_all_schools_view, name='manage_all_schools'),
+    path('manage-all-schools/<int:school_id>/edit/', edit_school_info_view, name='edit_school_info'),
     path('<int:school_id>/change-admin/', change_school_admin_view, name='change_school_admin'),
     path('edit-admin/<int:user_id>/', edit_school_admin_view, name='edit_school_admin'),
     path('change-admin-password/<int:user_id>/', change_school_admin_password_view, name='change_school_admin_password'),

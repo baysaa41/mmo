@@ -1,46 +1,52 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
     <div class="container">
         <h2 class="mb-4">Сургуулиудын нэгдсэн удирдлага</h2>
-        <p>Энэ хуудаснаас бүх сургуулийн мэдээллийг харж, модераторыг солих боломжтой.</p>
+        <p>Сургуулийн нэр, аймаг/дүүрэг, админыг засах болон админ хэрэглэгчийн мэдээллийг шинэчлэх боломжтой.</p>
         {% include 'selection_menu.html' %}
+
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle">
                 <thead class="table-light">
                 <tr>
-                    <th>Сургууль</th>
-                    <th>Модератор</th>
-                    <th>Сүүлд нэвтэрсэн</th>
+                    <th class="text-center">Сургууль</th>
+                    <th class="text-center">Аймаг/Дүүрэг</th>
+                    <th class="text-center">Админ</th>
+                    <th class="text-center">Сүүлд нэвтэрсэн</th>
                     <th class="text-center" colspan="3">Үйлдэл</th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for school in schools %}
                     <tr>
-                        <td><h5>{{ school.name }}</h5><span>{{ school.province.name }}</span><span
-                                class="badge bg-secondary rounded-pill mx-2">{{ school.student_count }}</span></td>
+                        <td>
+                            <strong>{{ school.name }}</strong>
+                            <span class="badge bg-secondary ms-2">{{ school.student_count }}</span>
+                        </td>
+                        <td>{{ school.province.name }}</td>
                         <td>
                             <div><label>Хэрэглэгчийн нэр:</label> {{ school.user.username }}</div>
-                        <div><label>Овог, нэр:</label> {{ school.user.last_name }} {{ school.user.first_name }}</div>
-                        <div><label>Гар утас:</label> {{ school.user.data.mobile|default:"-" }}</div>
-                        <div><label>И-мэйл:</label> {{ school.user.email }}</div>
+                            <div><label>Овог, нэр:</label> {{ school.user.last_name }} {{ school.user.first_name|upper }}
+                            </div>
+                            <div><label>Гар утас:</label> {{ school.user.data.mobile|default:"-" }}</div>
+                            <div><label>И-мэйл:</label> {{ school.user.email }}</div>
                         </td>
                         <td>{{ school.user.last_login|date:"Y-m-d" }}</td>
                         <td class="text-center">
-                            <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary me-2">
-                                <i class="fas fa-user-edit"></i> Админ
+                            <a href="{% url 'edit_school_info' school.id %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-school"></i> Сургууль
                             </a>
                         </td>
                         <td class="text-center">
-                            <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary m2-2">
-                                <i class="fas fa-user-edit"></i> Профайл
+                            <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-user-cog"></i> Админ&nbsp;солих
                             </a>
                         </td>
                         <td class="text-center">
-                            <a href="{% url 'change_school_admin_password' school.user.id %}"
-                               class="btn btn-sm btn-primary">
-                                <i class="fas fa-key"></i> Нууц&nbsp;үг
+                            <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-user-edit"></i> Админ&nbsp;профайл
                             </a>
                         </td>
                     </tr>

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">"{{ school.name }}" сургуулийн удирдлага шинэчлэх</h2>
+    <a href="{% url 'manage_all_schools' %}" class="btn btn-secondary btn-sm mb-4">&larr; Бүх сургуулийн жагсаалт</a>
+
+    <div class="row">
+        <!-- 1. Сургуулийн мэдээлэл шинэчлэх -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">Сургуулийн мэдээлэл</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ info_form|crispy }}
+                        <button type="submit" name="save_school_info" class="btn btn-success mt-2">
+                            Мэдээлэл шинэчлэх
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -14,7 +14,7 @@
                         <small>{{ school.province.name }}</small>
                     </div>
                     <p class="mb-1">
-                        <strong>Модератор:</strong> {{ school.user.get_full_name }}
+                        <strong>Модератор:</strong> {{ school.user.last_name }} {{ school.user.first_name|upper }}
                     </p>
                 </a>
             {% endfor %}

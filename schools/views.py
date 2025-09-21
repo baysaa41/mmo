@@ -30,7 +30,7 @@ from django.db import transaction
 from .forms import UploadExcelForm
 
 from django.contrib.admin.views.decorators import staff_member_required
-from .forms import SchoolModeratorChangeForm
+from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm
 
 def clean_surrogates(value):
     """Strips surrogate characters from a string."""
@@ -908,3 +908,27 @@ def school_list_view(request):
         'search_query': query_string,  # Хэрэглэгчийн оруулсан утгыг буцааж харуулах
     }
     return render(request, 'schools/school_list.html', context)
+
+@staff_member_required
+def edit_school_info_view(request, school_id):
+    """
+    Сургуулийн нэр, аймаг/дүүрэг засах болон модератор солих хоёр үйлдлийг нэг хуудсанд.
+    """
+    school = get_object_or_404(School, id=school_id)
+
+    if request.method == 'POST':
+        # Хэрэв сургуулийн мэдээлэл өөрчлөх form илгээгдсэн бол
+        if 'save_school_info' in request.POST:
+            info_form = EditSchoolInfoForm(request.POST, instance=school)
+            if info_form.is_valid():
+                info_form.save()
+                messages.success(request, "Сургуулийн мэдээлэл амжилттай шинэчлэгдлээ.")
+                return redirect('manage_all_schools')
+    else:
+        info_form = EditSchoolInfoForm(instance=school)
+        moderator_form = SchoolModeratorChangeForm()
+
+    return render(request, 'schools/edit_school_info.html', {
+        'school': school,
+        'info_form': info_form,
+    })
