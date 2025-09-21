@@ -35,6 +35,7 @@ class UserMeta(models.Model):
     photo = models.ImageField(upload_to=user_directory_path, blank=True)
     reg_num = models.CharField(max_length=12)
     province = models.ForeignKey("Province", on_delete=models.SET_NULL, null=True, blank=True)
+    user_school_name = models.CharField(max_length=100, null=True, blank=True)
     school = models.ForeignKey("schools.School", on_delete=models.SET_NULL, null=True, blank=True)
     grade = models.ForeignKey("Grade", on_delete=models.SET_NULL, null=True, blank=True)
     level = models.ForeignKey("Level", on_delete=models.SET_NULL, null=True, blank=True)
@@ -146,12 +147,3 @@ class UserMails(models.Model):
 
     def __str__(self):
         return f"Email to {self.to_email}"
-
-class SchoolData(models.Model):
-    user_id = models.IntegerField(default=0, blank=True, null=True)
-    province_id = models.IntegerField(default=0, blank=True, null=True)
-    school_name = models.CharField(max_length=256, default='', blank=True, null=True)
-    school_id = models.IntegerField(default=0, blank=True, null=True)
-    province_id_prediction = models.IntegerField(default=0, blank=True, null=True)
-    school_name_prediction = models.CharField(max_length=256, default='', blank=True, null=True)
-    similarity = models.FloatField(default=0)
