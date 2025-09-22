@@ -9,7 +9,7 @@ class School(models.Model):
     province = models.ForeignKey("accounts.Province", related_name='moderators', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, default='ЕБС')
     alias = models.CharField(
-        max_length=1024,
+        max_length=1023,
         blank=True,
         null=True,
         help_text="Сургуулийн өөр нэр, товчлол эсвэл нэмэлт хайлтын alias"
