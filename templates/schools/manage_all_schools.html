@@ -24,11 +24,15 @@
                         <td>
                             <strong>{{ school.name }}</strong>
                             <span class="badge bg-secondary ms-2">{{ school.student_count }}</span>
+                            {% if  school.alias %}
+                                <div class="text-muted mt-1">{{ school.alias }}</div>
+                            {% endif %}
                         </td>
                         <td>{{ school.province.name }}</td>
                         <td>
                             <div><label>Хэрэглэгчийн нэр:</label> {{ school.user.username }}</div>
-                            <div><label>Овог, нэр:</label> {{ school.user.last_name }} {{ school.user.first_name|upper }}
+                            <div><label>Овог,
+                                нэр:</label> {{ school.user.last_name }} {{ school.user.first_name|upper }}
                             </div>
                             <div><label>Гар утас:</label> {{ school.user.data.mobile|default:"-" }}</div>
                             <div><label>И-мэйл:</label> {{ school.user.email }}</div>
@@ -46,9 +50,9 @@
                         </td>
                         <td class="text-center">
                             {% if school.user %}
-                            <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary">
-                                <i class="fas fa-user-edit"></i> Админ&nbsp;профайл
-                            </a>
+                                <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-user-edit"></i> Админ&nbsp;профайл
+                                </a>
                             {% else %}
                                 <span class="text-muted">Админгүй</span>
                             {% endif %}
