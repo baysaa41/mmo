@@ -39,18 +39,18 @@
                         </td>
                         <td>{{ school.user.last_login|date:"Y-m-d" }}</td>
                         <td class="text-center">
-                            <a href="{% url 'edit_school_info' school.id %}" class="btn btn-sm btn-primary">
+                            <a href="{% url 'edit_school_info' school.id %}" class="btn btn-sm btn-primary" target="_blank">
                                 <i class="fas fa-school"></i> Сургууль
                             </a>
                         </td>
                         <td class="text-center">
-                            <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary">
+                            <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary" target="_blank">
                                 <i class="fas fa-user-cog"></i> Админ&nbsp;солих
                             </a>
                         </td>
                         <td class="text-center">
                             {% if school.user %}
-                                <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary">
+                                <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary" target="_blank">
                                     <i class="fas fa-user-edit"></i> Админ&nbsp;профайл
                                 </a>
                             {% else %}
