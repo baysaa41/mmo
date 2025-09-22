@@ -125,12 +125,14 @@ class SchoolModeratorChangeForm(forms.Form):
 class EditSchoolInfoForm(forms.ModelForm):
     class Meta:
         model = School
-        fields = ['name', 'province']
+        fields = ['name', 'alias', 'province']
         labels = {
             'name': 'Сургуулийн нэр',
+            'alias': 'Өөр нэрс',
             'province': 'Аймаг/Дүүрэг',
         }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'alias': forms.Textarea(attrs={'class': 'form-control'}),
             'province': forms.Select(attrs={'class': 'form-select'}),
         }

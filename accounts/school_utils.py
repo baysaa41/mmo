@@ -29,6 +29,7 @@ def roman_to_int(roman: str) -> int:
             i += 1
     return num
 
+# olon shatlaltai ner gargaj avaad shalgaj bolno
 def normalize_name(name: str) -> str:
     """
     Сургуулийн нэрийг латин болгож, тоон утгыг бүхэлд нь хадгална.
@@ -48,8 +49,12 @@ def normalize_name(name: str) -> str:
         return str(roman_to_int(match.group(0)))
     n = re.sub(r'\b[mdclxvi]+\b', replace_roman, n, flags=re.IGNORECASE)
 
+    n = re.sub(r'neg\s*dugeer', '1', n)
+    n = re.sub(r'hoyor\s*dugaar', '2', n)
+    n = re.sub(r'gurav\s*dugaar', '3', n)
+
     # ЕБ-ын / ЕБ-ийн / ЕБ-ийнх зэрэг бүх хэлбэрийг арилгах
-    n = re.sub(r'\beb[- ]?(iin|iinx|yn|in)?\b', '', n)
+    n = re.sub(r'\beb[- ]?(iin|iinx|yn|in)\b', '', n)
 
     # 1 дүгээр / 1 дугаар / 1-р / №1 / No.1 / number 1 зэрэг хэлбэрийг нэгтгэх
     n = re.sub(r'-', r' ', n)
@@ -62,9 +67,9 @@ def normalize_name(name: str) -> str:
 
     # Давтагддаг үгсийг арилгах
     stop_words = [
-        '.',',','school','surguuli','surguul','sumin','aimgin','sum','aimag','ebs','eb','in','arvaikheer','buren','dund',
-        'laboratori','laboratoroi','neremjit','ulsiin','terguunii','eronkhii','bolovsrol','akhlakh','tsogtsolbor', 'tss',
-        'arkhangai', 'dalanzadgad', 'bayan olgii', 'olgii', 'khumuun'
+        '.',',','school','surguuli','surguul','sumin','aimgin','sum','aimag','ebs','eb','arvaikheer','buren','dund',
+        'laboratori','laboratoroi','labortor','neremjit','ulsiin','terguunii','eronkhii','bolovsrol','akhlakh','tsogtsolbor', 'tss',
+        'arkhangai', 'dalanzadgad', 'bayan olgii', 'olgii', 'khumuun','iin','in',
     ]
     for w in stop_words:
         n = n.replace(w, '')
@@ -74,13 +79,40 @@ def normalize_name(name: str) -> str:
     return n
 
 def find_best_match(target_name: str, queryset):
+    """
+    queryset доторх School-уудын name болон alias бүрийг харьцуулж хамгийн өндөр оноотойг буцаана.
+    alias нь таслалаар тусгаарлагдсан олон нэр байж болно.
+    """
     best, best_score = None, 0
     n1 = normalize_name(target_name)
+    n1_joined = n1.replace(' ', '')
+
     for s in queryset:
-        n2 = normalize_name(s.name)
-        score = fuzz.token_sort_ratio(n1, n2)
+        # name талбар
+        name_norm = normalize_name(s.name)
+        score_name = max(
+            fuzz.token_sort_ratio(n1, name_norm),
+            fuzz.ratio(n1_joined, name_norm.replace(' ', ''))
+        )
+
+        # alias талбар (олон утгатай)
+        score_alias = 0
+        if s.alias:
+            # таслалаар заагласан бүх алиасыг шалгах
+            aliases = [a.strip() for a in s.alias.split(',') if a.strip()]
+            for a in aliases:
+                a_norm = normalize_name(a)
+                score_alias = max(
+                    score_alias,
+                    fuzz.token_sort_ratio(n1, a_norm),
+                    fuzz.ratio(n1_joined, a_norm.replace(' ', ''))
+                )
+
+        # name болон alias дундаас хамгийн өндөр оноог сонгох
+        score = max(score_name, score_alias)
         if score > best_score:
             best, best_score = s, score
+
     return best, best_score
 
 def guess_school(user_meta) -> School | None:

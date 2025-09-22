@@ -8,6 +8,12 @@ class School(models.Model):
     group = models.OneToOneField(Group, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Хамаарах бүлэг")
     province = models.ForeignKey("accounts.Province", related_name='moderators', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, default='ЕБС')
+    alias = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Сургуулийн өөр нэр, товчлол эсвэл нэмэлт хайлтын alias"
+    )
     is_sent_confirmation = models.BooleanField(default=False)
     is_received_confirmation = models.BooleanField(default=False)
 
