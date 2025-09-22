@@ -4,7 +4,7 @@ from django.db.models import UniqueConstraint
 
 
 class School(models.Model):
-    user = models.ForeignKey(User, related_name='moderating', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='moderating', on_delete=models.SET_NULL, null=True, blank=True)
     group = models.OneToOneField(Group, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Хамаарах бүлэг")
     province = models.ForeignKey("accounts.Province", related_name='moderators', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, default='ЕБС')
@@ -18,7 +18,7 @@ class School(models.Model):
         ]
 
     def __str__(self):
-        return "{}, {}".format(self.group.name, self.user.first_name)
+        return "{}".format(self.group.name)
 
 
 class UploadedExcel(models.Model):
