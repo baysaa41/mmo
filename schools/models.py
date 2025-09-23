@@ -24,7 +24,7 @@ class School(models.Model):
         ]
 
     def __str__(self):
-        return "{}".format(self.group.name)
+        return "{}".format(self.name)
 
 
 class UploadedExcel(models.Model):

@@ -43,9 +43,17 @@ def olympiad_top_stats(request, olympiad_id):
 
     scoresheets = scoresheets.order_by(rank_field)
 
-    # Эхний 50 ба эхний 30-г тасалж авах
-    top50 = scoresheets.filter(**{f"{rank_field}__lte": 50})
-    top30 = scoresheets.filter(**{f"{rank_field}__lte": 30})
+    if olympiad.level.id in [2,3,4,5]:
+        # Эхний 50 ба эхний 30-г тасалж авах
+        top50 = scoresheets.filter(**{f"{rank_field}__lte": 50})
+        top30 = scoresheets.filter(**{f"{rank_field}__lte": 30})
+        top_name_50 = '50'
+        top_name_30 = '30'
+    else:
+        top50 = scoresheets.filter(**{f"{rank_field}__lte": 30})
+        top30 = scoresheets.filter(**{f"{rank_field}__lte": 10})
+        top_name_50 = '30'
+        top_name_30 = '10'
 
     # --- Нэмэлтээр нийт тоог авах ---
     top50_count = top50.count()
@@ -66,6 +74,8 @@ def olympiad_top_stats(request, olympiad_id):
         "rank_field": rank_field,
         "top50_count": top50_count,
         "top30_count": top30_count,
+        "top_name_50": top_name_50,
+        "top_name_30": top_name_30,
     }
     return render(request, "olympiad/olympiad_top_stats.html", context)
 

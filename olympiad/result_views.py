@@ -33,17 +33,19 @@ ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
 @staff_member_required
 def scoresheet_change_school(request, scoresheet_id):
     sheet = get_object_or_404(ScoreSheet, pk=scoresheet_id)
+
     if request.method == "POST":
         form = ChangeScoreSheetSchoolForm(request.POST)
         if form.is_valid():
-            school = form.cleaned_data["school"]
-            sheet.school = school
+            sheet.school = form.cleaned_data["school"]
+            sheet.prizes = form.cleaned_data.get("prizes", "")
             sheet.save()
             return redirect("olympiad_result_view", olympiad_id=sheet.olympiad_id)
     else:
         form = ChangeScoreSheetSchoolForm(initial={
             "province": sheet.school.province if sheet.school else None,
             "school": sheet.school,
+            "prizes": sheet.prizes,
         })
 
     return render(request, "olympiad/change_scoresheet_school.html", {

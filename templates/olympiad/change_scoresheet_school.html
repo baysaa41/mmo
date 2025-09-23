@@ -3,13 +3,14 @@
 <div class="container mt-4">
   <div class="card shadow-sm">
     <div class="card-header bg-primary text-white">
-      <h5 class="mb-0">Дүнгийн хуудас дахь сургууль солих</h5>
+      <h5 class="mb-0">Дүнгийн хуудас дахь сургууль ба шагнал засах</h5>
     </div>
     <div class="card-body">
       <p class="text-muted">
         <strong>{{ sheet.user.last_name }} {{ sheet.user.first_name }}</strong>
-        (одоогийн: {{ sheet.school.name|default:"-" }})
-        – <em>{{ sheet.olympiad.name }}</em> олимпиадын сургуулийн мэдээллийг өөрчлөх.
+        (одоогийн сургууль: {{ sheet.school.name|default:"-" }},
+        шагнал: {{ sheet.prizes|default:"-" }})
+        – <em>{{ sheet.olympiad.name }}</em> олимпиадын дүнгийн мэдээллийг өөрчлөх.
       </p>
 
       <form method="post" id="school-change-form">
@@ -21,6 +22,10 @@
         <div class="mb-3">
           {{ form.school.label_tag }}
           {{ form.school }}
+        </div>
+        <div class="mb-3">
+          {{ form.prizes.label_tag }}
+          {{ form.prizes }}
         </div>
 
         <button type="submit" class="btn btn-success">

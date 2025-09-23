@@ -53,9 +53,15 @@ class ChangeScoreSheetSchoolForm(forms.Form):
         label="Сургууль",
         widget=forms.Select(attrs={"class": "form-select", "id": "school-select"})
     )
+    prizes = forms.CharField(
+        label="Шагнал",
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Жишээ: Алт, Мөнгө, Тусгай"})
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         # POST хийж байхад province сонгогдсон байвал сургуулиудыг filter хийнэ
         if "province" in self.data:
             try:
@@ -65,3 +71,4 @@ class ChangeScoreSheetSchoolForm(forms.Form):
                 pass
         elif self.initial.get("province"):
             self.fields["school"].queryset = School.objects.filter(province=self.initial["province"]).order_by("name")
+
