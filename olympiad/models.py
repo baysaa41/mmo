@@ -407,7 +407,11 @@ class ScoreSheet(models.Model):
         return "{} олимпиад, {}".format(self.olympiad.name, self.user)
 
     def save(self, *args, **kwargs):
-        # Calculate the total score
-        self.school = self.user.data.school
-        self.total = sum(getattr(self, f"s{i+1}") or 0 for i in range(20))  # Using `or 0` to handle None values
+        # зөвхөн анх үүсэх үед school-г онооно
+        if not self.pk and not self.school:
+            self.school = self.user.data.school
+
+        # нийт оноо тооцох
+        self.total = sum(getattr(self, f"s{i+1}") or 0 for i in range(20))
         super().save(*args, **kwargs)
+

@@ -16,10 +16,61 @@ from django.contrib import messages
 import openpyxl
 from accounts.utils import random_salt
 from django.core.paginator import Paginator
+from django.db.models import Count
 
 from schools.models import School
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
+
+
+@login_required
+def olympiad_top_stats(request, olympiad_id):
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+    province_id = request.GET.get("p", "0").strip()
+    zone_id = request.GET.get("z", "0").strip()
+
+    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad, total__gt=0)
+
+    # --- аль ranking багана ашиглахыг шийдэх ---
+    if province_id != "0":
+        scoresheets = scoresheets.filter(user__data__province_id=province_id)
+        rank_field = "ranking_a_p"
+    elif zone_id != "0":
+        scoresheets = scoresheets.filter(user__data__province__zone_id=zone_id)
+        rank_field = "ranking_a_z"
+    else:
+        rank_field = "ranking_a"
+
+    scoresheets = scoresheets.order_by(rank_field)
+
+    # Эхний 50 ба эхний 30-г тасалж авах
+    top50 = scoresheets.filter(**{f"{rank_field}__lte": 50})
+    top30 = scoresheets.filter(**{f"{rank_field}__lte": 30})
+
+    # --- Нэмэлтээр нийт тоог авах ---
+    top50_count = top50.count()
+    top30_count = top30.count()
+
+    # Статистикууд
+    top50_by_school = top50.values("school__name").annotate(count=Count("id")).order_by("-count")
+    top30_by_province = top30.values("user__data__province__name").annotate(count=Count("id")).order_by("-count")
+    top30_by_zone = top30.values("user__data__province__zone__name").annotate(count=Count("id")).order_by("-count")
+
+    context = {
+        "olympiad": olympiad,
+        "top50_by_school": top50_by_school,
+        "top30_by_province": top30_by_province,
+        "top30_by_zone": top30_by_zone,
+        "selected_province": province_id,
+        "selected_zone": zone_id,
+        "rank_field": rank_field,
+        "top50_count": top50_count,
+        "top30_count": top30_count,
+    }
+    return render(request, "olympiad/olympiad_top_stats.html", context)
+
+
+
 
 
 @login_required()
@@ -638,9 +689,9 @@ def upload_file(request):
 
         return render(request, 'olympiad/upload_file.html', context)
 
-def get_school_display_name(user):
+def get_school_display_name(school):
     try:
-        school_object=user.data.school
+        school_object=school
         if school_object:
             return school_object.name
         else:
@@ -649,170 +700,75 @@ def get_school_display_name(user):
         return ''
 
 
+@login_required
 def olympiad_scores(request, olympiad_id):
-    province_id = request.GET.get('p', '0')
-    zone_id = request.GET.get('z', '0')
-    school_id = request.GET.get('s', '0')
-    page_number = request.GET.get('page', '1')
-    size = 500
+    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
 
-    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+    province_id = request.GET.get("p", "0").strip()
+    zone_id = request.GET.get("z", "0").strip()
 
-    # Get current user's score, if available
+    # --- оноо > 0 сурагчид ---
+    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad, total__gt=0)
+
+    problem_range = len(olympiad.problem_set.all())+1
+
+    # --- шүүлтүүр ---
+    if province_id != "0":
+        scoresheets = scoresheets.filter(user__data__province_id=province_id)
+        rank_field_a = "ranking_a_p"
+        rank_field_b = "ranking_b_p"
+        list_rank_field = "list_rank_p"
+    elif zone_id != "0":
+        scoresheets = scoresheets.filter(user__data__province__zone_id=zone_id)
+        rank_field_a = "ranking_a_z"
+        rank_field_b = "ranking_b_z"
+        list_rank_field = "list_rank_z"
+    else:
+        rank_field_a = "ranking_a"
+        rank_field_b = "ranking_b"
+        list_rank_field = "list_rank"
+
+    scoresheets = scoresheets.select_related("user__data__province", "school").order_by(list_rank_field)
+
+    # --- дүнг context-д зориулж dict болгох ---
+    score_data = []
+    for sheet in scoresheets:
+        score_data.append({
+            "scoresheet_id": sheet.id,  # сургууль солих линкэд ашиглана
+            "list_rank": getattr(sheet, list_rank_field),
+            "last_name": sheet.user.last_name,
+            "first_name": sheet.user.first_name,
+            "id": sheet.user.id,
+            "province": sheet.user.data.province.name if sheet.user.data.province else "",
+            "school": sheet.school,   # ScoreSheet.school
+            "scores": [getattr(sheet, f"s{i}") for i in range(1, problem_range)],  # s1 ... s20
+            "total": sheet.total,
+            "ranking_a": getattr(sheet, rank_field_a),
+            "ranking_b": getattr(sheet, rank_field_b),
+            "prizes": sheet.prizes,
+        })
+
+    # --- pagination ---
+    paginator = Paginator(score_data, 50)  # нэг хуудсанд 50 сурагч
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    # --- тухайн хэрэглэгчийн дүн ---
     user_score_data = None
     if request.user.is_authenticated:
         try:
-            user_scoresheet = ScoreSheet.objects.get(olympiad=olympiad, user=request.user)
-            user_score_data = {
-                'list_rank': user_scoresheet.list_rank,
-                'last_name': user_scoresheet.user.last_name,
-                'first_name': user_scoresheet.user.first_name,
-                'id': user_scoresheet.user.id,
-                'total': user_scoresheet.total,
-                'ranking_a': user_scoresheet.ranking_a,
-                'ranking_b': user_scoresheet.ranking_b,
-            }
+            user_score_data = scoresheets.get(user=request.user)
         except ScoreSheet.DoesNotExist:
-            user_score_data = None
+            pass
 
-    # Filter based on province or zone, or get all scoresheets
-    is_province = False
-    is_zone = False
-    if province_id != '0':
-        scoresheets = ScoreSheet.objects.filter(
-            olympiad=olympiad,
-            user__data__province_id=province_id
-        ).order_by("list_rank_p")
-        province = Province.objects.get(pk=province_id)
-        page_title = province.name
-        is_province = True
-    elif zone_id != '0':
-        scoresheets = ScoreSheet.objects.filter(
-            olympiad=olympiad,
-            user__data__province__zone_id=zone_id
-        ).order_by("list_rank_z")
-        zone = Zone.objects.get(pk=zone_id)
-        page_title = zone.name
-        is_zone = True
-    else:
-        page_title = 'Бүх оролцогч'
-        scoresheets = ScoreSheet.objects.filter(
-            olympiad=olympiad
-        ).order_by("list_rank")
-
-    # Paginate scoresheets
-    paginator = Paginator(scoresheets, size)
-    scoresheets_page = paginator.get_page(page_number)
-
-    # Prepare score data for each ScoreSheet
-    score_data = []
-    if is_province:
-        for scoresheet in scoresheets_page:
-            scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
-            try:
-                score_data.append({
-                    'list_rank': scoresheet.list_rank_p,
-                    'last_name': scoresheet.user.last_name,
-                    'first_name': scoresheet.user.first_name,
-                    'id': scoresheet.user.id,
-                    'province': scoresheet.user.data.province.name,
-                    'school': get_school_display_name(scoresheet.user),
-                    'scores': scores,
-                    'total': scoresheet.total,
-                    'ranking_a': scoresheet.ranking_a_p,
-                    'ranking_b': scoresheet.ranking_b_p,
-                    'prizes': scoresheet.prizes,
-                })
-            except Exception as e:
-                score_data.append({
-                    'list_rank': scoresheet.list_rank_p,
-                    'last_name': scoresheet.user.last_name,
-                    'first_name': scoresheet.user.first_name,
-                    'id': scoresheet.user.id,
-                    'province': '',
-                    'school': get_school_display_name(scoresheet.user),
-                    'scores': scores,
-                    'total': scoresheet.total,
-                    'ranking_a': scoresheet.ranking_a_p,
-                    'ranking_b': scoresheet.ranking_b_p,
-                    'prizes': scoresheet.prizes,
-                })
-                print(e, scoresheet.user.id)
-    elif is_zone:
-        for scoresheet in scoresheets_page:
-            scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
-            try:
-                score_data.append({
-                    'list_rank': scoresheet.list_rank_z,
-                    'last_name': scoresheet.user.last_name,
-                    'first_name': scoresheet.user.first_name,
-                    'id': scoresheet.user.id,
-                    'province': scoresheet.user.data.province.name,
-                    'school': get_school_display_name(scoresheet.user),
-                    'scores': scores,
-                    'total': scoresheet.total,
-                    'ranking_a': scoresheet.ranking_a_z,
-                    'ranking_b': scoresheet.ranking_b_z,
-                    'prizes': scoresheet.prizes,
-                })
-            except Exception as e:
-                score_data.append({
-                    'list_rank': scoresheet.list_rank_z,
-                    'last_name': scoresheet.user.last_name,
-                    'first_name': scoresheet.user.first_name,
-                    'id': scoresheet.user.id,
-                    'province': '',
-                    'school': get_school_display_name(scoresheet.user),
-                    'scores': scores,
-                    'total': scoresheet.total,
-                    'ranking_a': scoresheet.ranking_a_z,
-                    'ranking_b': scoresheet.ranking_b_z,
-                    'prizes': scoresheet.prizes,
-                })
-                print(e, scoresheet.user.id)
-    else:
-        for scoresheet in scoresheets_page:
-            scores = [getattr(scoresheet, f's{i}', None) for i in range(1, olympiad.problem_set.count() + 1)]
-            # print(scores)
-            try:
-                score_data.append({
-                    'list_rank': scoresheet.list_rank,
-                    'last_name': scoresheet.user.last_name,
-                    'first_name': scoresheet.user.first_name,
-                    'id': scoresheet.user.id,
-                    'province': scoresheet.user.data.province.name,
-                    'school': get_school_display_name(scoresheet.user),
-                    'scores': scores,
-                    'total': scoresheet.total,
-                    'ranking_a': scoresheet.ranking_a,
-                    'ranking_b': scoresheet.ranking_b,
-                    'prizes': scoresheet.prizes,
-                })
-            except Exception as e:
-                score_data.append({
-                    'list_rank': scoresheet.list_rank,
-                    'last_name': scoresheet.user.last_name,
-                    'first_name': scoresheet.user.first_name,
-                    'id': scoresheet.user.id,
-                    'province': '',
-                    'school': get_school_display_name(scoresheet.user),
-                    'scores': scores,
-                    'total': scoresheet.total,
-                    'ranking_a': scoresheet.ranking_a,
-                    'ranking_b': scoresheet.ranking_b,
-                    'prizes': scoresheet.prizes,
-                })
-                print(e, scoresheet.user.id)
-    if is_province:
-        title = ''
     context = {
-        'page_title': page_title,
-        'olympiad': olympiad,
-        'user_score_data': user_score_data,
-        'score_data': score_data,
-        'problem_range': range(1, olympiad.problem_set.count() + 1),
-        'paginator': paginator,
-        'page_obj': scoresheets_page,
-        'is_province': is_province,
+        "olympiad": olympiad,
+        "page_title": "Нэгдсэн дүн",
+        "score_data": page_obj,     # зөвхөн одоогийн хуудасны өгөгдөл
+        "page_obj": page_obj,
+        "user_score_data": user_score_data,
+        "problem_range": range(1, problem_range),  # s1 ... s20
+        "selected_province": province_id,
+        "selected_zone": zone_id,
     }
-    return render(request, 'olympiad/olympiad_scores.html', context)
+    return render(request, "olympiad/olympiad_scores.html", context)

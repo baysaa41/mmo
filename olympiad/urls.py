@@ -39,6 +39,11 @@ urlpatterns = [
     path('problems/<int:olympiad_id>/', views.problems_view, name='olympiad_problems_view'),
     # Бодлогын статистик мэдээллийг харах
     path('stats/<int:problem_id>/', result_views.problem_stats_view, name='problem_stats'),
+    # Шилдэг 50/30 статистик
+    path('results/<int:olympiad_id>/top/', views.olympiad_top_stats, name='olympiad_top_stats'),
+    path('scoresheet/<int:scoresheet_id>/change-school/',
+         result_views.scoresheet_change_school,
+         name='scoresheet_change_school'),
 
     # === 4. Засалт ба Удирдлага (Багш/Админы Үзэгдэл) ===
     # Excel файлаас олимпиадын дүнг бөөнөөр импортлох

@@ -6,7 +6,7 @@ from olympiad.models import Olympiad, Result, SchoolYear, Award, Problem, Olympi
 from schools.models import School
 from accounts.models import Province, Zone, UserMeta
 from django.forms import modelformset_factory
-from .forms import ResultsForm
+from .forms import ResultsForm, ChangeScoreSheetSchoolForm
 import pandas as pd
 import numpy as np
 from django_pandas.io import read_frame
@@ -22,10 +22,34 @@ from django.core import serializers
 from django.core.serializers.json import DjangoJSONEncoder
 from django_tex.core import render_template_with_context
 from django.db.models import Count
+from django.shortcuts import redirect
+
 
 from django.db.models import Avg, Max, Min
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
+
+#дүнгийн хуудасны сургууль солих
+@staff_member_required
+def scoresheet_change_school(request, scoresheet_id):
+    sheet = get_object_or_404(ScoreSheet, pk=scoresheet_id)
+    if request.method == "POST":
+        form = ChangeScoreSheetSchoolForm(request.POST)
+        if form.is_valid():
+            school = form.cleaned_data["school"]
+            sheet.school = school
+            sheet.save()
+            return redirect("olympiad_result_view", olympiad_id=sheet.olympiad_id)
+    else:
+        form = ChangeScoreSheetSchoolForm(initial={
+            "province": sheet.school.province if sheet.school else None,
+            "school": sheet.school,
+        })
+
+    return render(request, "olympiad/change_scoresheet_school.html", {
+        "form": form,
+        "sheet": sheet,
+    })
 
 
 # nuhuh testiin hariug shinechileh

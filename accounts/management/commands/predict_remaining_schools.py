@@ -26,18 +26,18 @@ class Command(BaseCommand):
         for um in qs.iterator():
             school = guess_school(um)
             if school:
-                um.address1 = '-' + str(school.province.id) + ', ' + str(school.id)
-                um.address2 = '-' + school.name
-                um.save(update_fields=['address1', 'address2'])
+                um.address1 = str(school.name)
+                um.school = school
+                um.save(update_fields=['address1','school'])
                 updated_count += 1
             else:
-                um.address1 = '-skipped'
+                um.address1 = None
                 um.save(update_fields=['address1'])
                 skipped_count += 1
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Нийт {updated_count} сурагчийн address1/2 талбарыг шинэчилж, "
+                f"Нийт {updated_count} сурагчийн address1/school_id талбарыг шинэчилж, "
                 f"{skipped_count} сурагчийг таамаглаж чадсангүй."
             )
         )
