@@ -743,20 +743,25 @@ def olympiad_scores(request, olympiad_id):
     # --- дүнг context-д зориулж dict болгох ---
     score_data = []
     for sheet in scoresheets:
-        score_data.append({
-            "scoresheet_id": sheet.id,  # сургууль солих линкэд ашиглана
-            "list_rank": getattr(sheet, list_rank_field),
-            "last_name": sheet.user.last_name,
-            "first_name": sheet.user.first_name,
-            "id": sheet.user.id,
-            "province": sheet.school.province.name if sheet.user.data.province else "",
-            "school": sheet.school,   # ScoreSheet.school
-            "scores": [getattr(sheet, f"s{i}") for i in range(1, problem_range)],  # s1 ... s20
-            "total": sheet.total,
-            "ranking_a": getattr(sheet, rank_field_a),
-            "ranking_b": getattr(sheet, rank_field_b),
-            "prizes": sheet.prizes,
-        })
+        try:
+            province = sheet.school.province.name or sheet.user.data.province.name or ""
+            score_data.append({
+                "scoresheet_id": sheet.id,  # сургууль солих линкэд ашиглана
+                "list_rank": getattr(sheet, list_rank_field),
+                "last_name": sheet.user.last_name,
+                "first_name": sheet.user.first_name,
+                "id": sheet.user.id,
+                "province": province,
+                "school": sheet.school,   # ScoreSheet.school
+                "scores": [getattr(sheet, f"s{i}") for i in range(1, problem_range)],  # s1 ... s20
+                "total": sheet.total,
+                "ranking_a": getattr(sheet, rank_field_a),
+                "ranking_b": getattr(sheet, rank_field_b),
+                "prizes": sheet.prizes,
+            })
+        except Exception as e:
+            print(sheet)
+            print(sheet.user.id)
 
     # --- pagination ---
     paginator = Paginator(score_data, 50)  # нэг хуудсанд 50 сурагч
