@@ -176,7 +176,7 @@ def results_home(request):
         if level_param.isdigit():
             olympiads = olympiads.filter(level_id=int(level_param))
 
-    olympiads = olympiads.order_by('-school_year_id', 'name', 'level')
+    olympiads = olympiads.order_by('-school_year_id', '-round', '-level', 'name')
 
     context = {
         'olympiads': olympiads,
