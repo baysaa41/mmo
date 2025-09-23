@@ -738,7 +738,7 @@ def olympiad_scores(request, olympiad_id):
         rank_field_b = "ranking_b"
         list_rank_field = "list_rank"
 
-    scoresheets = scoresheets.select_related("user__data__province", "school").order_by(list_rank_field)
+    scoresheets = scoresheets.select_related("user__data__school__province", "school").order_by(list_rank_field)
 
     # --- дүнг context-д зориулж dict болгох ---
     score_data = []
@@ -749,7 +749,7 @@ def olympiad_scores(request, olympiad_id):
             "last_name": sheet.user.last_name,
             "first_name": sheet.user.first_name,
             "id": sheet.user.id,
-            "province": sheet.user.data.province.name if sheet.user.data.province else "",
+            "province": sheet.school.province.name if sheet.user.data.province else "",
             "school": sheet.school,   # ScoreSheet.school
             "scores": [getattr(sheet, f"s{i}") for i in range(1, problem_range)],  # s1 ... s20
             "total": sheet.total,
