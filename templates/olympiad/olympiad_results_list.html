@@ -25,6 +25,8 @@
                     <th>№</th>
                     <th>Нэр</th>
                     <th>Ангилал</th>
+                    <th>Хичээлийн жил</th>
+                    <th>Шат</th>
                     <th>Дүн</th>
                 </tr>
                 {% for olympiad in olympiads %}
@@ -32,21 +34,31 @@
                         <td>{{ forloop.counter }}</td>
                         <td>{{ olympiad.name }}</td>
                         <td>{{ olympiad.level.name }}</td>
+                        <td>{{ olympiad.school_year.name }}</td>
+                        <td>{{ olympiad.get_round }}</td>
                         <td>
                             <div class="d-flex flex-column flex-md-row gap-2">
                                 <a class="btn btn-sm btn-outline-primary w-100 w-md-auto"
                                    href="{% url 'olympiad_result_view' olympiad_id=olympiad.id %}" target="_blank">
-                                    <i class="fas fa-list"></i> Дүнгийн жагсаалт
+                                    <i class="fas fa-list"></i> Дүнгийн&nbsp;жагсаалт
                                 </a>
                                 <a class="btn btn-sm btn-outline-dark w-100 w-md-auto"
                                    href="{% url 'olympiad_top_stats' olympiad.id %}" target="_blank">
                                     <i class="fas fa-chart-bar"></i> Статистик
                                 </a>
+                                {% if request.user.is_staff %}
+                                    <a class="btn btn-sm btn-outline-warning w-100 w-md-auto"
+                                       href="/admin/olympiad/olympiad/{{ olympiad.id }}/change/"
+                                       target="_blank">
+                                        <i class="fas fa-edit"></i> Засах
+                                    </a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
                 {% endfor %}
             </table>
+
         {% else %}
             <div class="card p-3 mt-2 bg-light text-dark">Ямар нэг дүн байхгүй байна.</div>
         {% endif %}

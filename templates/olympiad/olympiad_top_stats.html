@@ -5,71 +5,92 @@
     <!-- Сонголтын меню -->
     {% include "selection_menu.html" %}
 
-
     <div class="my-3">
-        <a href="{% url 'olympiad_result_view' olympiad.id %}{% if selected_province != '0' %}?p={{ selected_province }}{% elif selected_zone != '0' %}?z={{ selected_zone }}{% endif %}"
-           class="btn btn-primary">
-            ← Дүнгийн хуудас руу буцах
+        <a href="{% url 'olympiad_result_view' olympiad.id %}{% if selected_province != '0' %}?p=
+            {{ selected_province }}{% elif selected_zone != '0' %}?z={{ selected_zone }}{% endif %}"
+           class="btn btn-primary me-2">
+            ← Жагсаалт харах
+        </a>
+        <a href="{% url 'olympiad_results_home' %}?year={{ olympiad.school_year.id }}"
+           class="btn btn-outline-primary">
+            Олимпиадын жагсаалт
         </a>
     </div>
 
-    <h3>Эхний {{ top_name_50 }}  байр – Сургууль
-    </h3>
-    <small class="text-muted">Эхний {{ top_name_50 }} болон түүнтэй тэнцүү оноо авсан сурагчдын тоо сургуулиар</small>
-    <table class="table table-bordered">
-        <tr>
-            <th>Сургууль</th>
-            <th>Сурагчдын тоо</th>
-        </tr>
-        {% for row in top50_by_school %}
-            <tr>
-                <td>{{ row.school__name }}</td>
-                <td>{{ row.count }}</td>
-            </tr>
-        {% endfor %}
-        <tr>
-            <th>Нийт</th>
-            <th>{{ top50_count }} сурагч</th>
-        </tr>
-    </table>
+    <div class="row">
+        <!-- Зүүн багана -->
+        <div class="col-md-6 mb-4">
+            <h3>Эхний {{ top_name_50 }} байр – Сургууль</h3>
+            <small class="text-muted">Эхний {{ top_name_50 }} болон түүнтэй тэнцүү оноо авсан сурагчдын тоо
+                сургуулиар</small>
+            <table class="table table-bordered mt-2">
+                <colgroup>
+                    <col style="width:60%">
+                    <col style="width:40%">
+                </colgroup>
+                <tr>
+                    <th>Сургууль</th>
+                    <th>Сурагчдын тоо</th>
+                </tr>
+                {% for row in top50_by_school %}
+                    <tr>
+                        <td>{{ row.school__name }}</td>
+                        <td>{{ row.count }}</td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <th>Нийт</th>
+                    <th>{{ top50_count }} сурагч</th>
+                </tr>
+            </table>
+        </div>
 
-    <h3>Эхний {{ top_name_30 }}  байр – Аймаг/Дүүрэг
-    </h3>
-    <small class="text-muted">Эхний {{ top_name_30 }}  болон түүнтэй тэнцүү оноо авсан сурагчдын тоо аймаг/дүүргээр</small>
-    <table class="table table-bordered">
-        <tr>
-            <th>Аймаг/Дүүрэг</th>
-            <th>Сурагчдын тоо</th>
-        </tr>
-        {% for row in top30_by_province %}
-            <tr>
-                <td>{{ row.user__data__province__name }}</td>
-                <td>{{ row.count }}</td>
-            </tr>
-        {% endfor %}
-        <tr>
-            <th>Нийт</th>
-            <th>{{ top30_count }} сурагч</th>
-        </tr>
-    </table>
-
-    <h3>Эхний {{ top_name_30 }}   байр – Бүс
-    </h3>
-    <table class="table table-bordered">
-        <tr>
-            <th>Бүс</th>
-            <th>Сурагчдын тоо</th>
-        </tr>
-        {% for row in top30_by_zone %}
-            <tr>
-                <td>{{ row.user__data__province__zone__name }}</td>
-                <td>{{ row.count }}</td>
-            </tr>
-        {% endfor %}
-        <tr>
-            <th>Нийт</th>
-            <th>{{ top30_count }} сурагч</th>
-        </tr>
-    </table>
-
+        <!-- Баруун багана -->
+        <div class="col-md-6 mb-4">
+            <h3 class="mt-5">Эхний {{ top_name_30 }} байр – Аймаг/Дүүрэг</h3>
+            <small class="text-muted">Эхний {{ top_name_30 }} болон түүнтэй тэнцүү оноо авсан сурагчдын тоо
+                аймаг/дүүргээр</small>
+            <table class="table table-bordered mt-2">
+                <colgroup>
+                    <col style="width:60%">
+                    <col style="width:40%">
+                </colgroup>
+                <tr>
+                    <th>Аймаг/Дүүрэг</th>
+                    <th>Сурагчдын тоо</th>
+                </tr>
+                {% for row in top30_by_province %}
+                    <tr>
+                        <td>{{ row.user__data__province__name }}</td>
+                        <td>{{ row.count }}</td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <th>Нийт</th>
+                    <th>{{ top30_count }} сурагч</th>
+                </tr>
+            </table>
+            <h3>Эхний {{ top_name_30 }} байр – Бүс</h3>
+            <table class="table table-bordered mt-2">
+                <colgroup>
+                    <col style="width:60%">
+                    <col style="width:40%">
+                </colgroup>
+                <tr>
+                    <th>Бүс</th>
+                    <th>Сурагчдын тоо</th>
+                </tr>
+                {% for row in top30_by_zone %}
+                    <tr>
+                        <td>{{ row.user__data__province__zone__name }}</td>
+                        <td>{{ row.count }}</td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <th>Нийт</th>
+                    <th>{{ top30_count }} сурагч</th>
+                </tr>
+            </table>
+        </div>
+    </div>
 {% endblock %}
