@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="table table-bordered mt-2 align-middle">
+    <div class="justify-content-center">
         <div class="mt-3 d-flex justify-content-between">
             <div>{% if prev is not None %}<a class="btn btn-light btn-sm" href="/olympiads/results/?year={{ prev.id }}">&larr; {{ prev.name }}</a>{% endif %}
             </div>
@@ -20,7 +20,7 @@
                     &rarr;</a>{% endif %}</div>
         </div>
         {% if olympiads|length > 0 %}
-            <table class="table table-bordered mt-2">
+            <table class="table table-bordered mt-2 align-middle">
                 <tr>
                     <th>№</th>
                     <th>Нэр</th>
