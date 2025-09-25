@@ -279,6 +279,7 @@ class Upload(models.Model):
     result = models.ForeignKey(Result, on_delete=models.CASCADE)
     upload_time = models.DateTimeField(auto_created=True,auto_now_add=True)
     is_accepted = models.BooleanField(default=True)
+    is_supplement = models.BooleanField(default=False)
     def file_to(instance, filename):
         return 'static/results/' + str(filename)
     file = models.ImageField(upload_to=file_to)
