@@ -39,6 +39,7 @@ urlpatterns = [
     path('results/g/<int:group_id>/', result_views.olympiad_group_result_view, name='olympiad_group_result_view'),
     # Тухайн олимпиадын бодлогуудыг харах
     path('problems/<int:olympiad_id>/', views_public.problems_view, name='olympiad_problems_view'),
+    path("problems/topics/", views_public.problem_list_with_topics, name="problem_list_with_topics"),
     # Бодлогын статистик мэдээллийг харах
     path('stats/<int:problem_id>/', views_results.problem_stats_view, name='problem_stats'),
     # Олимпиадын бүх бодлогын статистик
@@ -67,23 +68,22 @@ urlpatterns = [
 
     # === 5. Нэмэлт Материалтай Холбоотой Замууд ===
     # Сурагч нэмэлт материал илгээх
-    path('supplements/<int:olympiad_id>/', views.student_supplement_view, name='student_supplement_view'),
+    path('supplements/<int:olympiad_id>/', views_contest.student_supplement_view, name='student_supplement_view'),
     # Админ нэмэлт материалуудыг хянах
-    path('supplements/admin/', views.supplements_view, name='supplements_view'),
+    path('supplements/staff/', views_admin.staff_supplements_view, name='staff_supplements_view'),
     # Нэмэлт материалыг баталгаажуулах
-    path('supplements/approve/', views.approve_supplement, name='approve_supplement'),
+    path('supplements/approve/', views_admin.approve_supplement, name='approve_supplement'),
     # Нэмэлт материалыг устгах
-    path('supplements/remove/', views.remove_supplement, name='remove_supplement'),
+    path('supplements/remove/', views_admin.remove_supplement, name='remove_supplement'),
 
     # === 6. Бусад ба Туслах Замууд (AJAX, PDF, г.м.) ===
     # AJAX: Оролцогчийн илгээсэн бодолтыг харуулах
-    path('viewer/', views.result_viewer, name='olympiad_result_viewer'),
+    path('viewer/', views_contest.result_viewer, name='olympiad_result_viewer'),
     # AJAX: Файл хуулах формыг авах
     path('upload/', views.get_result_form, name='olympiad_get_result_form'),
     # Хуулсан зургийг харуулах
     path('getupload/', views.view_result, name='olympiad_view_result'),
     # PDF гэрчилгээ үүсгэх
     path('certificate/<int:quiz_id>/<int:contestant_id>/', result_views.createCertificate, name='olympiad_certificate'),
-    # problem/materials зам одоогоор ашиглагдаагүй
-    path('problem/materials', views.problem_exam_materials_view, name='problem_exam_materials'),
+    path("problems/<int:problem_id>/toggle-topic/<int:topic_id>/", views_admin.toggle_problem_topic, name="toggle_problem_topic"),
 ]

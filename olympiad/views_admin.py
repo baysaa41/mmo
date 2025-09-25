@@ -7,7 +7,37 @@ from django.utils import timezone
 from django.core.cache import cache
 from django.contrib.auth.models import User
 
-from .models import Olympiad, Problem, Result, SchoolYear
+from .models import Olympiad, Problem, Result, SchoolYear, Upload
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from olympiad.models import Problem, Topic
+
+@require_POST
+@csrf_exempt  # production-д бол csrf token ашиглаарай
+def toggle_problem_topic(request, problem_id, topic_id):
+    try:
+        problem = Problem.objects.get(pk=problem_id)
+        topic = Topic.objects.get(pk=topic_id)
+
+        if topic in problem.topics.all():
+            problem.topics.remove(topic)
+            action = "removed"
+        else:
+            problem.topics.add(topic)
+            action = "added"
+
+        return JsonResponse({
+            "status": "ok",
+            "action": action,
+            "topic": topic.name,
+            "problem_id": problem.id,
+        })
+    except Problem.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Problem not found"}, status=404)
+    except Topic.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Topic not found"}, status=404)
 
 
 @login_required
@@ -175,3 +205,30 @@ def exam_staff_view(request, olympiad_id, contestant_id):
                       {'results': results, 'olympiad': olympiad, 'contestant': contestant})
     else:
         return render(request, 'error.html', {'message':'Хандах эрхгүй.'})
+
+@staff_member_required
+def staff_supplements_view(request):
+    uploads = Upload.objects.filter(is_accepted=False).order_by('upload_time')
+    return render(request, 'olympiad/admin/supplements.html', {'uploads': uploads})
+
+
+@staff_member_required
+def approve_supplement(request):
+    id = request.GET.get('id', False)
+    if id and request.user.is_superuser:
+        upload = Upload.objects.filter(pk=id).first()
+        upload.result.state = 3
+        upload.result.save()
+        upload.is_official = True
+        upload.save()
+        return JsonResponse({'msg': 'Оk.'})
+    return JsonResponse({'msg': 'No uploads.'})
+
+@staff_member_required
+def remove_supplement(request):
+    id = request.GET.get('id', False)
+    if id and request.user.is_superuser:
+        upload = Upload.objects.filter(pk=id).first()
+        upload.delete()
+        return JsonResponse({'msg': 'Оk.'})
+    return JsonResponse({'msg': 'No uploads.'})

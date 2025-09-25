@@ -236,16 +236,16 @@ class Result(models.Model):
         return '{}, {}, Бодлого {}, {} оноо'.format(self.contestant.first_name, self.olympiad.name, self.problem.order, self.score)
 
     def get_upload_num(self):
-        return self.upload_set.filter(is_official=True).count()
+        return self.upload_set.filter(is_accepted=True).count()
 
     def get_uploads(self):
-        return self.upload_set.filter(is_official=True)
+        return self.upload_set.filter(is_accepted=True)
 
     def get_supplements_num(self):
-        return self.upload_set.filter(is_official=False).count()
+        return self.upload_set.filter(is_accepted=False).count()
 
     def get_supplements(self):
-        return self.upload_set.filter(is_official=False)
+        return self.upload_set.filter(is_accepted=False)
 
     def get_score(self):
         if self.score:

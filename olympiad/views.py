@@ -169,58 +169,6 @@ def exam_student_view(request, olympiad_id):
         return redirect('olympiad_home')
 
 
-@login_required
-def student_supplement_view(request, olympiad_id):
-    # return HttpResponse("Nemelt material huleen avah hugatsaa duussan.")
-    contestant = request.user
-    contestant_id = request.user.id
-    olympiad = Olympiad.objects.filter(pk=olympiad_id).first()
-
-    if not olympiad.is_grading:
-        return HttpResponse("Nemelt material huleen avah hugatsaa duussan.")
-    if olympiad.group is not None:
-        if contestant not in olympiad.group.user_set.all():
-            message = "Зөвхөн '{}' бүлгийн сурагчид оролцох боломжтой".format(olympiad.group.name)
-            messages.info(request, message)
-            return redirect('olympiad_supplement_home')
-
-    results = olympiad.result_set.filter(contestant=request.user)
-    if not results and not request.user.is_staff:
-        return HttpResponse("Zuvhun ene olympiadad oroltsson suragchid material nemj oruulah bolomjtoi.")
-
-    if olympiad.is_grading:
-        if request.method == 'POST':
-            form = UploadForm(request.POST, request.FILES)
-            if form.is_valid():
-                files = request.FILES.getlist('file')
-                for f in files:
-                    upload = Upload(file=f, result_id=request.POST['result'])
-                    upload.result.state = 3
-                    upload.is_official = False
-                    upload.result.save()
-                    upload.save()
-
-            return redirect('olympiad_supplements', olympiad_id=olympiad_id)
-
-        olympiad = Olympiad.objects.filter(pk=olympiad_id).first()
-        if olympiad:
-            problems = olympiad.problem_set.all().order_by('order')
-            for problem in problems:
-                Result.objects.get_or_create(contestant_id=contestant_id, olympiad_id=olympiad_id,
-                                             problem_id=problem.id)
-
-        results = Result.objects.filter(contestant_id=contestant_id, olympiad_id=olympiad_id).order_by('problem__order')
-
-        return render(request, 'olympiad/supplement_exam.html',
-                      {'results': results, 'olympiad': olympiad, 'contestant': contestant})
-    else:
-        messages.info(request, 'Энэ олммпиадын засалт дууссан байна.')
-        return redirect('olympiad_supplements', olympiad_id=olympiad_id)
-
-
-
-
-
 def is_my_student(teacher_id,student_id):
     try:
         school = School.objects.get(user_id=teacher_id)
@@ -358,33 +306,5 @@ def view_result(request):
         return HttpResponse("Ийм хариулт олдсонгүй.")
 
 
-def problem_exam_materials_view(request):
-    return None
 
 
-def supplements_view(request):
-    uploads = Upload.objects.filter(is_official=False).order_by('upload_time')
-    return render(request, 'olympiad/supplements.html', {'uploads': uploads})
-
-
-@login_required
-def approve_supplement(request):
-    id = request.GET.get('id', False)
-    if id and request.user.is_superuser:
-        upload = Upload.objects.filter(pk=id).first()
-        upload.result.state = 3
-        upload.result.save()
-        upload.is_official = True
-        upload.save()
-        return JsonResponse({'msg': 'Оk.'})
-    return JsonResponse({'msg': 'No uploads.'})
-
-
-@login_required
-def remove_supplement(request):
-    id = request.GET.get('id', False)
-    if id and request.user.is_superuser:
-        upload = Upload.objects.filter(pk=id).first()
-        upload.delete()
-        return JsonResponse({'msg': 'Оk.'})
-    return JsonResponse({'msg': 'No uploads.'})

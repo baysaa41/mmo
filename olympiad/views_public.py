@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from datetime import datetime, timezone, timedelta
 from olympiad.models import SchoolYear
 
-from .models import Olympiad, Problem
+from .models import Olympiad, Problem, Topic
 
 
 def olympiads_home(request):
@@ -109,4 +109,13 @@ def supplements_view(request, olympiad_id):
     return render(request, "olympiad/supplements/home.html", {
         "olympiad": olympiad,
         "problems": supplements,
+    })
+
+
+def problem_list_with_topics(request):
+    problems = Problem.objects.all().prefetch_related("topics")
+    all_topics = Topic.objects.all()   # 👈 энд бүх topics авч дамжуулна
+    return render(request, "olympiad/problem_list_with_topics.html", {
+        "problems": problems,
+        "all_topics": all_topics,
     })

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% load latex_filter %}
+
+{% block title %}Бодлогын ангилал{% endblock %}
+
+{% block content %}
+    <div class="container mt-3">
+        <h2>{{ olympiad.name }} – Бодлогуудын ангилал</h2>
+
+        <table class="table table-bordered table-striped mt-3">
+            <thead class="table-light">
+            <tr>
+                <th style="width:5%">№</th>
+                <th>Бодлого</th>
+                <th style="width:35%">Ангилал</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for problem in problems %}
+                <tr data-problem-id="{{ problem.id }}">
+                    <td>{{ problem.order }}</td>
+                    <td>{{ problem.statement|default:"<i>Бодлого алга</i>"|latex|safe }}</td>
+                    <td>
+                        {% for topic in problem.topics.all %}
+                            <span class="badge bg-primary topic-badge"
+                                  data-topic-id="{{ topic.id }}"
+                                  style="cursor:pointer">
+                            {{ topic.name }} ×
+                        </span>
+                        {% endfor %}
+                        <div class="dropdown d-inline">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                    data-bs-toggle="dropdown">
+                                + Нэмэх
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% for t in all_topics %}
+                                    <li>
+                                        <a class="dropdown-item add-topic"
+                                           href="#"
+                                           data-problem-id="{{ problem.id }}"
+                                           data-topic-id="{{ t.id }}">
+                                            {{ t.name }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const csrftoken = '{{ csrf_token }}';
+
+    // === Функц: Topic устгах ===
+    function attachRemoveEvent(span, problemId, topicId) {
+        span.addEventListener("click", function() {
+            fetch(`/olympiads/problems/${problemId}/toggle-topic/${topicId}/`, {
+                method: "POST",
+                headers: { "X-CSRFToken": csrftoken }
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.status === "ok" && d.action === "removed") {
+                    span.remove(); // DOM-оос badge-ийг арилгана
+                }
+            });
+        });
+    }
+
+    // === Эхний байдлаар байгаа бүх badge дээр устгах event залгах ===
+    document.querySelectorAll(".topic-badge").forEach(function(span) {
+        const problemId = span.closest("tr").dataset.problemId;
+        const topicId = span.dataset.topicId;
+        attachRemoveEvent(span, problemId, topicId);
+    });
+
+    // === Topic нэмэх ===
+    document.querySelectorAll(".add-topic").forEach(function(el) {
+        el.addEventListener("click", function(e) {
+            e.preventDefault();
+            let problemId = el.dataset.problemId;
+            let topicId = el.dataset.topicId;
+
+            fetch(`/olympiads/problems/${problemId}/toggle-topic/${topicId}/`, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === "ok" && data.action === "added") {
+                    const row = el.closest("tr");
+                    const container = row.querySelector("td:nth-child(3)");
+
+                    // Шинэ badge хийх
+                    const span = document.createElement("span");
+                    span.className = "badge bg-primary topic-badge ms-1";
+                    span.dataset.topicId = topicId;
+                    span.style.cursor = "pointer";
+                    span.innerText = data.topic + " ×";
+
+                    // remove event залгах
+                    attachRemoveEvent(span, problemId, topicId);
+
+                    // dropdown-оос өмнө оруулна
+                    container.insertBefore(span, container.querySelector(".dropdown"));
+                }
+            });
+        });
+    });
+});
+</script>
+
+
+
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+{% load latex_filter %}
+
+{% block title %}Нэмэлт материал{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <style>
+        th, td {
+            max-width: 300px;
+            overflow: hidden;
+            vertical-align: middle;
+        }
+    </style>
+    <div class="justify-content-center">
+        {% if messages %}
+            {% for message in messages %}
+                <h5 class="alert alert-danger">{{ message }}</h5>
+            {% endfor %}
+        {% endif %}
+        <h3>Нэмэлт материал удирдах</h3>
+        <table class="table table-hover table-bordered">
+            <tr>
+                <th>№</th>
+                <th>Сурагчийн нэр</th>
+                <th>Олимпиад</th>
+                <th>Бодлого</th>
+                <th>Материал</th>
+                <th>Үйлдэл</th>
+            </tr>
+            {% for upload in uploads %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        USER ID: {{ upload.result.contestant.id }},
+                        {{ upload.result.contestant.last_name|slice:":1" }}.&nbsp;
+                        {{ upload.result.contestant.first_name }},
+                        {{ upload.result.contestant.data.mobile }}
+                    </td>
+                    <td>{{ upload.result.olympiad.name }}</td>
+                    <td>{% autoescape off %}Бодлого №{{ upload.result.problem.order }}<br>
+                        {{ upload.result.problem.statement|latex }}{% endautoescape %}
+                    </td>
+                    <td>
+                        <a href="/media/{{ upload.file }}" target="_blank">
+                            <img src="/media/{{ upload.file }}" style="height: 50px">
+                        </a><br>
+                        <span class="text-muted">{{ upload.upload_time|date:'Y-m-d H:i' }}</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'olympiad_exam_staff' olympiad_id=upload.result.olympiad.id contestant_id=upload.result.contestant.id %}"
+                           target="_blank" class="btn btn-sm btn-success me-2">Материал</a>
+                        <button class="btn btn-sm btn-primary me-2" onclick="approve({{ upload.id }},this)">Зөвшөөрөх</button>
+                        <button class="btn btn-sm btn-danger" onclick="removeUpload({{ upload.id }},this)">Устгах</button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Анхааруулга</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body text-center">
+            <p id="confirmMessage">Энэ үйлдлийг хийх үү?</p>
+            <img id="confirmImage" src="" alt="Материалын зураг" class="img-fluid mt-2" style="max-height:300px;">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Цуцлах</button>
+            <button type="button" class="btn btn-danger" id="confirmBtn">Тийм</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        let action = null;
+        let targetId = null;
+        let targetEl = null;
+
+        function approve(id, el) {
+            action = 'approve';
+            targetId = id;
+            targetEl = el;
+
+            const imgSrc = $(el).closest("tr").find("td img").attr("src");
+            document.getElementById('confirmImage').src = imgSrc || "";
+            document.getElementById('confirmMessage').innerText = "Энэ материалыг ЗӨВШӨӨРӨХ үү?";
+
+            new bootstrap.Modal(document.getElementById('confirmModal')).show();
+        }
+
+        function removeUpload(id, el) {
+            action = 'remove';
+            targetId = id;
+            targetEl = el;
+
+            const imgSrc = $(el).closest("tr").find("td img").attr("src");
+            document.getElementById('confirmImage').src = imgSrc || "";
+            document.getElementById('confirmMessage').innerText = "Энэ материалыг УСТГАХ уу?";
+
+            new bootstrap.Modal(document.getElementById('confirmModal')).show();
+        }
+
+        document.getElementById('confirmBtn').addEventListener('click', function() {
+            if (action === 'approve') {
+                $.get('{% url "approve_supplement" %}', {id: targetId}, function(data){
+                    console.log(data);
+                }).done(function(){
+                    $(targetEl).closest("tr").remove();
+                });
+            } else if (action === 'remove') {
+                $.get('{% url "remove_supplement" %}', {id: targetId}, function(data){
+                    console.log(data);
+                }).done(function(){
+                    $(targetEl).closest("tr").remove();
+                });
+            }
+            bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+        });
+    </script>
+{% endblock %}

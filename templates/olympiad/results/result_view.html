@@ -3,14 +3,12 @@
 {% block title %}Бодолт харах{% endblock %}
 
 {% block content %}
-    <div>
-        <ul id="images" class="list-inline d-none">
+    <div id="viewer-container" class="my-3" style="width: 100%; min-height: 600px; border: 1px solid #ccc;">
+        <ul id="images" class="list-inline d-inline">
             {% for upload in result.upload_set.all %}
-                <li class="list-inline-item"><img src="https://www.mmo.mn/media/{{ upload.file }}"></li>
+                <li class="list-inline-item"><img src="/media/{{ upload.file }}" style="height: 200px"></li>
             {% endfor %}
-        </ul>
-    </div>
-    <div id="viewer-container" class="my-3" style="width: 100%; height: 600px; border: 1px solid #ccc;"></div>
+        </ul></div>
     <button class="btn btn-sm btn-primary" onclick="loadViewer()">Зургийг тодруулж харах</button>
     <button class="btn btn-sm btn-danger" onclick="closeViewer()">Зургийг хаах</button>
 <style>
@@ -52,7 +50,7 @@
                     flipVertical: 1,
                 },
                 viewed() {
-                    galleryViewer.zoomTo(.25);
+                    galleryViewer.zoomTo(0.5);
                 },
             });
         }

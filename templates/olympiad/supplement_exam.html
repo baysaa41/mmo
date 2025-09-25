@@ -14,24 +14,24 @@
         гэж тодоор бичиж ирүүлнэ.
         Дүгнэх аргачлалын аль заалтаар оноо авах үндэслэл үүсч буйг тодорхой бичээрэй. Бодлого хамгаалах сурагч өөрийн үндсэн материалын зураг системд ороогүй, эсвэл шаардлага хангахгүй гэж үзвэл
         нэмэлтээр оруулах хүсэлт ирүүлж болно (өөрт зураг нь байхгүй бол материалыг нэмүүлэх хүсэлт ирүүлнэ).
-        Хүсэлтийг хүлээн авсан тохиолдолд материал үндсэн материалд нэмэгдэх (дүнгийн хуудаснаас харж болно) ба энэ хуудсанд харагдахгүй. Шаардлага хангаагүй материалыг системээс устгана. Энэ тохиолдолд дүнгийн хуудас болон энэ хуудасны алинд ч материал харагдахгүй.</p
+        Хүсэлтийг хүлээн авсан тохиолдолд материал үндсэн материалд нэмэгдэх (дүнгийн хуудаснаас харж болно) ба энэ хуудсанд харагдахгүй. Шаардлага хангаагүй материалыг системээс устгана. Энэ тохиолдолд дүнгийн хуудас болон энэ хуудасны алинд ч материал харагдахгүй.</p>
     <h4>Бодлогууд</h4>
     {% autoescape off %}
         {% for result in results %}
             <div>{{ result.problem.order }}. {{ result.problem.statement|latex|linebreaksbr }}</div>
             <div class="my-3">
                 {% if result.get_supplements %}
-                    <b>Илгээсэн бодолтууд:</b>
-                    {% for upload in result.get_supplements %}
-                        <img src="/media/{{ upload.file }}" style="width: 100px;height: 100px">
-                    {% endfor %}
+                    <h5>Илгээсэн бодолтууд:</h5>
+                        {% for upload in result.upload_set.all %}
+                            <li class="list-inline-item"><img src="/media/{{ upload.file }}" style="height: 60px"></li>
+                        {% endfor %}
                     <a href="{% url 'olympiad_result_viewer' %}?result_id={{ result.id }}"
-                       target="_blank">Харах</a>
+                       target="_blank" class="btn btn-sm btn-secondary">Харах</a>
                 {% endif %}
             </div>
             <div id="form-{{ result.id }}" class="upload-form"></div>
             <div class="my-3">
-                <button type="submit" class="btn btn-sm btn-secondary" onclick="upload({{ result.id }})">Бодолт илгээх
+                <button type="submit" class="btn btn-sm btn-primary" onclick="upload({{ result.id }})">Бодолт илгээх
                 </button>
             </div>
         {% endfor %}
