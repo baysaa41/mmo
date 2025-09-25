@@ -7,7 +7,7 @@
 
 {% block content %}
     <div class="container mt-3">
-        <h2>{{ olympiad.name }} – Бодлогуудын ангилал</h2>
+        <h3>Бодлогын сан</h3>
 
         <table class="table table-bordered table-striped mt-3">
             <thead class="table-light">
@@ -51,77 +51,79 @@
 
                     </td>
                 </tr>
+            {% empty %}
+                <p>Хайлтад тохирох бодлого олдсонгүй.</p>
             {% endfor %}
             </tbody>
         </table>
     </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const csrftoken = '{{ csrf_token }}';
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const csrftoken = '{{ csrf_token }}';
 
-    // === Функц: Topic устгах ===
-    function attachRemoveEvent(span, problemId, topicId) {
-        span.addEventListener("click", function() {
-            fetch(`/olympiads/problems/${problemId}/toggle-topic/${topicId}/`, {
-                method: "POST",
-                headers: { "X-CSRFToken": csrftoken }
-            })
-            .then(r => r.json())
-            .then(d => {
-                if (d.status === "ok" && d.action === "removed") {
-                    span.remove(); // DOM-оос badge-ийг арилгана
-                }
+            // === Функц: Topic устгах ===
+            function attachRemoveEvent(span, problemId, topicId) {
+                span.addEventListener("click", function () {
+                    fetch(`/olympiads/problems/${problemId}/toggle-topic/${topicId}/`, {
+                        method: "POST",
+                        headers: {"X-CSRFToken": csrftoken}
+                    })
+                        .then(r => r.json())
+                        .then(d => {
+                            if (d.status === "ok" && d.action === "removed") {
+                                span.remove(); // DOM-оос badge-ийг арилгана
+                            }
+                        });
+                });
+            }
+
+            // === Эхний байдлаар байгаа бүх badge дээр устгах event залгах ===
+            document.querySelectorAll(".topic-badge").forEach(function (span) {
+                const problemId = span.closest("tr").dataset.problemId;
+                const topicId = span.dataset.topicId;
+                attachRemoveEvent(span, problemId, topicId);
+            });
+
+            // === Topic нэмэх ===
+            document.querySelectorAll(".add-topic").forEach(function (el) {
+                el.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    let problemId = el.dataset.problemId;
+                    let topicId = el.dataset.topicId;
+
+                    fetch(`/olympiads/problems/${problemId}/toggle-topic/${topicId}/`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": csrftoken,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({})
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.status === "ok" && data.action === "added") {
+                                const row = el.closest("tr");
+                                const container = row.querySelector("td:nth-child(3)");
+
+                                // Шинэ badge хийх
+                                const span = document.createElement("span");
+                                span.className = "badge bg-primary topic-badge ms-1";
+                                span.dataset.topicId = topicId;
+                                span.style.cursor = "pointer";
+                                span.innerText = data.topic + " ×";
+
+                                // remove event залгах
+                                attachRemoveEvent(span, problemId, topicId);
+
+                                // dropdown-оос өмнө оруулна
+                                container.insertBefore(span, container.querySelector(".dropdown"));
+                            }
+                        });
+                });
             });
         });
-    }
-
-    // === Эхний байдлаар байгаа бүх badge дээр устгах event залгах ===
-    document.querySelectorAll(".topic-badge").forEach(function(span) {
-        const problemId = span.closest("tr").dataset.problemId;
-        const topicId = span.dataset.topicId;
-        attachRemoveEvent(span, problemId, topicId);
-    });
-
-    // === Topic нэмэх ===
-    document.querySelectorAll(".add-topic").forEach(function(el) {
-        el.addEventListener("click", function(e) {
-            e.preventDefault();
-            let problemId = el.dataset.problemId;
-            let topicId = el.dataset.topicId;
-
-            fetch(`/olympiads/problems/${problemId}/toggle-topic/${topicId}/`, {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": csrftoken,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({})
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === "ok" && data.action === "added") {
-                    const row = el.closest("tr");
-                    const container = row.querySelector("td:nth-child(3)");
-
-                    // Шинэ badge хийх
-                    const span = document.createElement("span");
-                    span.className = "badge bg-primary topic-badge ms-1";
-                    span.dataset.topicId = topicId;
-                    span.style.cursor = "pointer";
-                    span.innerText = data.topic + " ×";
-
-                    // remove event залгах
-                    attachRemoveEvent(span, problemId, topicId);
-
-                    // dropdown-оос өмнө оруулна
-                    container.insertBefore(span, container.querySelector(".dropdown"));
-                }
-            });
-        });
-    });
-});
-</script>
+    </script>
 
 
 

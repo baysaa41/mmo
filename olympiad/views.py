@@ -107,13 +107,6 @@ def quiz_end(request, quiz_id):
     return render(request, 'olympiad/end_note.html', {'quiz': quiz})
 
 
-def mmo2021(request):
-    return render(request, "accounts/site_home.html")
-
-
-
-
-
 @login_required
 def student_result_view(request, olympiad_id, contestant_id):
     results = Result.objects.filter(contestant_id=contestant_id, olympiad_id=olympiad_id).order_by('problem__order')
@@ -177,6 +170,7 @@ def is_my_student(teacher_id,student_id):
     except:
         return False
     return False
+
 @login_required
 def quiz_staff_view(request, olympiad_id, contestant_id):
     if not request.user.is_staff:
@@ -247,7 +241,7 @@ def result_viewer(request):
     return JsonResponse({'status': 'failed'})
 
 
-# @login_required
+@staff_member_required
 def grading_home(request):
     olympiads = Olympiad.objects.filter(is_grading=True).order_by('id')
 

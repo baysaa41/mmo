@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from olympiad.models import SchoolYear
 
 from .models import Olympiad, Problem, Topic
+from django.db.models import Q
 
 
 def olympiads_home(request):
@@ -113,9 +114,24 @@ def supplements_view(request, olympiad_id):
 
 
 def problem_list_with_topics(request):
+    # URL-аас ?q=... гэсэн хайлтын түлхүүр үгийг авах
+    query = request.GET.get('q', '')
+
+    # Анхдагч queryset-г тодорхойлох
     problems = Problem.objects.all().prefetch_related("topics")
-    all_topics = Topic.objects.all()   # 👈 энд бүх topics авч дамжуулна
+
+    # Хэрэв хайлтын үг орж ирсэн бол queryset-г шүүх
+    if query:
+        problems = problems.filter(
+            Q(statement__icontains=query) | # Бодлогын өгүүлбэрээс хайх
+            Q(olympiad__name__icontains=query) | # Холбогдсон олимпиадын нэрээс хайх
+            Q(topics__name__icontains=query)     # Холбогдсон сэдвүүдийн нэрээс хайх
+        ).distinct() # Сэдвээр хайхад үүсэх давхардлыг арилгах
+
+    all_topics = Topic.objects.all()
+
     return render(request, "olympiad/problems/problem_list_with_topics.html", {
         "problems": problems,
         "all_topics": all_topics,
+        "query": query, # Хайлтын үгийг темплэйт рүү буцааж дамжуулах
     })
