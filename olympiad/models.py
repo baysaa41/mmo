@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
 from accounts.models import Author, Province, Zone, Grade, Level
-from datetime import datetime, timezone, timedelta
+from django.utils import timezone
+from datetime import datetime, timedelta
 from schools.models import School
 
 
@@ -70,32 +71,33 @@ class Olympiad(models.Model):
         return self.rounds[self.round][1]
 
     def is_active(self):
-        now = datetime.now(timezone.utc)
-        if self.start_time < now and self.end_time > now:
-            return True
-        else:
-            return False
+        now = timezone.now()
+        return bool(self.start_time and self.end_time and self.start_time <= now <= self.end_time)
 
     def is_started(self):
-        now = datetime.now(timezone.utc)
-        if self.start_time < now:
-            return True
-        else:
-            return False
+        now = timezone.now()
+        return bool(self.start_time and self.start_time <= now)
 
     def is_finished(self):
-        now = datetime.now(timezone.utc)
-        if self.end_time < now:
-            return True
-        else:
-            return False
+        now = timezone.now()
+        return bool(self.end_time and self.end_time < now)
 
     def is_closed(self):
-        threshold = datetime.now(timezone.utc) + timedelta(seconds=-300)
-        if self.end_time < threshold:
-            return True
-        else:
-            return False
+        threshold = timezone.now() - timedelta(seconds=300)
+        return bool(self.end_time and self.end_time < threshold)
+
+    # — Template-д ашиглах property-ууд (method-уудыг үл давхцуулна) —
+    @property
+    def started(self):
+        return self.is_started()
+
+    @property
+    def finished(self):
+        return self.is_finished()
+
+    @property
+    def active(self):
+        return self.is_active()
 
     class Meta:
         ordering = ['-school_year_id','-id']
@@ -276,7 +278,7 @@ class Result(models.Model):
 class Upload(models.Model):
     result = models.ForeignKey(Result, on_delete=models.CASCADE)
     upload_time = models.DateTimeField(auto_created=True,auto_now_add=True)
-    is_official = models.BooleanField(default=True)
+    is_accepted = models.BooleanField(default=True)
     def file_to(instance, filename):
         return 'static/results/' + str(filename)
     file = models.ImageField(upload_to=file_to)

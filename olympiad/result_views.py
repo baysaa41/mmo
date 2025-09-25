@@ -25,33 +25,58 @@ from django.db.models import Count
 from django.shortcuts import redirect
 
 
-from django.db.models import Avg, Max, Min
+from django.db.models import Count, Avg, Max, Min
+
+from django.core.cache import cache
+
+@staff_member_required
+def olympiad_problem_stats(request, olympiad_id):
+    cache_key = f"olympiad_stats_{olympiad_id}"
+    data = cache.get(cache_key)
+    if not data:
+        olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+        problems = olympiad.problem_set.order_by('order')
+
+        problem_stats = []
+        for problem in problems:
+            results = Result.objects.filter(problem=problem, score__isnull=False)
+            stats = results.aggregate(
+                submissions=Count('id'),
+                avg=Avg('score'),
+                max=Max('score'),
+                min=Min('score')
+            )
+            province_stats = []
+            for prov in Province.objects.all().order_by("id"):
+                prov_results = results.filter(contestant__data__province=prov)
+                total = prov_results.count()
+                gt_zero = prov_results.filter(score__gt=0).count()
+                full = prov_results.filter(score=problem.max_score).count()
+                province_stats.append({
+                    "province": prov.name,
+                    "total": total,
+                    "gt_zero": gt_zero,
+                    "full": full,
+                })
+            problem_stats.append({
+                "problem": problem,
+                "stats": stats,
+                "province_stats": province_stats,
+            })
+
+        data = {
+            "olympiad": olympiad,
+            "problem_stats": problem_stats,
+        }
+        cache.set(cache_key, data, timeout=None)  # хугацаагүй хадгална
+
+    return render(request, "olympiad/stats/olympiad_problem_stats.html", data)
+
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
 
 #дүнгийн хуудасны сургууль солих
-@staff_member_required
-def scoresheet_change_school(request, scoresheet_id):
-    sheet = get_object_or_404(ScoreSheet, pk=scoresheet_id)
 
-    if request.method == "POST":
-        form = ChangeScoreSheetSchoolForm(request.POST)
-        if form.is_valid():
-            sheet.school = form.cleaned_data["school"]
-            sheet.prizes = form.cleaned_data.get("prizes", "")
-            sheet.save()
-            return redirect("olympiad_result_view", olympiad_id=sheet.olympiad_id)
-    else:
-        form = ChangeScoreSheetSchoolForm(initial={
-            "province": sheet.school.province if sheet.school else None,
-            "school": sheet.school,
-            "prizes": sheet.prizes,
-        })
-
-    return render(request, "olympiad/change_scoresheet_school.html", {
-        "form": form,
-        "sheet": sheet,
-    })
 
 
 # nuhuh testiin hariug shinechileh
@@ -176,7 +201,7 @@ def results_home(request):
         if level_param.isdigit():
             olympiads = olympiads.filter(level_id=int(level_param))
 
-    olympiads = olympiads.order_by('-school_year_id', '-round', '-level', 'name')
+    olympiads = olympiads.order_by('-school_year_id', 'round', 'level', 'name')
 
     context = {
         'olympiads': olympiads,
@@ -205,7 +230,7 @@ def student_result_view(request, olympiad_id, contestant_id):
     if olympiad.is_active() and not request.user.is_superuser:
         return HttpResponse("Test urgeljilj baina.")
     username = contestant.last_name + ', ' + contestant.first_name
-    return render(request, 'olympiad/student_result.html',
+    return render(request, 'olympiad/results/student_result.html',
                   {'results': results, 'username': username, 'olympiad': olympiad})
 
 

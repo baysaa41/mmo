@@ -2,56 +2,60 @@
 
 from django.urls import path
 from . import views, result_views
+from . import views_results, views_public, views_admin, views_contest
 
 urlpatterns = [
     # === 1. Үндсэн ба Нүүр хуудасны Замууд ===
     # Нүүр хуудас: Удахгүй болох олимпиадуудын жагсаалт
-    path('', views.list_upcomming_olympiads, name='olympiad_home'),
+    path('', views_public.olympiads_home, name='olympiad_home'),
     # Нэмэлт материалын нүүр хуудас
-    path('supplements/', views.supplement_home, name='olympiad_supplement_home'),
+    path('supplements/', views_contest.supplement_home, name='olympiad_supplement_home'),
     # Бодлогын сангийн нүүр хуудас
-    path('problems/', views.problems_home, name='olympiad_problems_home'),
+    path('problems/', views_public.problems_home, name='olympiad_problems_home'),
     # Дүнгийн нүүр хуудас
-    path('results/', result_views.results_home, name='olympiad_results_home'),
+    path('results/', views_results.results_home, name='olympiad_results_home'),
     # Засалтын ажлын нүүр хуудас
-    path('grading/home/', views.grading_home, name='olympiad_grading_home'),
+    path('grading/home/', views_contest.grading_home, name='olympiad_grading_home'),
 
     # === 2. Олимпиадад Оролцох (Оролцогчийн Үзэгдэл) ===
     # Тестэн олимпиадад оролцох хуудас
-    path('quiz/<int:quiz_id>/', views.quiz_view, name='olympiad_quiz'),
+    path('quiz/<int:olympiad_id>/', views_contest.quiz_view, name='olympiad_quiz'),
     # Уламжлалт олимпиадад оролцох, бодолт хуулах хуудас
-    path('exam/<int:olympiad_id>/', views.exam_student_view, name='olympiad_exam'),
+    path('exam/<int:olympiad_id>/', views_contest.exam_student_view, name='olympiad_exam'),
     # Олимпиадын хугацаа дууссаныг мэдэгдэх хуудас
-    path('end/<int:quiz_id>/', views.quiz_end, name='olympiad_quiz_end'),
+    path('end/<int:olympiad_id>/', views_contest.olympiad_end, name='olympiad_end'),
     # Сурагчийн илгээсэн бүх материалыг харах
-    path('student/materials', views.student_exam_materials_view, name='student_exam_materials'),
+    path('student/materials', views_contest.student_exam_materials_view, name='student_exam_materials'),
 
     # === 3. Дүн ба Үзүүлэлт Харах ===
     # Олимпиадын нэгдсэн дүнг хүснэгтээр харах (pandas ашигласан)
-    path('results/<int:olympiad_id>/', views.olympiad_scores, name='olympiad_result_view'),
+    path('results/<int:olympiad_id>/', views_results.olympiad_results, name='olympiad_result_view'),
     # Тодорхой оролцогчийн хувийн дүнг дэлгэрэнгүй харах
-    path('result/<int:olympiad_id>/<int:contestant_id>/', result_views.student_result_view, name='olympiad_student_result'),
+    path('results/<int:olympiad_id>/<int:contestant_id>/', views_results.student_result_view,
+         name='olympiad_student_result'),
     # Оролцогчдын өгсөн хариултуудын жагсаалт (админд зориулсан)
     path('answers/<int:olympiad_id>/', result_views.answers_view, name='olympiad_answer_view'),
     # Нэгдсэн олимпиадын бүлгийн дүнг харах
     path('results/g/<int:group_id>/', result_views.olympiad_group_result_view, name='olympiad_group_result_view'),
     # Тухайн олимпиадын бодлогуудыг харах
-    path('problems/<int:olympiad_id>/', views.problems_view, name='olympiad_problems_view'),
+    path('problems/<int:olympiad_id>/', views_public.problems_view, name='olympiad_problems_view'),
     # Бодлогын статистик мэдээллийг харах
-    path('stats/<int:problem_id>/', result_views.problem_stats_view, name='problem_stats'),
+    path('stats/<int:problem_id>/', views_results.problem_stats_view, name='problem_stats'),
+    # Олимпиадын бүх бодлогын статистик
+    path('stats/olympiad/<int:olympiad_id>/',
+         views_results.olympiad_problem_stats,
+         name='olympiad_problem_stats'),
     # Шилдэг 50/30 статистик
     path('results/<int:olympiad_id>/top/', views.olympiad_top_stats, name='olympiad_top_stats'),
     path('scoresheet/<int:scoresheet_id>/change-school/',
-         result_views.scoresheet_change_school,
+         views_admin.scoresheet_change_school,
          name='scoresheet_change_school'),
 
     # === 4. Засалт ба Удирдлага (Багш/Админы Үзэгдэл) ===
-    # Excel файлаас олимпиадын дүнг бөөнөөр импортлох
-    path('excel/', views.upload_file, name='upload_file'),
     # Багш/ажилтан сурагчийн тестийн хариултыг оруулах/засах
-    path('quiz/staff/<int:quiz_id>/<int:contestant_id>/', views.quiz_staff_view, name='olympiad_quiz_staff'),
+    path('quiz/staff/<int:olympiad_id>/<int:contestant_id>/', views.quiz_staff_view, name='olympiad_quiz_staff'),
     # Багш/ажилтан сурагчийн нэрийн өмнөөс бодолт хуулах
-    path('exam/staff/<int:olympiad_id>/<int:contestant_id>/', views.exam_staff_view, name='olympiad_exam_staff'),
+    path('exam/staff/<int:olympiad_id>/<int:contestant_id>/', views_admin.exam_staff_view, name='olympiad_exam_staff'),
     # Тухайн бодлогын ирүүлсэн бүх бодолтыг засах хуудас
     path('grading/<int:problem_id>/', views.exam_grading_view, name='olympiad_exam_grading'),
     # Нэг бодолтыг үнэлэх (оноо өгөх)
@@ -70,7 +74,6 @@ urlpatterns = [
     path('supplements/approve/', views.approve_supplement, name='approve_supplement'),
     # Нэмэлт материалыг устгах
     path('supplements/remove/', views.remove_supplement, name='remove_supplement'),
-
 
     # === 6. Бусад ба Туслах Замууд (AJAX, PDF, г.м.) ===
     # AJAX: Оролцогчийн илгээсэн бодолтыг харуулах

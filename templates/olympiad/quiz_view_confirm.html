@@ -18,9 +18,9 @@
     <form method="post">
         {% csrf_token %}
         <div class="row mt-4">
-            <div class="col-6"><a href="{% url 'olympiad_quiz' quiz_id=olympiad.id %}"
+            <div class="col-6"><a href="{% url 'olympiad_quiz' olympiad_id=olympiad.id %}"
                                   class="btn btn-block btn-warning">Хариултаа засах (буцах)</a></div>
-            <div class="col-6"><a href="{% url 'olympiad_quiz_end' quiz_id=olympiad.id %}"
+            <div class="col-6"><a href="{% url 'olympiad_end' olympiad_id=olympiad.id %}"
                                   class="btn btn-block btn-success">Дуусгах</a></div>
         </div>
     </form>

@@ -48,6 +48,7 @@ def pst2png(text):
     latex = settings.LATEX
     dvips = settings.DVIPS
     convert = settings.CONVERT
+    pdflatex = settings.PDFLATEX
     os.chdir( TEX_ROOT )
     matches=re.findall(r'\[pst\](.*?)\[/pst\]',text, re.MULTILINE|re.DOTALL)
     for match in matches:
@@ -62,6 +63,18 @@ def pst2png(text):
             os.system('{} {}.dvi'.format(dvips, name))
             os.system('{} {}.ps {}.png'.format(convert, name,name))
             #os.system('rm *.tex *.ps *.dvi *.log *.aux')
+
+    matches=re.findall(r'\[xlat\](.*?)\[/xlat\]',text, re.MULTILINE|re.DOTALL)
+    for match in matches:
+        match = match.strip()
+        result = hashlib.md5(match.encode())
+        name = result.hexdigest()
+        text = text.replace(match, "<div class='picture text-center'><img src='/static/latex/{}.png'></div>".format(name))
+        if not os.path.isfile("{}/{}.png".format(TEX_ROOT,name)):
+            with io.open('{}.tex'.format(name),"w") as f:
+                print(match, file=f)
+            os.system('{} {}.tex'.format(pdflatex, name))
+            os.system('{} {}.pdf {}.png'.format(convert, name,name))
 
     matches=re.findall(r'\[psti\](.*?)\[/psti\]',text, re.MULTILINE|re.DOTALL)
     for match in matches:

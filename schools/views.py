@@ -608,7 +608,7 @@ def view_school_olympiad_results(request, school_id, olympiad_id):
         'olympiad_id': olympiad_id,
     }
 
-    return render(request, 'olympiad/results/results.html', context)
+    return render(request, 'olympiad/results/school_results.html', context)
 
 @login_required
 def edit_user_in_group(request, user_id):

@@ -1,10 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Алдаа</title>
-</head>
-<body>
-Алдааны мэдээлэл: {{ message }}
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block content %}
+    <h3>{{ message }}</h3>
+{% endblock %}

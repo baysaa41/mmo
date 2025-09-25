@@ -1,9 +1,0 @@
-{# оюутнаас хариулт авах #}
-{% load crispy_forms_filters %}
-
-<label>Бодлого {{ result.problem.order }}.</label>
-<form method="post" enctype="multipart/form-data" id="student-result">
-    {% csrf_token %}
-    {{ form | crispy }}
-    <button type="submit" class="btn btn-sm btn-primary">Серверт хуулах</button>
-</form>
