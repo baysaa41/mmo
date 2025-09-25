@@ -12,15 +12,15 @@
         <table class="table table-bordered table-striped mt-3">
             <thead class="table-light">
             <tr>
-                <th style="width:5%">№</th>
+                <th style="width:20%">№</th>
                 <th>Бодлого</th>
-                <th style="width:35%">Ангилал</th>
+                <th style="width:20%">Ангилал</th>
             </tr>
             </thead>
             <tbody>
             {% for problem in problems %}
                 <tr data-problem-id="{{ problem.id }}">
-                    <td>{{ problem.order }}</td>
+                    <td>{{ problem.olympiad.name }}-{{ problem.order }}</td>
                     <td>{{ problem.statement|default:"<i>Бодлого алга</i>"|latex|safe }}</td>
                     <td>
                         {% for topic in problem.topics.all %}

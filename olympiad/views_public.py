@@ -115,7 +115,7 @@ def supplements_view(request, olympiad_id):
 def problem_list_with_topics(request):
     problems = Problem.objects.all().prefetch_related("topics")
     all_topics = Topic.objects.all()   # 👈 энд бүх topics авч дамжуулна
-    return render(request, "olympiad/problem_list_with_topics.html", {
+    return render(request, "olympiad/problems/problem_list_with_topics.html", {
         "problems": problems,
         "all_topics": all_topics,
     })
