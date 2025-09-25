@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load cache %}
+
+{% block title %}{{ olympiad.name }}, {{ olympiad.level.name }} олимпиадын дүнгийн хүснэгт{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <h3 class="my-3">
+            {{ olympiad.name }}, {{ olympiad.level.name }} олимпиадын дүн, {{ page_title }}
+        </h3>
+        <p class="text-muted">Олимпиадын дүнгийн хуудас. Аймаг, дүүрэг, бүсээр дүнг харж болно. Нийлбэр оноо 0 тохиолдолд жагсаалтад ороогүй.</p>
+        <a href="{% url 'olympiad_top_stats' olympiad.id %}" class="btn btn-primary my-2">
+            Статистик харах
+        </a>
+        {% include 'selection_menu.html' %}
+
+        {# --- PAGINATION (дээд хэсэг) --- #}
+        <div class="pagination d-flex justify-content-center my-3">
+    <span class="align-self-center me-3">
+      Хуудас: {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+    </span>
+            <ul class="pagination mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page=1&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&laquo;</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.previous_page_number }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&lsaquo;</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+                {% endif %}
+
+                {% for page_num in page_obj.paginator.page_range %}
+                    {% if page_num == page_obj.number %}
+                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ page_num }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.next_page_number }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&rsaquo;</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.paginator.num_pages }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&raquo;</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </div>
+
+        {% if user_score_data %}
+            <div class="alert alert-primary text-center">
+                <strong>Таны авсан оноо: {{ user_score_data.total }}</strong> |
+                <strong>Байр: </strong>
+                {% if user_score_data.ranking_a == user_score_data.ranking_b %}
+                    <span>{{ user_score_data.ranking_a }}</span>
+                {% else %}
+                    <span>{{ user_score_data.ranking_a }}-{{ user_score_data.ranking_b }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered table-hover">
+                <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Овог</th>
+                    <th>Нэр</th>
+                    <th>ID</th>
+                    <th>Аймаг/Дүүрэг</th>
+                    <th>Сургууль</th>
+                    {% for i in problem_range %}
+                        <th>№{{ i }}</th>
+                    {% endfor %}
+                    <th>Нийт</th>
+                    <th>Байр</th>
+                    <th>Тайлбар</th>
+                    <th><i class="fas fa-plus-circle"></i></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for data in score_data %}
+                    <tr>
+                        <td>{{ data.list_rank }}</td>
+                        <td>{{ data.last_name }}</td>
+                        <td>{{ data.first_name }}</td>
+                        <td>{{ data.id }}</td>
+                        <td>{{ data.province }}</td>
+                        <td>{{ data.school.name }}</td>
+                        {% for score in data.scores %}
+                            <td class="text-center">{{ score }}</td>
+                        {% endfor %}
+                        <td class="text-center"><strong>{{ data.total }}</strong></td>
+                        <td class="text-center">
+                            {% if data.ranking_a == data.ranking_b %}
+                                {{ data.ranking_a }}
+                            {% else %}
+                                {{ data.ranking_a }}-{{ data.ranking_b }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if data.prizes %}{{ data.prizes }}{% endif %}
+                            {% if request.user.is_superuser %}
+                                <a href="{% url 'scoresheet_change_school' data.scoresheet_id %}"
+                                   class="text-primary ms-2">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if data.id %}
+                                <a href="{% url 'olympiad_student_result' olympiad.id data.id %}">
+                                    <i class="fas fa-angle-down"></i>
+                                </a>
+                            {% else %}
+                                ID-гүй
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# --- PAGINATION (доод хэсэг) --- #}
+        <div class="pagination d-flex justify-content-center my-3">
+    <span class="align-self-center me-3">
+      Хуудас: {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+    </span>
+            <ul class="pagination mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page=1&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&laquo;</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.previous_page_number }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&lsaquo;</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
+                {% endif %}
+
+                {% for page_num in page_obj.paginator.page_range %}
+                    {% if page_num == page_obj.number %}
+                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ page_num }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">{{ page_num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.next_page_number }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&rsaquo;</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.paginator.num_pages }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&raquo;</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><a class="page-link" href="#">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

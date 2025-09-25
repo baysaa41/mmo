@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Дүнгийн хуудас дахь сургууль ба шагнал засах</h5>
+    </div>
+    <div class="card-body">
+      <p class="text-muted">
+        <strong>{{ sheet.user.last_name }} {{ sheet.user.first_name }}</strong>
+        (одоогийн сургууль: {{ sheet.school.name|default:"-" }},
+        шагнал: {{ sheet.prizes|default:"-" }})
+        – <em>{{ sheet.olympiad.name }}</em> олимпиадын дүнгийн мэдээллийг өөрчлөх.
+      </p>
+
+      <form method="post" id="school-change-form">
+        {% csrf_token %}
+        <div class="mb-3">
+          {{ form.province.label_tag }}
+          {{ form.province }}
+        </div>
+        <div class="mb-3">
+          {{ form.school.label_tag }}
+          {{ form.school }}
+        </div>
+        <div class="mb-3">
+          {{ form.prizes.label_tag }}
+          {{ form.prizes }}
+        </div>
+
+        <button type="submit" class="btn btn-success">
+          <i class="fas fa-save"></i> Хадгалах
+        </button>
+        <a href="{% url 'olympiad_result_view' sheet.olympiad.id %}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i> Буцах
+        </a>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // province сонгогдоход формоо автоматаар дахин илгээж сургуулиудыг ачаалуулах
+  document.getElementById('province-select').addEventListener('change', function() {
+    document.getElementById('school-change-form').submit();
+  });
+</script>
+{% endblock %}

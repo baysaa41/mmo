@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% load crispy_forms_tags %}
+{% load latex_filter %}
+
+{% block title %}Шалгалт{% endblock %}
+
+{% block menu %}
+{% endblock %}
+
+{% block content %}
+    <h3>ID: {{ contestant.id }}. {{ contestant.first_name }}, {{ contestant.last_name }}</h3>
+    <p class="alert alert-info">{% autoescape off %}{{ olympiad.description }}{% endautoescape %}</p>
+    <h4>Бодлогууд</h4>
+    {% autoescape off %}
+        {% for result in results %}
+            <div>{{ result.problem.order }}. {{ result.problem.statement|latex|linebreaksbr}}</div>
+            <div class="my-3">
+                {% if result.get_uploads %}
+                    <p><strong>Илгээсэн бодолтууд:</strong></p>
+                    {% for upload in result.get_uploads %}
+                        <p><a href="/media/{{ upload.file }}" target="_blank">{{ upload.file }}</a></p>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <div id="form-{{ result.id }}" class="upload-form"></div>
+            <div class="my-3">
+                <button type="submit" class="btn btn-sm btn-secondary" onclick="upload({{ result.id }})">Бодолт илгээх
+                </button>
+            </div>
+        {% endfor %}
+    {% endautoescape %}
+    <script>
+        function upload(i) {
+            $(".upload-form").empty()
+            $.get('{% url 'olympiad_get_result_form' %}', {'result_id': i}, function (data) {
+                $("#form-" + i).empty()
+                $("#form-" + i).append(data)
+            })
+        }
+    </script>
+{% endblock %}
