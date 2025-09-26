@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count, Avg, Max, Min
@@ -7,12 +7,12 @@ from django.utils import timezone
 from django.core.cache import cache
 from django.contrib.auth.models import User
 
-from .models import Olympiad, Problem, Result, SchoolYear, Upload
+from .models import Olympiad, ScoreSheet, Result, SchoolYear, Upload, Problem, Topic
+from .forms import ChangeScoreSheetSchoolForm
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
-from olympiad.models import Problem, Topic
 
 @require_POST
 @csrf_exempt  # production-д бол csrf token ашиглаарай
