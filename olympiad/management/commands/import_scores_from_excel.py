@@ -46,8 +46,10 @@ class Command(BaseCommand):
             try:
                 df_info = pd.read_excel(file_path, sheet_name='Мэдээлэл')
                 info_dict = pd.Series(df_info.Утга.values,index=df_info.Түлхүүр).to_dict()
+
                 olympiad_id = int(info_dict['olympiad_id'])
                 school_id = int(info_dict['school_id'])
+                self.stdout.write(f"\n Олимпиадын id: {olympiad_id}")
                 self.stdout.write(f"\n Сургуулийн id: {school_id}")
 
                 olympiad = Olympiad.objects.get(pk=olympiad_id)
@@ -72,6 +74,7 @@ class Command(BaseCommand):
 
                 for index, row in df.iterrows():
                     user_id = row.get('ID')
+                    self.stdout.write(f"\n Сурагчийн id: {user_id}")
                     if pd.isna(user_id):
                         skipped_rows += 1
                         continue

@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container my-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">Бодлогын статистик</h4>
+                        <small class="text-muted">{{ problem.olympiad.name }}, {{ problem.olympiad.level.name }}
+                            ангилал, Бодлого №{{ problem.order }}</small>
+                    </div>
+                    <div>
+                        {% if prev_problem %}
+                            <a href="{% url 'problem_stats' prev_problem.id %}"
+                               class="btn btn-outline-secondary btn-sm">&larr; Өмнөх бодлого</a>
+                        {% endif %}
+                        {% if next_problem %}
+                            <a href="{% url 'problem_stats' next_problem.id %}"
+                               class="btn btn-outline-secondary btn-sm">Дараагийн бодлого &rarr;</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Бодлогын нөхцөл:</h5>
+                <div class="p-3 bg-light rounded mb-4">
+                    {{ problem.statement|safe }}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Үндсэн статистик</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Нийт хариулсан сурагч:
+                                <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Дундаж оноо:
+                                <span class="badge bg-info rounded-pill">{{ stats.avg|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Хамгийн өндөр оноо:
+                                <span class="badge bg-success rounded-pill">{{ stats.max|floatformat:2 }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Хамгийн бага оноо:
+                                <span class="badge bg-danger rounded-pill">{{ stats.min|floatformat:2 }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Онооны тархалт</h5>
+                        {% if results_grouped %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                    <tr>
+                                        <th>Оноо</th>
+                                        <th>Сурагчийн тоо</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for group in results_grouped %}
+                                        <tr>
+                                            <td>{{ group.score|floatformat:2 }}</td>
+                                            <td>{{ group.score_count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Онооны тархалтын мэдээлэл алга байна.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <h5>Аймаг/Дүүрэг бүрээрх дундаж оноо</h5>
+                <div style="width: 100%; max-width: 900px; margin: auto;">
+                    <canvas id="provinceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const ctx = document.getElementById('provinceChart').getContext('2d');
+
+            // View-с дамжуулсан өгөгдлийг JavaScript хувьсагчид оноох
+            const provinceLabels = {{ province_labels|safe }};
+            const provinceAvgScores = {{ province_avg_scores|safe }};
+
+            new Chart(ctx, {
+                type: 'bar', // Графикийн төрөл: баганан
+                data: {
+                    labels: provinceLabels,
+                    datasets: [{
+                        label: 'Дундаж оноо',
+                        data: provinceAvgScores,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Дундаж оноо'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false // Домог (legend)-г нуух
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

@@ -44,7 +44,7 @@ urlpatterns = [
     path('stats/<int:problem_id>/', views_results.problem_stats_view, name='problem_stats'),
     # Олимпиадын бүх бодлогын статистик
     path('stats/olympiad/<int:olympiad_id>/',
-         views_results.olympiad_problem_stats,
+         views_admin.olympiad_problem_stats,
          name='olympiad_problem_stats'),
     # Шилдэг 50/30 статистик
     path('results/<int:olympiad_id>/top/', views.olympiad_top_stats, name='olympiad_top_stats'),

@@ -416,36 +416,4 @@ def is_my_school_group(user_id, group_id):
     return False
 
 
-def problem_stats_view(request, problem_id):
-    problem = get_object_or_404(Problem, pk=problem_id)
-    results = Result.objects.filter(problem=problem, score__isnull=False)
 
-    grouped = (results.values('score')
-               .annotate(score_count=Count('score'))
-               .order_by('score'))
-
-    stats = results.aggregate(
-        avg=Avg('score'),
-        max=Max('score'),
-        min=Min('score')
-    )
-
-    # --- Дараагийн болон өмнөх бодлогын id олох ---
-    next_problem = (Problem.objects
-                    .filter(olympiad=problem.olympiad, order__gt=problem.order)
-                    .order_by('order')
-                    .first())
-    prev_problem = (Problem.objects
-                    .filter(olympiad=problem.olympiad, order__lt=problem.order)
-                    .order_by('-order')
-                    .first())
-
-    context = {
-        'problem': problem,
-        'count': results.count(),
-        'results_grouped': grouped,
-        'stats': stats,
-        'next_problem': next_problem,
-        'prev_problem': prev_problem,
-    }
-    return render(request, 'olympiad/stats/problem_stats.html', context)

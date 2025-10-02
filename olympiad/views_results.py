@@ -172,61 +172,42 @@ def problem_stats_view(request, problem_id):
     stats = results.aggregate(
         avg=Avg('score'),
         max=Max('score'),
-        min=Min('score'),
-        submissions=Count('id')
+        min=Min('score')
     )
 
+        # --- ШИНЭ ХЭСЭГ: АЙМАГ БҮРЭЭР ДУНДАЖ ОНООГ ТООЦООЛОХ ---
+    province_stats = (Result.objects.filter(problem=problem, score__isnull=False)
+                      .values('contestant__data__province__name') # Аймгийн нэрээр бүлэглэх
+                      .annotate(average_score=Avg('score')) # Дундаж оноог тооцоолох
+                      .order_by('contestant__data__province__id')) # Аймгийн id-аар эрэмбэлэх
+
+    # Chart.js-д зориулж өгөгдлийг бэлдэх
+    province_labels = [entry['contestant__data__province__name'] for entry in province_stats]
+    province_avg_scores = [round(entry['average_score'], 2) for entry in province_stats]
+
+
+
+    # --- Дараагийн болон өмнөх бодлогын id олох ---
+    next_problem = (Problem.objects
+                    .filter(olympiad=problem.olympiad, order__gt=problem.order)
+                    .order_by('order')
+                    .first())
+    prev_problem = (Problem.objects
+                    .filter(olympiad=problem.olympiad, order__lt=problem.order)
+                    .order_by('-order')
+                    .first())
+
     context = {
-        "problem": problem,
-        "grouped": grouped,
-        "stats": stats,
+        'problem': problem,
+        'count': results.count(),
+        'results_grouped': grouped,
+        'stats': stats,
+        'next_problem': next_problem,
+        'prev_problem': prev_problem,
+        # Chart.js-д зориулсан шинэ өгөгдөл
+        'province_labels': province_labels,
+        'province_avg_scores': province_avg_scores,
     }
-    return render(request, "olympiad/results/problem_stats.html", context)
+    print(context)
+    return render(request, 'olympiad/stats/problem_stats.html', context)
 
-
-@login_required
-def olympiad_problem_stats(request, olympiad_id):
-    cache_key = f"olympiad_stats_{olympiad_id}"
-    data = cache.get(cache_key)
-
-    if not data:
-        olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
-        problems = olympiad.problem_set.order_by('order')
-
-        problem_stats = []
-        for problem in problems:
-            results = Result.objects.filter(problem=problem, score__isnull=False)
-            stats = results.aggregate(
-                submissions=Count('id'),
-                avg=Avg('score'),
-                max=Max('score'),
-                min=Min('score')
-            )
-
-            province_stats = []
-            for prov in olympiad.schoolyear.province_set.all().order_by("id"):
-                prov_results = results.filter(contestant__data__province=prov)
-                total = prov_results.count()
-                gt_zero = prov_results.filter(score__gt=0).count()
-                full = prov_results.filter(score=problem.max_score).count()
-
-                province_stats.append({
-                    "province": prov.name,
-                    "total": total,
-                    "gt_zero": gt_zero,
-                    "full": full,
-                })
-
-            problem_stats.append({
-                "problem": problem,
-                "stats": stats,
-                "province_stats": province_stats,
-            })
-
-        data = {
-            "olympiad": olympiad,
-            "problem_stats": problem_stats,
-        }
-        cache.set(cache_key, data, timeout=None)
-
-    return render(request, "olympiad/results/olympiad_problem_stats.html", data)
