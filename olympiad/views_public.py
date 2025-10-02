@@ -49,7 +49,7 @@ def problems_home(request):
         if year:
             olympiads = olympiads.filter(school_year=year)
     else:
-        if year:
+        if request.GET.get('year',False):
             olympiads = olympiads.filter(school_year=year)
 
         if name_query:
