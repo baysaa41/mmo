@@ -33,6 +33,9 @@ def results_home(request):
         if year:
             olympiads = olympiads.filter(school_year=year)
     else:
+        if request.GET.get('year',False):
+            olympiads = olympiads.filter(school_year=year)
+
         if name_query:
             olympiads = olympiads.filter(name__icontains=name_query)
 
@@ -42,13 +45,13 @@ def results_home(request):
         if level_param.isdigit():
             olympiads = olympiads.filter(level_id=int(level_param))
 
-    olympiads = olympiads.order_by('-school_year_id', 'round', 'level', 'name')
+    olympiads = olympiads.order_by('-school_year_id', 'round', 'name', 'level')
 
     context = {
         'olympiads': olympiads,
         'year': year,
         'prev': prev,
-        'next': next,
+        'next': next
     }
     return render(request, 'olympiad/results/home.html', context=context)
 
