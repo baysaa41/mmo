@@ -49,6 +49,9 @@ def problems_home(request):
         if year:
             olympiads = olympiads.filter(school_year=year)
     else:
+        if year:
+            olympiads = olympiads.filter(school_year=year)
+
         if name_query:
             olympiads = olympiads.filter(name__icontains=name_query)
 
