@@ -30,17 +30,35 @@ def olympiads_home(request):
 
 def problems_home(request):
     now = datetime.now(timezone.utc)
-    mode = request.GET.get('mode', 0)
     school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
-    id = request.GET.get('year', school_year.id)
-    year = SchoolYear.objects.filter(pk=id).first()
-    prev = SchoolYear.objects.filter(pk=year.id - 1).first()
-    next = SchoolYear.objects.filter(pk=year.id + 1).first()
+    year_id = request.GET.get('year', school_year.id if school_year else None)
+    year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
-    olympiads = Olympiad.objects.filter(is_open=True).order_by('-school_year_id', 'name', 'level')
+    prev = SchoolYear.objects.filter(pk=year.id - 1).first() if year else None
+    next = SchoolYear.objects.filter(pk=year.id + 1).first() if year else None
 
-    if id:
-        olympiads = olympiads.filter(school_year=year)
+    olympiads = Olympiad.objects.filter(is_open=True)
+
+    # --- Бусад шүүлтүүрүүдийг шалгах ---
+    name_query = request.GET.get('name', '').strip()
+    round_param = request.GET.get('round', '')
+    level_param = request.GET.get('level', '')
+
+    # Хэрэв өөр шүүлтүүрүүд байхгүй бол зөвхөн жилээр шүүх
+    if not (name_query or round_param or level_param):
+        if year:
+            olympiads = olympiads.filter(school_year=year)
+    else:
+        if name_query:
+            olympiads = olympiads.filter(name__icontains=name_query)
+
+        if round_param.isdigit():
+            olympiads = olympiads.filter(round=int(round_param))
+
+        if level_param.isdigit():
+            olympiads = olympiads.filter(level_id=int(level_param))
+
+    olympiads = olympiads.order_by('-school_year_id', 'round', 'level', 'name')
 
     context = {
         'olympiads': olympiads,
