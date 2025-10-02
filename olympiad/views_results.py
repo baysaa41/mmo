@@ -176,10 +176,12 @@ def problem_stats_view(request, problem_id):
     )
 
         # --- ШИНЭ ХЭСЭГ: АЙМАГ БҮРЭЭР ДУНДАЖ ОНООГ ТООЦООЛОХ ---
-    province_stats = (Result.objects.filter(problem=problem, score__isnull=False)
-                      .values('contestant__data__province__name') # Аймгийн нэрээр бүлэглэх
-                      .annotate(average_score=Avg('score')) # Дундаж оноог тооцоолох
-                      .order_by('contestant__data__province__id')) # Аймгийн id-аар эрэмбэлэх
+    province_stats = (
+        results.values('contestant__data__province')
+        .annotate(average_score=Avg('score'))
+        .exclude(contestant__data__province__isnull=True)   # 🔥 None-г хасах
+        .order_by('contestant__data__province')
+    )
 
     # Chart.js-д зориулж өгөгдлийг бэлдэх
     province_labels = [entry['contestant__data__province__name'] for entry in province_stats]
