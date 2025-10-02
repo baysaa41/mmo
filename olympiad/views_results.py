@@ -177,15 +177,15 @@ def problem_stats_view(request, problem_id):
 
         # --- ШИНЭ ХЭСЭГ: АЙМАГ БҮРЭЭР ДУНДАЖ ОНООГ ТООЦООЛОХ ---
     province_stats = (
-        results.values('contestant__data__province')
+        results.values('contestant__data__province', 'contestant__data__province__name')
         .annotate(average_score=Avg('score'))
-        .exclude(contestant__data__province__isnull=True)   # 🔥 None-г хасах
+        .exclude(contestant__data__province__isnull=True)
         .order_by('contestant__data__province')
     )
 
-    # Chart.js-д зориулж өгөгдлийг бэлдэх
     province_labels = [entry['contestant__data__province__name'] for entry in province_stats]
     province_avg_scores = [round(entry['average_score'], 2) for entry in province_stats]
+
 
 
 
@@ -210,6 +210,6 @@ def problem_stats_view(request, problem_id):
         'province_labels': province_labels,
         'province_avg_scores': province_avg_scores,
     }
-    print(context)
+    # print(context)
     return render(request, 'olympiad/stats/problem_stats.html', context)
 
