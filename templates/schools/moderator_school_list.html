@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    {% if user.is_staff %}
+        {# Staff хэрэглэгчийн дэлгэц #}
+        <h2 class="mb-4">Сургуулийн удирдлага</h2>
+
+        {# 1. Миний удирдах сургуулиуд #}
+        <h4 class="mt-4">Миний удирдах сургуулиуд</h4>
+        {% if my_schools %}
+            <p>Та доорх сургуулиудын мэдээллийг удирдах боломжтой. Сургуулийн нэр дээр дарж удирдлагын самбар луу орно уу.</p>
+            <div class="list-group mt-3">
+                {% for school in my_schools %}
+                    <a href="{% url 'school_dashboard' school.id %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ school.name }}</h5>
+                            <small>{{ school.province.name }}</small>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                Таны удирдлагад бүртгэлтэй сургууль одоогоор байхгүй байна.
+            </div>
+        {% endif %}
+
+        {# 2. Бусад бүх сургууль #}
+        <h4 class="mt-5">Бусад сургуулиуд</h4>
+        {% include 'selection_menu.html' %}
+        <p>Системд бүртгэлтэй бусад сургуулиудын жагсаалт.</p>
+        {% if other_schools %}
+             <div class="list-group mt-3">
+                {% for school in other_schools %}
+                    <a href="{% url 'school_dashboard' school.id %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ school.name }}</h5>
+                            <small>{{ school.province.name }}</small>
+                        </div>
+                         <p class="mb-1">
+                            <strong>Модератор:</strong> {{ school.user.get_full_name|default:"(Тодорхойгүй)" }}
+                        </p>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-secondary">
+                Харуулах бусад сургууль байхгүй байна.
+            </div>
+        {% endif %}
+
+    {% else %}
+        {# Энгийн хэрэглэгчийн дэлгэц (хуучнаараа) #}
+        <h2 class="mb-4">Миний удирдах сургуулиуд</h2>
+        <p>Та доорх сургуулиудын мэдээллийг удирдах боломжтой. Сургуулийн нэр дээр дарж удирдлагын самбар луу орно уу.</p>
+
+        {% if schools %}
+            <div class="list-group mt-3">
+                {% for school in schools %}
+                    <a href="{% url 'school_dashboard' school.id %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ school.name }}</h5>
+                            <small>{{ school.province.name }}</small>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                Таны удирдлагад бүртгэлтэй сургууль одоогоор байхгүй байна.
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

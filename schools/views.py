@@ -71,7 +71,48 @@ def school_moderators_view(request):
     context = {
         'schools': final_schools,
     }
-    return render(request, 'schools/user_school_list.html', context)
+    return render(request, 'schools/moderator_school_list.html', context)
+
+# schools/views.py
+
+@login_required
+def school_moderators_view(request):
+    """
+    Shows a list of schools. Regular moderators see their own.
+    Staff users see both their own moderated schools and a separate list of all other schools.
+    """
+    pid = request.GET.get('p')
+    zid = request.GET.get('z')
+    context = {}
+
+    if request.user.is_staff:
+        # Staff хэрэглэгчийн хувьд
+        # 1. Өөрийн удирддаг сургууль
+        my_schools = request.user.moderating.select_related('user__data', 'group', 'province').order_by('province__name', 'name')
+        context['my_schools'] = my_schools
+
+        # 2. Бусад бүх сургууль (өөрийнхийг хассан)
+        other_schools_qs = School.objects.select_related('user__data', 'group', 'province').exclude(pk__in=my_schools.values_list('pk', flat=True))
+
+        if pid:
+            other_schools_qs = other_schools_qs.filter(province_id=pid)
+        elif zid:
+            other_schools_qs = other_schools_qs.filter(province__zone_id=zid)
+
+        context['other_schools'] = other_schools_qs.order_by('province__name', 'name')
+
+    else:
+        # Энгийн модераторын хувьд (хуучин логик хэвээрээ)
+        schools_qs = request.user.moderating.select_related('user__data', 'group', 'province')
+        if pid:
+            schools_qs = schools_qs.filter(province_id=pid)
+        elif zid:
+            schools_qs = schools_qs.filter(province__zone_id=zid)
+
+        final_schools = schools_qs.order_by('province__name', 'name')
+        context['schools'] = final_schools
+
+    return render(request, 'schools/moderator_school_list.html', context)
 
 @login_required
 def school_dashboard(request, school_id):
