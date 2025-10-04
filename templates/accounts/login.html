@@ -3,28 +3,30 @@
 {% load static %}
 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center bg-light" style="min-height: 75vh;">
-  <div class="card shadow-lg border-0" style="max-width: 400px; width: 100%; border-radius: 1rem;">
-    <div class="card-body p-4">
-      <div class="text-center mb-4">
-        <img src="{% static 'logo.png' %} alt="MMO Logo" width="72" class="mb-2">
-        <h4 class="fw-bold mb-0">Монголын Математикийн Олимпиад</h4>
-        <small class="text-muted">Нэвтрэх</small>
-      </div>
+    <div class="vh-100 bg-light">
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 75vh;">
+            <div class="card shadow-lg border-0" style="max-width: 400px; width: 100%; border-radius: 1rem;">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <img src="{% static 'logo.png' %} alt=" MMO Logo" width="72" class="mb-2">
+                        <h4 class="fw-bold mb-0">Монголын Математикийн Олимпиад</h4>
+                        <small class="text-muted">Нэвтрэх</small>
+                    </div>
 
-      <form method="post" novalidate>
-        {% csrf_token %}
-        {{ form|crispy }}
-        <div class="d-grid mt-3">
-          <button type="submit" class="btn btn-primary btn-lg">Нэвтрэх</button>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary btn-lg">Нэвтрэх</button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+                    <div class="text-center">
+                        <a href="{% url 'password_reset' %}" class="text-decoration-none">Нууц үгээ мартсан уу?</a>
+                    </div>
+                </div>
+            </div>
         </div>
-      </form>
-
-      <hr class="my-4">
-      <div class="text-center">
-        <a href="{% url 'password_reset' %}" class="text-decoration-none">Нууц үгээ мартсан уу?</a>
-      </div>
     </div>
-  </div>
-</div>
 {% endblock %}
