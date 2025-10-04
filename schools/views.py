@@ -158,7 +158,8 @@ def manage_school_by_level(request, school_id, level_id):
                     with transaction.atomic():
                         new_user = add_user_form.save(commit=False)
                         new_user.username = ''.join(random.choice(string.ascii_letters) for _ in range(32))
-                        new_user.set_unusable_password()  # Эхлээд password байхгүй
+                        temp_password = User.objects.make_random_password(length=20)
+                        new_user.set_password(temp_password)
                         new_user.save()
                         new_user.username = f'u{new_user.id}'
                         new_user.save()
