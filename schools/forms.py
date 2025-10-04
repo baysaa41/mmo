@@ -6,6 +6,8 @@ from accounts.models import UserMeta
 from django.contrib.auth.forms import SetPasswordForm
 from schools.models import School
 from schools.models import UploadedExcel
+from django.core.validators import EmailValidator
+from django.core.exceptions import ValidationError
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -24,6 +26,46 @@ class UserForm(forms.ModelForm):
             'first_name': 'Нэр',
             'email': 'Имэйл',
         }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            validator = EmailValidator()
+            try:
+                validator(email)
+            except ValidationError:
+                raise forms.ValidationError('Зөв имэйл хаяг оруулна уу.')
+
+        return email
+
+# AddUserForm - Шинэ хэрэглэгч ҮҮСГЭХ зориулалттай
+class AddUserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['last_name', 'first_name', 'email']
+        widgets = {
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Овог'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Нэр'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Имэйл'}),
+        }
+        labels = {
+            'last_name': 'Овог',
+            'first_name': 'Нэр',
+            'email': 'Имэйл',
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not email:
+            raise forms.ValidationError('И-мэйл хаяг заавал шаардлагатай.')
+
+        validator = EmailValidator()
+        try:
+            validator(email)
+        except ValidationError:
+            raise forms.ValidationError('Зөв имэйл хаяг оруулна уу.')
+
+        return email
 
 class UserMetaForm(forms.ModelForm):
     class Meta:
@@ -76,19 +118,13 @@ class UserSearchForm(forms.Form):
         return User.objects.filter(filters)
 
 
-# Form to add a new user
-class AddUserForm(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ['last_name', 'first_name', 'email']
-
     def save(self, commit=True):
         user = super().save(commit=False)
-        password = User.objects.make_random_password()  # Generate a random password
-        user.set_password(password)
+        # Password ҮҮСГЭХГҮЙ - password reset link илгээнэ
+        user.set_unusable_password()
         if commit:
             user.save()
-        return user, password  # Return both user and the generated password
+        return user  # Password буцаахгүй болгох
 
 
 class SchoolAdminPasswordChangeForm(SetPasswordForm):

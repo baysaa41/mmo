@@ -9,7 +9,6 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.core.mail import EmailMultiAlternatives
 from django.template import loader
-from olympiad.widgets import MultiFileInput
 from django_select2.forms import ModelSelect2MultipleWidget
 from schools.models import School
 
@@ -56,21 +55,9 @@ class CustomPasswordResetForm(PasswordResetForm):
         subject = "".join(subject.splitlines())
         body = loader.render_to_string(email_template_name, context)
 
-        # --- ОНОШЛОГООНЫ ХЭСЭГ ---
-        # И-мэйл илгээхийн өмнө бүх хувьсагчийн утгыг түүхийгээр нь хэвлэж шалгах
-        # repr() функц нь үл үзэгдэгч тэмдэгтүүдийг (\uXXXX гэх мэт) харуулдаг.
-        print("\n--- DEBUGGING EMAIL DATA ---")
-        print(f"FROM: {repr(from_email)}")
-        print(f"TO: {repr(to_email)}")
-        print(f"SUBJECT: {repr(subject)}")
-        print(f"BODY: {repr(body)}")
-
         html_email = None
         if html_email_template_name is not None:
             html_email = loader.render_to_string(html_email_template_name, context)
-            print(f"HTML_BODY: {repr(html_email)}")
-        print("--- END DEBUGGING --- \n")
-        # --- ОНОШЛОГООНЫ ХЭСЭГ ДУУСАВ ---
 
         try:
             email_message = EmailMultiAlternatives(subject, body, from_email, [to_email])
@@ -78,11 +65,8 @@ class CustomPasswordResetForm(PasswordResetForm):
                 email_message.attach_alternative(html_email, "text/html")
 
             email_message.send()
-            print("Email sent successfully (according to Django).")
 
         except Exception as e:
-            print(f"ERROR DURING SEND: {e}")
-            # Алдаа гарсан ч үргэлжлүүлэхгүйгээр зогсоох
             raise e
 
     def save(

@@ -67,7 +67,7 @@ def profile_ready(request):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('posts:home')
     form = LoginForm(request.POST or None)
     if form.is_valid():
         username = form.cleaned_data.get('username')

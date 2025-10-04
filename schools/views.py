@@ -3,15 +3,16 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Count, Q
-from django.db import transaction
 from django.core.mail import send_mail
+from .email_service import SchoolEmailService
 import random
 import string
 from django.urls import reverse
 
-import pandas as pd
 import numpy as np
-from django_pandas.io import read_frame
+import logging
+# Logger үүсгэх
+logger = logging.getLogger(__name__)
 
 # Шаардлагатай import-ууд
 import io
@@ -31,49 +32,6 @@ from .forms import UploadExcelForm
 
 from django.contrib.admin.views.decorators import staff_member_required
 from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm
-
-def clean_surrogates(value):
-    """Strips surrogate characters from a string."""
-    if not isinstance(value, str):
-        return value
-    return value.encode('utf-8', 'surrogateescape').decode('utf-8', 'replace')
-
-def force_ascii(value):
-    """
-    Converts a string to ASCII, ignoring any characters that cannot be converted.
-    This will remove Cyrillic, emojis, etc.
-    """
-    if not isinstance(value, str):
-        return value
-    return value.encode('ascii', 'ignore').decode('ascii')
-
-@login_required
-def school_moderators_view(request):
-    """
-    Shows a list of schools. Staff users see all schools, while regular
-    moderators only see their own.
-    """
-    if request.user.is_staff:
-        schools_qs = School.objects.select_related('user__data', 'group', 'province')
-    else:
-        schools_qs = request.user.moderating.select_related('user__data', 'group', 'province')
-
-    pid = request.GET.get('p')
-    zid = request.GET.get('z')
-
-    if pid:
-        schools_qs = schools_qs.filter(province_id=pid)
-    elif zid:
-        schools_qs = schools_qs.filter(province__zone_id=zid)
-
-    final_schools = schools_qs.order_by('province__name', 'name')
-
-    context = {
-        'schools': final_schools,
-    }
-    return render(request, 'schools/moderator_school_list.html', context)
-
-# schools/views.py
 
 @login_required
 def school_moderators_view(request):
@@ -198,8 +156,9 @@ def manage_school_by_level(request, school_id, level_id):
                 new_user = None
                 try:
                     with transaction.atomic():
-                        new_user, password = add_user_form.save(commit=False)
+                        new_user = add_user_form.save(commit=False)
                         new_user.username = ''.join(random.choice(string.ascii_letters) for _ in range(32))
+                        new_user.set_unusable_password()  # Эхлээд password байхгүй
                         new_user.save()
                         new_user.username = f'u{new_user.id}'
                         new_user.save()
@@ -215,47 +174,32 @@ def manage_school_by_level(request, school_id, level_id):
                         UserMeta.objects.create(**meta_data)
                         new_user.groups.add(group)
 
-                    try:
-                        subject = 'ММОХ - Шинэ бүртгэл'
-                        message = f'Сайн байна уу, {new_user.first_name}.\n\nТаны хэрэглэгчийн нэр: {new_user.username}\nНууц үг: {password}'
+                    # Тавтай морилно уу имэйл + password reset link илгээх
+                    school_name = request.user.data.school.name if request.user.data.school else "ММОХ"
+                    success, error = SchoolEmailService.send_new_user_welcome_with_reset_link(
+                        new_user,
+                        school_name,
+                        request
+                    )
 
-                        send_mail(subject, message, 'baysa@mmo.mn', [new_user.email])
+                    level_name = selected_level['name'] if level_id == 0 else selected_level.name
 
-                        level_name = selected_level['name'] if level_id == 0 else selected_level.name
-                        messages.success(request, f"'{new_user.get_full_name()}' хэрэглэгчийг '{level_name}' хэсэгт амжилттай нэмж, нэвтрэх мэдээллийг илгээлээ.")
-
-                    except Exception as email_error:
-                        messages.warning(request, f"Хэрэглэгч үүссэн ч и-мэйл илгээхэд алдаа гарлаа: {email_error}")
-
-                        components_to_check = {
-                            "Subject (static text)": 'ММОХ - Шинэ бүртгэл',
-                            "Greeting (static text)": 'Сайн байна уу, ',
-                            "User First Name": new_user.first_name,
-                            "User Last Name": new_user.last_name,
-                            "Username": new_user.username,
-                            "Email": new_user.email,
-                            "Password": password
-                        }
-
-                        for name, text in components_to_check.items():
-                            print(f"\n--- Analyzing component: '{name}' ---")
-                            print(f"Value: {repr(text)}")
-                            found_surrogate = False
-                            if isinstance(text, str):
-                                for i, char in enumerate(text):
-                                    if 0xD800 <= ord(char) <= 0xDFFF:
-                                        print(f"!!! SURROGATE FOUND in '{name}' at position {i}: char='{char}', codepoint={hex(ord(char))}")
-                                        found_surrogate = True
-                            if not found_surrogate:
-                                print("No surrogates found in this component.")
-
-                        print("\n--- ANALYSIS FINISHED ---")
-                        # --- ОНОШЛОГОО ДУУСАВ ---
-
-                        messages.warning(request, f"И-мэйл илгээхэд кодчилолын алдаа гарлаа. Системийн админд хандана уу.")
+                    if success:
+                        messages.success(
+                            request,
+                            f"'{new_user.get_full_name()}' хэрэглэгчийг '{level_name}' хэсэгт "
+                            f"амжилттай нэмж, нэвтрэх мэдээллийг и-мэйлээр илгээлээ."
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            f"Хэрэглэгч үүссэн ч и-мэйл илгээхэд алдаа гарлаа. "
+                            f"Та дахин илгээх эсвэл password reset хийлгэнэ үү."
+                        )
 
                 except Exception as e:
                     messages.error(request, f"Хэрэглэгч үүсгэхэд алдаа гарлаа: {e}")
+                    logger.error(f"User creation failed: {e}", exc_info=True)
 
                 return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 

@@ -1,7 +1,23 @@
 {% extends 'base.html' %}
 
-{% block title %}Системээс амжилттай гарлаа{% endblock %}
+{% block title %}Амжилттай гарлаа{% endblock %}
 
 {% block content %}
-Та системээс амжилттай гарлаа.
+    <div class="bg-light vh-100">
+        <div class="d-flex justify-content-center align-items-center" style="min-height: 75vh;">
+            <div class="card shadow border-0 text-center p-5" style="max-width: 480px;">
+                <div class="card-body">
+                    <div class="mb-3 text-success">
+                        <i class="bi bi-check-circle-fill" style="font-size: 3rem;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-3">Та системээс амжилттай гарлаа</h3>
+                    <p class="text-muted mb-4">Дараа дахин нэвтрэхдээ хэрэглэгчийн нэр, нууц үгээ оруулна уу.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'login' %}" class="btn btn-primary">Дахин нэвтрэх</a>
+                        <a href="/" class="btn btn-outline-secondary">Нүүр хуудас руу буцах</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .welcome-message {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #667eea;
+            font-size: 16px;
+        }
+        .info-item {
+            margin: 8px 0;
+        }
+        .info-item strong {
+            color: #555;
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .steps {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .steps h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .steps ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .steps li {
+            margin: 8px 0;
+        }
+        .warning {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .warning strong {
+            color: #721c24;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #dee2e6;
+        }
+        .link-fallback {
+            background-color: #e9ecef;
+            padding: 10px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Тавтай морилно уу!</h1>
+            <p style="margin: 10px 0 0 0;">ММОХ Систем</p>
+        </div>
+
+        <div class="content">
+            <p class="welcome-message">
+                Сайн байна уу, <strong>{{ user.last_name }} {{ user.first_name }}</strong>!
+            </p>
+
+            <p>
+                Таныг ММОХ (mmo.mn) системд амжилттай бүртгэлээ.
+            </p>
+
+            <div class="info-box">
+                <h3>📋 Таны мэдээлэл</h3>
+                <div class="info-item"><strong>Хэрэглэгчийн нэр:</strong> {{ username }}</div>
+                <div class="info-item"><strong>И-мэйл:</strong> {{ user.email }}</div>
+                <div class="info-item"><strong>Сургууль:</strong> {{ school_name }}</div>
+            </div>
+
+            <div class="steps">
+                <h3>🚀 Эхлэхийн тулд</h3>
+                <p>Системд анх удаа нэвтрэхийн тулд эхлээд өөрийн нууц үгээ тохируулна уу:</p>
+                <ol>
+                    <li>Доорх товч дээр дарна уу</li>
+                    <li>Өөрийн нууц үгийг сонгоно уу (8-с дээш тэмдэгт)</li>
+                    <li>Нууц үгээ баталгаажуулна уу</li>
+                    <li>Системд нэвтэрч эхэлнэ үү</li>
+                </ol>
+            </div>
+
+            <div class="button-container">
+                <a href="{{ reset_url }}" class="button">
+                    Нууц үг тохируулах
+                </a>
+            </div>
+
+            <div class="warning">
+                <strong>⚠️ Анхаар:</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Энэ холбоос <strong>{{ expiry_hours }} цагийн турш</strong> хүчинтэй</li>
+                    <li>Нууц үгээ хэнд ч дамжуулахгүй байна уу</li>
+                </ul>
+            </div>
+
+            <p><strong>Амжилт хүсье! 🎯</strong></p>
+
+            <div class="link-fallback">
+                <strong>Товч ажиллахгүй бол энэ холбоосыг хуулж браузер дээрээ ажлуулна уу:</strong><br>
+                {{ reset_url }}
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Монголын Математикийн Олимпиадын Хороо</strong></p>
+            <p>{{ site_url }}</p>
+            <p style="margin-top: 10px; color: #999;">
+                Энэ и-мэйл автоматаар илгээгдсэн. Хариу бичих шаардлагагүй.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

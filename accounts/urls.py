@@ -32,4 +32,21 @@ urlpatterns = [
 
     # dashboard
     path('commands-guide/', admin.command_guide_view, name='commands_guide'),
+
+    path(
+        'password-reset/<uidb64>/<token>/',
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name='accounts/password_reset_confirm.html',
+            success_url='/accounts/password-reset-complete/'
+        ),
+        name='password_reset_confirm'
+    ),
+
+    path(
+        'password-reset-complete/',
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name='accounts/password_reset_complete.html'
+        ),
+        name='password_reset_complete'
+    ),
 ]
