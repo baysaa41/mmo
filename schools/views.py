@@ -697,7 +697,7 @@ def change_student_password_view(request, user_id):
 
     # --- АЮУЛГҮЙ БАЙДЛЫН ШАЛГАЛТУУД ---
     # 1. Засварлах гэж буй хэрэглэгч нь staff/superuser биш байх ёстой.
-    if target_user.is_staff or target_user.is_superuser:
+    if (target_user.is_staff or target_user.is_superuser) and not request.user.is_superuser:
         messages.error(request, "Та staff эрхтэй хэрэглэгчийн нууц үгийг солих боломжгүй.")
         return redirect('school_dashboard', school_id=moderator.data.school.id) # Өөрийнх нь dashboard руу буцаах
 
