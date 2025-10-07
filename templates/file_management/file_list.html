@@ -66,12 +66,12 @@
                                         <td>{{ forloop.counter }}</td>
                                         <td>{{ file.description|truncatewords:20 }}</td>
                                         <td>
-                                            <span class="badge badge-primary">
+                                            <span class="badge badge-primary" style="background-color: #007bff; color: white;">
                                                 {{ file.school_year.name|default:"Тодорхойгүй" }}
                                             </span>
                                         </td>
                                         <td class="text-center">
-                                            <span class="badge badge-info">{{ file.download_count }}</span>
+                                            <span class="badge badge-info" style="background-color: #17a2b8; color: white;">{{ file.download_count }}</span>
                                         </td>
                                         <td class="text-center">
                                             <a href="{% url 'download_file' file.id %}" class="btn btn-sm btn-primary">
@@ -112,6 +112,16 @@
         .badge {
             font-size: 0.9em;
             padding: 0.4em 0.6em;
+            color: white !important;
+        }
+        .badge-primary {
+            background-color: #007bff !important;
+        }
+        .badge-info {
+            background-color: #17a2b8 !important;
+        }
+        .badge-secondary {
+            background-color: #6c757d !important;
         }
     </style>
 {% endblock %}
