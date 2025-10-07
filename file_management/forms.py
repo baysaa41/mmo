@@ -28,7 +28,7 @@ class FileUploadForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Сүүлийн жилийг анхдагч утга болгож сонгох
-        latest_year = SchoolYear.objects.first()  # ordering = ['-name']
-        if latest_year:
-            self.fields['school_year'].initial = latest_year
+        # Одоогийн жилийг анхдагч утга болгож сонгох, байхгүй бол сүүлийнх
+        current_year = SchoolYear.get_current() or SchoolYear.objects.first()
+        if current_year:
+            self.fields['school_year'].initial = current_year

@@ -20,7 +20,7 @@
                                 <option value="">-- Бүх жилүүд --</option>
                                 {% for year in school_years %}
                                     <option value="{{ year.id }}" {% if selected_year and selected_year.id == year.id %}selected{% endif %}>
-                                        {{ year.name }}
+                                        {{ year.name }}{% if year.is_current %} ⭐ (Одоогийн){% endif %}
                                     </option>
                                 {% endfor %}
                             </select>
@@ -66,8 +66,9 @@
                                         <td>{{ forloop.counter }}</td>
                                         <td>{{ file.description|truncatewords:20 }}</td>
                                         <td>
-                                            <span class="badge badge-primary" style="background-color: #007bff; color: white;">
+                                            <span class="badge {% if file.school_year.is_current %}badge-success{% else %}badge-secondary{% endif %}" style="color: white;">
                                                 {{ file.school_year.name|default:"Тодорхойгүй" }}
+                                                {% if file.school_year.is_current %} ⭐{% endif %}
                                             </span>
                                         </td>
                                         <td class="text-center">
@@ -114,8 +115,8 @@
             padding: 0.4em 0.6em;
             color: white !important;
         }
-        .badge-primary {
-            background-color: #007bff !important;
+        .badge-success {
+            background-color: #28a745 !important;
         }
         .badge-info {
             background-color: #17a2b8 !important;

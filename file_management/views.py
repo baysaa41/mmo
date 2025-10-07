@@ -57,11 +57,12 @@ def file_list(request):
         # Бүх хичээлийн жилүүдийг авах
         school_years = SchoolYear.objects.all()
 
-        # Хэрэв жил сонгогдоогүй бол сүүлийн жилийг сонгоно
+        # Хэрэв жил сонгогдоогүй бол одоогийн жилийг сонгоно
         if selected_year_id:
             selected_year = get_object_or_404(SchoolYear, id=selected_year_id)
         else:
-            selected_year = school_years.first()  # ordering = ['-name'] учраас эхний нь сүүлийнх
+            # Одоогийн хичээлийн жилийг авах, байхгүй бол хамгийн сүүлийнх
+            selected_year = SchoolYear.get_current() or SchoolYear.objects.first()
 
         # Файлуудыг хичээлийн жилээр шүүж, сүүлд оруулсан эхэнд эрэмбэлэх
         if selected_year:

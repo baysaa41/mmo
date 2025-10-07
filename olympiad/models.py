@@ -19,6 +19,31 @@ class SchoolYear(models.Model):
     def __str__(self):
         return '{} хичээлийн жил'.format(self.name)
 
+    @property
+    def is_current(self):
+        """Энэ жил одоогийн хичээлийн жил мөн эсэхийг шалгана"""
+        if not self.start or not self.end:
+            return False
+        today = timezone.now().date()
+        return self.start <= today <= self.end
+
+    @classmethod
+    def get_current(cls):
+        """Одоогийн хичээлийн жилийг буцаана"""
+        today = timezone.now().date()
+        return cls.objects.filter(
+            start__lte=today,
+            end__gte=today
+        ).first()
+
+    @classmethod
+    def get_latest(cls):
+        """Хамгийн сүүлийн хичээлийн жилийг буцаана (одоогийн эсвэл хамгийн шинэ)"""
+        current = cls.get_current()
+        if current:
+            return current
+        return cls.objects.first()  # ordering = ['-name']
+
 class Olympiad(models.Model):
     name = models.CharField(max_length=120)
     description = models.TextField(default='') # endnote зэрэг ашиглаж байгаа.

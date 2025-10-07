@@ -23,11 +23,11 @@ class FileUpload(models.Model):
         return self.file.name
 
     def save(self, *args, **kwargs):
-        # Хэрэв school_year заагаагүй бол сүүлийн жилийг автоматаар сонго
+        # Хэрэв school_year заагаагүй бол одоогийн жилийг автоматаар сонго
         if not self.school_year:
-            latest_year = SchoolYear.objects.first()  # ordering = ['-name'] учраас эхний нь сүүлийнх
-            if latest_year:
-                self.school_year = latest_year
+            current_year = SchoolYear.get_current() or SchoolYear.objects.first()
+            if current_year:
+                self.school_year = current_year
         super().save(*args, **kwargs)
 
 
