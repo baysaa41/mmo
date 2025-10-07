@@ -8,7 +8,7 @@ from django.core.cache import cache
 from django.contrib.auth.models import User
 
 from .models import Olympiad, ScoreSheet, Result, SchoolYear, Upload, Problem, Topic
-from .forms import ChangeScoreSheetSchoolForm
+from .forms import ChangeScoreSheetSchoolForm, ResultsGraderForm, UploadForm
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -232,3 +232,163 @@ def remove_supplement(request):
         upload.delete()
         return JsonResponse({'msg': 'Оk.'})
     return JsonResponse({'msg': 'No uploads.'})
+
+
+@login_required
+def view_result(request):
+    result_id = int(request.GET.get('result_id', 0))
+    if result_id > 0:
+        result = Result.objects.filter(pk=result_id).first()
+        return render(request, "olympiad/upload_viewer.html", {'result': result})
+    else:
+        return HttpResponse("Ийм хариулт олдсонгүй.")
+
+@staff_member_required
+def grading_home(request):
+    olympiads = Olympiad.objects.filter(is_grading=True).order_by('id')
+
+    return render(request, 'olympiad/grading_home.html', {'olympiads': olympiads})
+
+@staff_member_required
+def exam_grading_view(request, problem_id):
+    problem = Problem.objects.filter(pk=problem_id).first()
+
+    results = Result.objects.filter(problem_id=problem_id, contestant__data__province__isnull=False).order_by(
+        'score').reverse
+
+    return render(request, 'olympiad/exam_grading.html', {'results': results, 'problem': problem})
+
+@staff_member_required
+def grade(request):
+    result_id = int(request.GET.get('result_id', 0))
+    if result_id > 0:
+        result = Result.objects.get(pk=result_id)
+        if not result.olympiad.is_grading or result.state == 5:
+            return HttpResponse("Энэ бодлогын үнэлгээг өөрчлөх боломжгүй.")
+        if request.method == 'POST':
+            form = ResultsGraderForm(request.POST, instance=result)
+            if form.is_valid() and request.user.is_staff:
+                form.save()
+                result.coordinator = request.user
+                result.state = 2
+                result.save()
+                url = reverse('olympiad_exam_grading', kwargs={'problem_id': result.problem.id})
+                url = url + '#result{}'.format(result.id)
+                return redirect(url)
+        form = ResultsGraderForm(instance=result)
+        return render(request, "olympiad/grading_result_form.html", {'form': form, 'result': result})
+    else:
+        return HttpResponse("Ийм хариулт олдсонгүй.")
+
+@staff_member_required
+def update_results(request, olympiad_id):
+    # create_results(olympiad_id)
+    # return HttpResponse('Edit update')
+    olympiad = Olympiad.objects.filter(pk=olympiad_id, type=1).first()
+    if olympiad:
+        with connection.cursor() as cursor:
+            cursor.execute("UPDATE olympiad_result SET score=0, state=5 WHERE olympiad_id=%s", [olympiad_id])
+            cursor.execute("UPDATE olympiad_result r \
+                            SET score = p.max_score \
+                            FROM olympiad_problem p \
+                            WHERE r.problem_id = p.id \
+                                AND r.answer = p.numerical_answer \
+                                AND p.olympiad_id = %s", [olympiad_id])
+
+        # olympiad.json_results = to_json(olympiad_id)
+        # olympiad.save()
+    else:
+        return HttpResponse("Olympiad doesn't exist.")
+    # return JsonResponse(olympiad.json_results, safe=False)
+    return HttpResponse("Ok.")
+
+
+@login_required
+def quiz_staff_view(request, olympiad_id, contestant_id):
+    if not request.user.is_staff:
+        return render(request, "error.html", {'message': 'Хандах эрхгүй.'})
+
+    staff = request.user
+    contestant = User.objects.get(pk=contestant_id)
+
+    try:
+        olympiad = Olympiad.objects.get(pk=olympiad_id)
+    except Olympiad.DoesNotExist:
+        return HttpResponse("Ops, something went wrong.")
+
+    school = staff.moderating.all().first()
+    group = school.group
+
+    if not is_my_student(staff.id,contestant_id) and not staff.is_staff:
+        return render(request, 'error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
+
+    if request.method == 'POST':
+        keys = request.POST.keys()
+        problems = list(keys)[2:]
+        for problem in problems:
+            id = int(problem[1:])
+            result = Result.objects.get(pk=id)
+            if request.POST[problem] == '':
+                result.answer = None
+            elif request.POST[problem] != 'None':
+                result.answer = int(request.POST[problem])
+            result.save()
+
+    staff = request.user
+    contestant = User.objects.get(pk=contestant_id)
+
+    school = staff.moderating.first()
+
+    problems = olympiad.problem_set.order_by('order')
+
+    results = []
+    for problem in problems:
+        result, created = Result.objects.get_or_create(contestant=contestant, olympiad_id=olympiad_id, problem=problem)
+        results.append(result)
+
+    return render(request, 'olympiad/quiz/staff_edit.html', {'school': school,
+                                                   'contestant': contestant,
+                                                   'olympiad': olympiad,
+                                                   'results': results})
+
+def createCertificate(request, quiz_id, contestant_id):
+    if quiz_id == 102:
+        template = '1.png'
+    elif quiz_id == 100:
+        template = '2.png'
+    elif quiz_id == 101:
+        template = '3.png'
+    elif quiz_id == 103:
+        template = '4.png'
+    elif quiz_id == 104:
+        template = '5.png'
+    else:
+        return HttpResponse("quiz_id do not match")
+    try:
+        contestant = User.objects.get(pk=contestant_id)
+        results = Result.objects.filter(olympiad_id=quiz_id, contestant_id=contestant_id)
+        total = 0
+        for result in results:
+            total = total + int(result.score)
+            # if total == 0:
+            # return HttpResponse("Оролцоогүй эсвэл оноо аваагүй.")
+    except:
+        return HttpResponse("contestant or results")
+
+    TEX_ROOT = "/home/deploy/django/latex"
+    xelatex = '/usr/bin/xelatex'
+    os.chdir(TEX_ROOT)
+    name = '{}-{}'.format(quiz_id, contestant_id)
+    context = {
+        'lastname': contestant.last_name,
+        'firstname': contestant.first_name,
+        'points': total,
+        'template': template,
+    }
+    content = render_template_with_context('certificate.tex', context)
+    with io.open('{}.tex'.format(name), "w") as f:
+        print(content, file=f)
+    os.system('{} -synctex=1 -interaction=nonstopmode {}.tex'.format(xelatex, name))
+    os.system('{} {}.tex'.format(xelatex, name))
+
+    return FileResponse(open('{}.pdf'.format(name), 'rb'))

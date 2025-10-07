@@ -32,10 +32,19 @@
                     <td>{{ olympiad.group.name }}</td>
                     <td>
                         {% if olympiad.type == 0 %}
-                            <a class="btn btn-secondary{% if not olympiad.active %} disabled{% endif %}"
-                               href="{% url 'olympiad_exam' olympiad_id=olympiad.id %}">Оролцох</a>
+                            {% if olympiad.active %}
+                                <a class="btn btn-primary" href="{% url 'student_exam' olympiad_id=olympiad.id %}">Оролцох</a>
+                            {% else %}
+                                <a class="btn btn-secondary disabled"
+                                   href="{% url 'student_exam' olympiad_id=olympiad.id %}">Оролцох</a>
+                            {% endif %}
                         {% else %}
-                            <a class="btn btn-secondary{% if not olympiad.active %} disabled{% endif %}" href="{% url 'olympiad_quiz' olympiad_id=olympiad.id %}">Оролцох</a>
+                            {% if olympiad.active %}
+                                <a class="btn btn-primary" href="{% url 'student_quiz' olympiad_id=olympiad.id %}">Оролцох</a>
+                            {% else %}
+                                <a class="btn btn-secondary disabled"
+                                   href="{% url 'student_quiz' olympiad_id=olympiad.id %}">Оролцох</a>
+                            {% endif %}
                         {% endif %}
                     </td>
                 </tr>

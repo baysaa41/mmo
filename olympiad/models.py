@@ -273,6 +273,11 @@ class Result(models.Model):
             ("edit_result", "Дүн оруулах"),
             ("confirm_result", "Дүн баталгаажуулах")
         ]
+        indexes = [
+            # Quiz хадгалалтыг хурдасгах
+            models.Index(fields=['contestant', 'olympiad', 'problem']),
+            models.Index(fields=['olympiad', 'state']),
+        ]
 
 
 class Upload(models.Model):

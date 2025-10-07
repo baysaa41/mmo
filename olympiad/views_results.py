@@ -216,3 +216,159 @@ def problem_stats_view(request, problem_id):
     # print(context)
     return render(request, 'olympiad/stats/problem_stats.html', context)
 
+
+def olympiad_group_result_view(request, group_id):
+    try:
+        olympiad_group = OlympiadGroup.objects.get(pk=group_id)
+    except OlympiadGroup.DoesNotExist:
+        return render(request, 'olympiad/results/no_olympiad.html')
+    except Exception as e:
+        return render(request, 'messages/../templates/schools/error.html', {'message': str(e)})
+    olympiads = olympiad_group.olympiads.all().order_by('id')
+    answers = Result.objects.filter(olympiad__in=olympiads)
+    title = 'Нэгдсэн дүн'
+
+    if answers.count() == 0:
+        context = {
+            'df': '',
+            'pivot': '',
+            'quiz': '',
+            'title': 'Оролцсон сурагч байхгүй.',
+        }
+        return render(request, 'olympiad/pandas_results_view.html', context)
+
+    if olympiad_group.group_id:
+        users = olympiad_group.group.user_set.all()
+    else:
+        users = User.objects.all()
+    answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
+    users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id', 'data__school'], verbose=False)
+    answers_df['score'] = answers_df['score'].fillna(0)
+    pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
+    pivot["Дүн"] = pivot.sum(axis=1)
+    results = users_df.merge(pivot, left_on='id', right_on='contestant_id', how='inner')
+    results.sort_values(by='Дүн', ascending=False, inplace=True)
+    results['id'].fillna(0).astype(int)
+    results['id'] = results['id'].apply(lambda x: "{id:.0f}".format(id=x))
+    results.rename(columns={
+        'id': 'ID',
+        'first_name': 'Нэр',
+        'last_name': 'Овог',
+        'data__school': 'Cургууль',
+        'link': '<i class="fas fa-expand-wide"></i>',
+    }, inplace=True)
+    results.index = np.arange(1, results.__len__() + 1)
+
+    pd.set_option('colheader_justify', 'center')
+
+    num = 0
+    for olympiad in olympiads:
+        num = num + 1
+        for item in olympiad.problem_set.all().order_by('order'):
+            results = results.rename(columns={item.id: '№' + str(num) + '.' + str(item.order)})
+
+    # print(results.columns)
+    columns1 = list(results.columns[:4])
+    columns2 = sorted(results.columns[4:-1])
+    columns3 = list(results.columns[-1:])
+    # columns1.update(columns2)
+    # print(columns1, columns2, columns3)
+    results = results.reindex(columns1 + columns2 + columns3, axis=1)
+
+    context = {
+        'df': results.to_html(classes='table table-bordered table-hover', border=3, na_rep="", escape=False),
+        'pivot': results.to_html(classes='table table-bordered table-hover', na_rep="", escape=False),
+        'quiz': {
+            'name': olympiad_group.name,
+        },
+        'title': title,
+    }
+    return render(request, 'olympiad/pandas_results_view.html', context)
+
+@login_required
+def answers_view(request, olympiad_id):
+    pid = int(request.GET.get('p', 0))
+    sid = int(request.GET.get('s', 0))
+    school = None
+    context_data = ''
+
+    try:
+        olympiad = Olympiad.objects.get(pk=olympiad_id)
+    except Olympiad.DoesNotExist:
+        return render(request, 'olympiad/results/no_olympiad.html')
+
+    provinces = Province.objects.all().order_by('name')
+    schools = School.objects.filter(province_id=pid).order_by('name') if pid > 0 else School.objects.none()
+
+    if sid > 0:
+        try:
+            school = School.objects.get(pk=sid)
+        except School.DoesNotExist:
+            school = None
+
+        results = Result.objects.filter(olympiad_id=olympiad_id, contestant__data__school_id=sid)
+
+        if results.exists():
+            rows = list(results.values_list('contestant_id', 'problem_id', 'answer'))
+            data = pd.DataFrame(rows, columns=['contestant_id', 'problem_id', 'answer'])
+
+            # --- ӨӨРЧЛӨЛТ 1: fill_value=0 болон .astype(int)-г устгах ---
+            # Ингэснээр NULL утгууд нь DataFrame дотор NaN (Not a Number) болж хадгалагдана.
+            results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='answer', aggfunc='sum')
+
+            problem_ids = results_df.columns.values
+            problem_orders = {p.id: f'№{p.order:02d}' for p in Problem.objects.filter(id__in=problem_ids)}
+            results_df.columns = [problem_orders.get(col, 'Unknown') for col in results_df.columns]
+            results_df = results_df[sorted(results_df.columns)]
+
+            contestant_ids = list(results_df.index)
+            contestants_data = User.objects.filter(pk__in=contestant_ids).values('id', 'last_name', 'first_name')
+            user_df = pd.DataFrame(list(contestants_data))
+            user_df.columns = ['ID', 'Овог', 'Нэр']
+
+            user_results_df = pd.merge(user_df, results_df, left_on='ID', right_index=True, how='left')
+            sorted_df = user_results_df.sort_values(by=['Овог', 'Нэр']).drop(columns=['ID'])
+            sorted_df.index = np.arange(1, len(sorted_df) + 1)
+
+            # --- ШИНЭЧИЛСЭН ХЭСЭГ ---
+            # 1. Тоон утгатай багануудын жагсаалтыг үүсгэх (нэр нь '№'-ээр эхэлсэн)
+            numeric_columns = [col for col in sorted_df.columns if str(col).startswith('№')]
+
+            # 2. Форматчилах функцээ тодорхойлох
+            formatter = lambda val: '{:.0f}'.format(val) if val > 0 else '---'
+
+            # 3. Зөвхөн тоон багануудад ('subset') форматчилах үйлдлийг хийх
+            styled_df = (sorted_df.style
+                                  .format(formatter, subset=numeric_columns, na_rep="-")
+                                  .set_table_attributes('class="table table-bordered table-hover"'))
+            context_data = styled_df.to_html()
+
+             # --- ОНОШЛОГОО 1: pivot_table-ийн дараах үр дүнг шалгах ---
+            results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='answer', aggfunc='sum')
+
+    # Гарчиг болон бусад мэдээллийг бэлтгэх
+    name = f"{olympiad.name}, {olympiad.level.name} ангилал"
+    title = olympiad.name
+    if school:
+        title = school.name
+    elif pid > 0:
+        try:
+            province = Province.objects.get(pk=pid)
+            title = province.name
+        except Province.DoesNotExist:
+            pass
+
+    context = {
+        'title': f"{title} - Үр дүн",
+        'name': name,
+        'data': re.sub(r'&nbsp;</th>', r'№</th>', context_data),
+        'school': school,
+        'provinces': provinces,
+        'schools': schools,
+        'selected_pid': pid,
+        'selected_sid': sid,
+        'olympiad_id': olympiad_id,
+    }
+
+    return render(request, 'olympiad/results/answers.html', context)
+

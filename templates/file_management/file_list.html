@@ -1,24 +1,117 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>Заавар</h2>
-    <p class="alert alert-info">Энд зөвхөн сургуулийн олимпиад зохион байгуулах ажилтнууд нэвтэрч татаж авч болох файлууд байгаа тул нууцлалыг 
-        чанд хадгална уу!</p>
-  <h2>Файлууд</h2>
-  <table class="table table-bordered">
-      <tr>
-          <th>Тайлбар</th>
-          <th>Татах линк</th>
-          <th>Оруулсан</th>
-          <th>Цаг</th>
-      </tr>
-    {% for file in files %}
-      <tr>
-          <td>{{ file.description }}</td>
-          <td><a href="{% url 'download_file' file.id %}" class="btn btn-sm btn-primary">Татах</a></td>
-          <td>{{ file.uploader }}</td>
-          <td>{{ file.uploaded_at | date:"l, F j, Y g:i A" }}</td>
-      </tr>
-    {% endfor %}
-  </table>
+    <div class="container mt-4">
+        <h2>Заавар</h2>
+        <p class="alert alert-info">
+            Энд зөвхөн сургуулийн олимпиад зохион байгуулах ажилтнууд нэвтэрч татаж авч болох файлууд байгаа тул нууцлалыг чанд хадгална уу!
+        </p>
+
+        <!-- Хичээлийн жил сонгох хэсэг -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h5 class="mb-0">Хичээлийн жил сонгох:</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <form method="get" class="form-inline justify-content-end">
+                            <select name="year" class="form-control mr-2" onchange="this.form.submit()">
+                                <option value="">-- Бүх жилүүд --</option>
+                                {% for year in school_years %}
+                                    <option value="{{ year.id }}" {% if selected_year and selected_year.id == year.id %}selected{% endif %}>
+                                        {{ year.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Файлуудын жагсаалт -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    Файлууд
+                    {% if selected_year %}
+                        - {{ selected_year.name }}
+                    {% endif %}
+                </h4>
+                {% if user.is_staff %}
+                    <a href="{% url 'upload_file' %}" class="btn btn-success">
+                        <i class="fas fa-upload"></i> Файл оруулах
+                    </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if files %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 35%;">Тайлбар</th>
+                                    <th style="width: 15%;">Хичээлийн жил</th>
+                                    <th style="width: 10%;">Татсан</th>
+                                    <th style="width: 10%;">Татах</th>
+                                    <th style="width: 15%;">Оруулсан</th>
+                                    <th style="width: 10%;">Цаг</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in files %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ file.description|truncatewords:20 }}</td>
+                                        <td>
+                                            <span class="badge badge-primary">
+                                                {{ file.school_year.name|default:"Тодорхойгүй" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-info">{{ file.download_count }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{% url 'download_file' file.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-download"></i> Татах
+                                            </a>
+                                        </td>
+                                        <td>{{ file.uploader.username }}</td>
+                                        <td>
+                                            <small>{{ file.uploaded_at|date:"Y-m-d H:i" }}</small>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-info-circle"></i>
+                        {% if selected_year %}
+                            {{ selected_year.name }} жилд оруулсан файл байхгүй байна.
+                        {% else %}
+                            Одоогоор файл оруулаагүй байна.
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .table td {
+            vertical-align: middle;
+        }
+        .badge {
+            font-size: 0.9em;
+            padding: 0.4em 0.6em;
+        }
+    </style>
 {% endblock %}

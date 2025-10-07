@@ -1,8 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 
 from schools.models import School
+from olympiad.models import SchoolYear
 from .models import FileUpload, FileAccessLog
 from .forms import FileUploadForm
 from django.contrib.auth.models import User
@@ -45,14 +47,42 @@ def download_file(request, file_id):
     else:
         return render(request, 'error.html', {'message': 'Та сургуулийн хаягаар нэвтрээгүй байна.'})
 
+
 @login_required
 def file_list(request):
     if is_manager(request.user.id):
-        # Retrieve all uploaded files
-        files = FileUpload.objects.all()
-        return render(request, 'file_management/file_list.html', {'files': files})
+        # Хичээлийн жил сонгох (query parameter ашиглана)
+        selected_year_id = request.GET.get('year', None)
+
+        # Бүх хичээлийн жилүүдийг авах
+        school_years = SchoolYear.objects.all()
+
+        # Хэрэв жил сонгогдоогүй бол сүүлийн жилийг сонгоно
+        if selected_year_id:
+            selected_year = get_object_or_404(SchoolYear, id=selected_year_id)
+        else:
+            selected_year = school_years.first()  # ordering = ['-name'] учраас эхний нь сүүлийнх
+
+        # Файлуудыг хичээлийн жилээр шүүж, сүүлд оруулсан эхэнд эрэмбэлэх
+        if selected_year:
+            files = FileUpload.objects.filter(school_year=selected_year).select_related('uploader', 'school_year')
+        else:
+            # Хэрэв хичээлийн жил байхгүй бол бүх файлыг харуулна
+            files = FileUpload.objects.all().select_related('uploader', 'school_year')
+
+        # Файл бүрийн татагдсан тоог тооцоолох
+        files = files.annotate(download_count=Count('access_logs'))
+
+        context = {
+            'files': files,
+            'school_years': school_years,
+            'selected_year': selected_year,
+        }
+
+        return render(request, 'file_management/file_list.html', context)
     else:
         return render(request, 'error.html', {'message': 'Та сургуулийн хаягаар нэвтрээгүй байна.'})
+
 
 def is_manager(user_id):
     try:

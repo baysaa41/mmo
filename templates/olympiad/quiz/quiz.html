@@ -1,0 +1,447 @@
+{% extends 'base.html' %}
+
+{% load latex_filter %}
+
+{% block extra_css %}
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+        }
+
+        body {
+            background: var(--gray-50);
+        }
+
+        .quiz-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Header */
+        .quiz-header {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .quiz-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 0.5rem;
+        }
+
+        .quiz-meta {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            color: var(--gray-600);
+            font-size: 0.9rem;
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar-container {
+            background: var(--gray-200);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-bar-fill {
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Problem Card */
+        .problem-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.2s;
+        }
+
+        .problem-card:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .problem-number {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .problem-statement {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: var(--gray-800);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Answer Input */
+        .answer-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .answer-input {
+            flex: 1;
+            max-width: 300px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .answer-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .answer-input.saved {
+            border-color: var(--success);
+        }
+
+        .answer-input.error {
+            border-color: var(--danger);
+        }
+
+        /* Save Indicator */
+        .save-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            min-width: 120px;
+        }
+
+        .save-indicator.saving {
+            color: var(--warning);
+        }
+
+        .save-indicator.saved {
+            color: var(--success);
+        }
+
+        .save-indicator.error {
+            color: var(--danger);
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--gray-200);
+            border-top-color: var(--warning);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Instructions */
+        .instructions {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        /* Submit Button */
+        .submit-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .submit-btn {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 3rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: var(--gray-200);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .quiz-container {
+                padding: 1rem;
+            }
+
+            .quiz-header, .problem-card {
+                padding: 1.5rem;
+            }
+
+            .quiz-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="quiz-container">
+            <!-- Header -->
+            <div class="quiz-header">
+                <div class="quiz-title">{{ olympiad.name }} - {{ olympiad.level.name }} ангилал</div>
+                <div class="quiz-meta">
+                    <span>📝 ID: {{ contestant.id }}</span>
+                    <span>⏰ Дуусах хугацаа: {{ olympiad.end_time|date:'Y-m-d, H:i' }}</span>
+                </div>
+                {% if olympiad.description %}
+                    <div style="margin-top: 1rem; color: var(--gray-600); font-size: 0.9rem;">
+                        {% autoescape off %}{{ olympiad.description }}{% endautoescape %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-section">
+                <div class="progress-text">
+                    <span>Хариулсан бодлого</span>
+                    <span id="progress-count">0/{{ items|length }}</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progress-bar"></div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions">
+                <strong>⚠️ Анхааруулга:</strong> Хариултыг зөвхөн натурал тоогоор оруулна уу.
+                Хариулт автоматаар хадгалагдана.
+            </div>
+
+            <!-- Form -->
+            <form method="post" id="quiz-form">
+                {% csrf_token %}
+
+                {% for item in items %}
+                    <div class="problem-card">
+                        <div class="problem-number">Бодлого {{ item.problem.order }}</div>
+                        <div class="problem-statement">
+                            {% autoescape off %}{{ item.problem.statement|latex }}{% endautoescape %}
+                        </div>
+
+                        <div class="answer-group">
+                            <input
+                                    type="number"
+                                    name="form-{{ forloop.counter0 }}-answer"
+                                    value="{{ item.answer|default:'' }}"
+                                    class="answer-input"
+                                    placeholder="Хариултаа оруулна уу"
+                                    data-result-id="{{ item.id }}"
+                                    data-problem-number="{{ item.problem.order }}"
+                                    autocomplete="off"
+                            >
+                            <input type="hidden" name="form-{{ forloop.counter0 }}-id" value="{{ item.id }}">
+                            <div class="save-indicator" id="indicator-{{ item.id }}"></div>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                {{ form.management_form }}
+            </form>
+
+            <!-- Submit -->
+            <div class="submit-section">
+                <button type="button" class="submit-btn" id="final-submit">
+                    Эцсийн хариулт илгээх
+                </button>
+                <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--gray-600);">
+                    Хариулт автоматаар хадгалагдаж байгаа. Дууссаны дараа товч дарна уу.
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        // CSRF Token авах
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        // Progress тооцоолох
+        function updateProgress() {
+            const inputs = document.querySelectorAll('.answer-input');
+            const answered = Array.from(inputs).filter(input => input.value.trim() !== '').length;
+            const total = inputs.length;
+            const percentage = (answered / total) * 100;
+
+            document.getElementById('progress-count').textContent = `${answered}/${total}`;
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+        }
+
+        // Auto-save функц
+        let saveTimeouts = {};
+
+        function autoSave(input) {
+            const resultId = input.dataset.resultId;
+            const problemNumber = input.dataset.problemNumber;
+            const answer = input.value.trim();
+            const indicator = document.getElementById(`indicator-${resultId}`);
+
+            // Өмнөх timeout цуцлах
+            if (saveTimeouts[resultId]) {
+                clearTimeout(saveTimeouts[resultId]);
+            }
+
+            // Хадгалж байна гэдгийг харуулах
+            indicator.className = 'save-indicator saving';
+            indicator.innerHTML = '<span class="spinner"></span> Хадгалж байна...';
+            input.classList.remove('saved', 'error');
+
+            // 800ms хүлээгээд хадгалах
+            saveTimeouts[resultId] = setTimeout(() => {
+                fetch('/olympiads/api/save-answer/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        result_id: resultId,
+                        answer: answer
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            indicator.className = 'save-indicator saved';
+                            indicator.textContent = '✓ Хадгалагдсан';
+                            input.classList.add('saved');
+                            updateProgress();
+
+                            // 2 секундын дараа indicator арилгах
+                            setTimeout(() => {
+                                indicator.textContent = '';
+                                indicator.className = 'save-indicator';
+                            }, 2000);
+                        } else {
+                            indicator.className = 'save-indicator error';
+                            indicator.textContent = '✗ ' + data.message;
+                            input.classList.add('error');
+                        }
+                    })
+                    .catch(error => {
+                        indicator.className = 'save-indicator error';
+                        indicator.textContent = '✗ Алдаа гарлаа';
+                        input.classList.add('error');
+                        console.error('Error:', error);
+                    });
+            }, 800);
+        }
+
+        // Input event listener нэмэх
+        document.addEventListener('DOMContentLoaded', function () {
+            const inputs = document.querySelectorAll('.answer-input');
+
+            inputs.forEach(input => {
+                input.addEventListener('input', function () {
+                    autoSave(this);
+                });
+
+                // Enter дарахад дараагийн input руу шилжих
+                input.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const nextInput = this.closest('.problem-card').nextElementSibling?.querySelector('.answer-input');
+                        if (nextInput) {
+                            nextInput.focus();
+                        } else {
+                            document.getElementById('final-submit').focus();
+                        }
+                    }
+                });
+            });
+
+            // Эхний progress
+            updateProgress();
+
+            // Эцсийн submit
+            document.getElementById('final-submit').addEventListener('click', function () {
+                if (confirm('Та эцсийн хариултаа илгээхдээ итгэлтэй байна уу?')) {
+                    document.getElementById('quiz-form').submit();
+                }
+            });
+        });
+    </script>
+{% endblock %}

@@ -72,7 +72,6 @@ def problems_home(request):
     return render(request, 'olympiad/problems/home.html', context=context)
 
 
-@login_required
 def problems_view(request, olympiad_id):
     """
     Олимпиадын бүх бодлогын жагсаалтыг харуулна.
@@ -85,54 +84,6 @@ def problems_view(request, olympiad_id):
         "problems": problems,
     }
     return render(request, "olympiad/problems/list.html", context)
-
-
-@login_required
-def exam_view(request, olympiad_id):
-    """
-    Олимпиадын онлайн шалгалтын орчин.
-    """
-    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
-
-    # Жишээ нь эхлэх, дуусах хугацааг шалгана
-    now = timezone.now()
-    if not (olympiad.start_time <= now <= olympiad.end_time):
-        return render(request, "olympiad/exam/closed.html", {"olympiad": olympiad})
-
-    problems = olympiad.problem_set.order_by('order')
-    return render(request, "olympiad/exam/exam.html", {
-        "olympiad": olympiad,
-        "problems": problems,
-    })
-
-
-@login_required
-def quiz_view(request, olympiad_id):
-    """
-    Богино асуулт/quiz төрлийн бодлогуудын жагсаалт.
-    """
-    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
-    problems = olympiad.problem_set.filter(type="quiz").order_by('order')
-
-    return render(request, "olympiad/quiz/home.html", {
-        "olympiad": olympiad,
-        "problems": problems,
-    })
-
-
-@login_required
-def supplements_view(request, olympiad_id):
-    """
-    Supplement буюу нэмэлт материал (жишээ нь нөхөх тест, нэмэлт бодлого).
-    """
-    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
-    supplements = olympiad.problem_set.filter(type="supplement").order_by('order')
-
-    return render(request, "olympiad/supplements/home.html", {
-        "olympiad": olympiad,
-        "problems": supplements,
-    })
-
 
 def problem_list_with_topics(request):
     # URL-аас ?q=... гэсэн хайлтын түлхүүр үгийг авах
@@ -156,3 +107,59 @@ def problem_list_with_topics(request):
         "all_topics": all_topics,
         "query": query, # Хайлтын үгийг темплэйт рүү буцааж дамжуулах
     })
+
+@login_required
+def olympiad_top_stats(request, olympiad_id):
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+    province_id = request.GET.get("p", "0").strip()
+    zone_id = request.GET.get("z", "0").strip()
+
+    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad, total__gt=0)
+
+    # --- аль ranking багана ашиглахыг шийдэх ---
+    if province_id != "0":
+        scoresheets = scoresheets.filter(user__data__province_id=province_id)
+        rank_field = "ranking_a_p"
+    elif zone_id != "0":
+        scoresheets = scoresheets.filter(user__data__province__zone_id=zone_id)
+        rank_field = "ranking_a_z"
+    else:
+        rank_field = "ranking_a"
+
+    scoresheets = scoresheets.order_by(rank_field)
+
+    if olympiad.level.id in [2,3,4,5]:
+        # Эхний 50 ба эхний 30-г тасалж авах
+        top50 = scoresheets.filter(**{f"{rank_field}__lte": 50})
+        top30 = scoresheets.filter(**{f"{rank_field}__lte": 30})
+        top_name_50 = '50'
+        top_name_30 = '30'
+    else:
+        top50 = scoresheets.filter(**{f"{rank_field}__lte": 30})
+        top30 = scoresheets.filter(**{f"{rank_field}__lte": 10})
+        top_name_50 = '30'
+        top_name_30 = '10'
+
+    # --- Нэмэлтээр нийт тоог авах ---
+    top50_count = top50.count()
+    top30_count = top30.count()
+
+    # Статистикууд
+    top50_by_school = top50.values("school__name").annotate(count=Count("id")).order_by("-count")
+    top30_by_province = top30.values("user__data__province__name").annotate(count=Count("id")).order_by("-count")
+    top30_by_zone = top30.values("user__data__province__zone__name").annotate(count=Count("id")).order_by("-count")
+
+    context = {
+        "olympiad": olympiad,
+        "top50_by_school": top50_by_school,
+        "top30_by_province": top30_by_province,
+        "top30_by_zone": top30_by_zone,
+        "selected_province": province_id,
+        "selected_zone": zone_id,
+        "rank_field": rank_field,
+        "top50_count": top50_count,
+        "top30_count": top30_count,
+        "top_name_50": top_name_50,
+        "top_name_30": top_name_30,
+    }
+    return render(request, "olympiad/olympiad_top_stats.html", context)

@@ -24,7 +24,7 @@ def supplement_home(request):
     return render(request, 'olympiad/supplement_home.html', {'olympiads': olympiads})
 
 @login_required
-def quiz_view(request, olympiad_id):
+def student_quiz_view(request, olympiad_id):
     contestant = request.user
     olympiad = Olympiad.objects.filter(pk=olympiad_id).first()
 
@@ -64,7 +64,7 @@ def quiz_view(request, olympiad_id):
         if form.is_valid():
             form.save()
             results = Result.objects.filter(contestant=user, olympiad_id=olympiad_id).order_by('problem__order')
-            return render(request, 'olympiad/quiz_view_confirm.html', {'results': results, 'olympiad': olympiad})
+            return render(request, 'olympiad/quiz/quiz_view_confirm.html', {'results': results, 'olympiad': olympiad})
     else:
         if olympiad.is_active():
             form = ResultsFormSet(
@@ -72,20 +72,17 @@ def quiz_view(request, olympiad_id):
         else:
             messages.error(request, 'Хугацаа дууссан байна.')
             return redirect('olympiad_end', olympiad_id=olympiad_id)
-    return render(request, 'olympiad/quiz.html', {'items': items, 'form': form, 'olympiad': olympiad})
+    return render(request, 'olympiad/quiz/quiz.html', {'items': items, 'form': form, 'olympiad': olympiad})
 
 
 @login_required
-def olympiad_end(request, olympiad_id):
+def contest_end(request, olympiad_id):
     olympiad = Olympiad.objects.get(pk=olympiad_id)
     return render(request, 'olympiad/exam/end_note.html', {'olympiad': olympiad})
 
 
-
-
-
 @login_required
-def exam_student_view(request, olympiad_id):
+def student_exam_view(request, olympiad_id):
     contestant = request.user
     contestant_id = request.user.id
     olympiad = Olympiad.objects.filter(pk=olympiad_id).first()
@@ -183,7 +180,7 @@ def is_my_student(teacher_id,student_id):
         if school.group.user_set.filter(id=student_id).exists():
             return True
     except:
-        return False
+        pass
     return False
 
 @login_required
@@ -202,7 +199,7 @@ def quiz_staff_view(request, quiz_id, contestant_id):
     group = school.group
 
     if not is_my_student(staff.id,contestant_id) and not staff.is_staff:
-        return render(request, 'messages/../templates/schools/error.html', {'error': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
+        return render(request, 'error.html', {'message': 'Та зөвхөн өөрийн сургуулийн сурагчийн дүнг оруулах боломжтой.'})
 
     if request.method == 'POST':
         keys = request.POST.keys()
@@ -255,44 +252,7 @@ def result_viewer(request):
     return JsonResponse({'status': 'failed'})
 
 
-# @login_required
-def grading_home(request):
-    olympiads = Olympiad.objects.filter(is_grading=True).order_by('id')
 
-    return render(request, 'olympiad/grading_home.html', {'olympiads': olympiads})
-
-
-@staff_member_required
-def exam_grading_view(request, problem_id):
-    problem = Problem.objects.filter(pk=problem_id).first()
-
-    results = Result.objects.filter(problem_id=problem_id, contestant__data__province__isnull=False).order_by(
-        'score').reverse
-
-    return render(request, 'olympiad/exam_grading.html', {'results': results, 'problem': problem})
-
-
-@staff_member_required
-def grade(request):
-    result_id = int(request.GET.get('result_id', 0))
-    if result_id > 0:
-        result = Result.objects.get(pk=result_id)
-        if not result.olympiad.is_grading or result.state == 5:
-            return HttpResponse("Энэ бодлогын үнэлгээг өөрчлөх боломжгүй.")
-        if request.method == 'POST':
-            form = ResultsGraderForm(request.POST, instance=result)
-            if form.is_valid() and request.user.is_staff:
-                form.save()
-                result.coordinator = request.user
-                result.state = 2
-                result.save()
-                url = reverse('olympiad_exam_grading', kwargs={'problem_id': result.problem.id})
-                url = url + '#result{}'.format(result.id)
-                return redirect(url)
-        form = ResultsGraderForm(instance=result)
-        return render(request, "olympiad/grading_result_form.html", {'form': form, 'result': result})
-    else:
-        return HttpResponse("Ийм хариулт олдсонгүй.")
 
 @login_required
 def student_exam_materials_view(request):
@@ -302,29 +262,3 @@ def student_exam_materials_view(request):
                                                                    request.user.last_name)
 
     return render(request, 'olympiad/student_exam_materials_view.html', {'results': results, 'title': title})
-
-
-@login_required
-def view_result(request):
-    result_id = int(request.GET.get('result_id', 0))
-    if result_id > 0:
-        result = Result.objects.filter(pk=result_id).first()
-        return render(request, "olympiad/upload_viewer.html", {'result': result})
-    else:
-        return HttpResponse("Ийм хариулт олдсонгүй.")
-
-
-def problem_exam_materials_view(request):
-    return None
-
-
-
-
-@login_required
-def remove_supplement(request):
-    id = request.GET.get('id', False)
-    if id and request.user.is_superuser:
-        upload = Upload.objects.filter(pk=id).first()
-        upload.delete()
-        return JsonResponse({'msg': 'Оk.'})
-    return JsonResponse({'msg': 'No uploads.'})

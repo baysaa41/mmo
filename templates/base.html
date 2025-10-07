@@ -16,7 +16,8 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.7/viewer.css" integrity="sha512-9NawOLzuLE2GD22PJ6IPWXEjPalb/FpdH1qMpgXdaDM+0OfxEV75ZCle6KhZi0vM6ZWvMrNnIZv6YnsL+keVmA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
- </head>
+    {% block extra_css %}{% endblock %}
+</head>
 <body class="d-flex flex-column min-vh-100">
 
 <header>
@@ -117,6 +118,8 @@
         sidebar.classList.toggle('active');
     }
 </script>
+
+{% block extra_js %}{% endblock %}
 
 </body>
 </html>

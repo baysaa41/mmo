@@ -5,89 +5,547 @@
 
 {% block title %}Дүн{% endblock %}
 
-{% block menu %}
+{% block extra_css %}
+    <!-- Viewer.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css" integrity="sha512-za6IYQz7tR0pzniM/UvcLaVTr/SiBURN6Яmh6QJE4A4Tk/VD2К0A1ւևն/VQ7ճĄZ6I6լկի0սAրկYնն҆/Զ5սչկբն3ե/+=" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        /* Override Viewer.js z-index to be above modal */
+        .viewer-container {
+            z-index: 999999 !important;
+        }
+
+        .viewer-backdrop {
+            z-index: 999998 !important;
+        }
+
+        .viewer-canvas {
+            z-index: 999999 !important;
+        }
+
+        .viewer-footer {
+            z-index: 999999 !important;
+        }
+
+        .viewer-toolbar {
+            z-index: 999999 !important;
+        }
+
+        .viewer-navbar {
+            z-index: 999999 !important;
+        }
+
+        .viewer-button {
+            z-index: 999999 !important;
+        }
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+        }
+
+        body {
+            background: var(--gray-50);
+        }
+
+        .grading-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .grading-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .grading-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .grading-table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .grading-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .grading-table th {
+            background: var(--gray-100);
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-800);
+            border-bottom: 2px solid var(--gray-200);
+            white-space: nowrap;
+            font-size: 0.875rem;
+        }
+
+        .grading-table td {
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            vertical-align: middle;
+        }
+
+        .grading-table tr:hover {
+            background: var(--gray-50);
+        }
+
+        .grade-btn {
+            padding: 0.5rem 1rem !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.2s !important;
+            white-space: nowrap !important;
+            text-decoration: none !important;
+            display: inline-block !important;
+        }
+
+        .grade-btn-warning {
+            background: var(--warning) !important;
+            background-color: #f59e0b !important;
+            color: white !important;
+        }
+
+        .grade-btn-warning:hover {
+            background: #d97706 !important;
+            background-color: #d97706 !important;
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+
+        .grade-btn-secondary {
+            background: var(--gray-600) !important;
+            background-color: #6b7280 !important;
+            color: white !important;
+        }
+
+        .grade-btn-secondary:hover {
+            background: var(--gray-800) !important;
+            background-color: #1f2937 !important;
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+        }
+
+        /* Grading Modal */
+        .grading-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .grading-modal.active {
+            display: flex;
+        }
+
+        .modal-content-wrapper {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header-custom {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header-custom h4 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray-600);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--gray-100);
+            color: var(--gray-800);
+        }
+
+        .modal-body-custom {
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer-custom {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        .modal-btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .modal-btn-danger:hover {
+            background: #dc2626;
+        }
+
+        /* Badge Styles */
+        .score-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .score-high {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .score-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .score-low {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (max-width: 768px) {
+            .grading-container {
+                padding: 1rem;
+            }
+
+            .modal-content-wrapper {
+                width: 95%;
+                max-height: 95vh;
+            }
+
+            .grading-table {
+                font-size: 0.8rem;
+            }
+
+            .grading-table th,
+            .grading-table td {
+                padding: 0.5rem 0.25rem;
+            }
+
+            .grade-btn {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-    <div class="justify-content-center">
-        <h3>{{ problem.olympiad.name }}, Бодлого №{{ problem.order }}</h3>
-        {% autoescape off %}
-            <table class="table table bordered">
-                <tr>
-                    <th>№</th>
-                    <th>Овог, нэр</th>
-                    <th>Утас</th>
-                    <th>ID</th>
-                    <th>Бодолт зассан</th>
-                    <th>Коммент</th>
-                    <th>Оноо</th>
-                    <th>Бодолт харах</th>
-                    <th>Файлын тоо</th>
-                </tr>
-                {% for result in results %}
-                    <tr id="result{{ result.id }}">
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ result.contestant.last_name }}, {{ result.contestant.first_name }}</td>
-                        <td>{{ result.contestant.data.mobile }}</td>
-                        <td>{{ result.contestant.id }}</td>
-                        <td>{{ result.coordinator.first_name }}</td>
-                        <td>{{ result.grader_comment }}</td>
-                        <td>{{ result.score }}</td>
-                        <td><button class="btn btn-sm {% if result.state == 3 %}btn-warning{% else %}btn-secondary{% endif %}"
-                                    onclick="grade({{ result.id }})">Үнэлэх</button></td>
-                        <td>{{ result.get_upload_num }}</td>
-                    </tr>
-                {% endfor %}
-            </table>
-        {% endautoescape %}
+    <div class="grading-container">
+        <div class="grading-header">
+            <div class="grading-title">{{ problem.olympiad.name }}, Бодлого №{{ problem.order }}</div>
+        </div>
+
+        <div class="grading-table-container">
+            {% autoescape off %}
+                <table class="grading-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">№</th>
+                            <th style="min-width: 150px;">Овог, нэр</th>
+                            <th style="width: 100px;">Утас</th>
+                            <th style="width: 60px;">ID</th>
+                            <th style="width: 120px;">Бодолт зассан</th>
+                            <th style="min-width: 120px;">Коммент</th>
+                            <th style="width: 80px;">Оноо</th>
+                            <th style="width: 80px;">Файл</th>
+                            <th style="width: 100px;">Үйлдэл</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                            <tr id="result{{ result.id }}">
+                                <td>{{ forloop.counter }}</td>
+                                <td><strong>{{ result.contestant.last_name }}, {{ result.contestant.first_name }}</strong></td>
+                                <td>{{ result.contestant.data.mobile }}</td>
+                                <td>{{ result.contestant.id }}</td>
+                                <td>{{ result.coordinator.first_name|default:"-" }}</td>
+                                <td>{{ result.grader_comment|default:"-" }}</td>
+                                <td>
+                                    {% if result.score %}
+                                        <span class="score-badge {% if result.score >= problem.max_score %}score-high{% elif result.score > 0 %}score-medium{% else %}score-low{% endif %}">
+                                            {{ result.score }}
+                                        </span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ result.get_upload_num }}</td>
+                                <td>
+                                    <button class="grade-btn {% if result.state == 3 %}grade-btn-warning{% else %}grade-btn-secondary{% endif %}"
+                                            onclick="openGradeModal({{ result.id }})">
+                                        📝 Үнэлэх
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endautoescape %}
+        </div>
     </div>
-    <div class="modal" id="grading" style="z-index: 10000">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
 
-                <!-- Modal Header -->
-                <div class="modal-header">
-                    <h4 class="modal-title">Бодолт засах</h4>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                </div>
+    <!-- Grading Modal -->
+    <div class="grading-modal" id="grading-modal">
+        <div class="modal-content-wrapper">
+            <div class="modal-header-custom">
+                <h4>Бодолт засах</h4>
+                <button class="modal-close" onclick="closeGradeModal()">&times;</button>
+            </div>
 
-                <!-- Modal body -->
-                <div class="modal-body">
-                    Modal body..
-                </div>
-
-                <!-- Modal footer -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-danger btn-sm" onclick="viewerClose()">Зураг хаах</button>
-                </div>
-
+            <div class="modal-body-custom" id="modal-body">
+                <!-- Content loaded dynamically -->
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Viewer.js Library - Vanilla JS version -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js" integrity="sha512-EC3CQ+2OkM+ZKsM1dbFAB6OGEPKRxi6EDRnZW9ys8LghQRAq6cXPUgXCCujmDrXdodGXX9bqaaCRtwj4h4wgSQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
     <script>
-        function grade(i) {
-            $.get('{% url 'olympiad_grade_result' %}', {'result_id': i }, function (data) {
-                $("#grading").modal({backdrop: false})
-                $("#grading .modal-body").empty().append(data)
-                MathJax.Hub.Queue(["Typeset",MathJax.Hub])
-            }).done(
-                $("#student-result").submit(function(){
-                    console.log("hi")
-                })
-            )
+        function openGradeModal(resultId) {
+            const modal = document.getElementById('grading-modal');
+            const modalBody = document.getElementById('modal-body');
+
+            // Show loading
+            modalBody.innerHTML = '<div style="text-align: center; padding: 2rem;"><p>Уншиж байна...</p></div>';
+            modal.classList.add('active');
+
+            // Fetch grading form
+            $.get('{% url 'olympiad_grade_result' %}', {'result_id': resultId}, function(data) {
+                modalBody.innerHTML = data;
+
+                // Wait a bit for DOM to settle, then initialize everything
+                setTimeout(function() {
+                    // Re-render MathJax if available
+                    if (typeof MathJax !== 'undefined' && MathJax.Hub && MathJax.Hub.Queue) {
+                        MathJax.Hub.Queue(["Typeset", MathJax.Hub, modalBody]);
+                    } else if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                        // MathJax 3
+                        MathJax.typesetPromise([modalBody]).catch(function(err) {
+                            console.log('MathJax error:', err);
+                        });
+                    }
+
+                    // Initialize viewer if the script was loaded
+                    initializeViewerInModal();
+
+                    // Handle form submission
+                    setupFormSubmit();
+                }, 100);
+            }).fail(function() {
+                modalBody.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;"><p>Алдаа гарлаа. Дахин оролдоно уу.</p></div>';
+            });
         }
 
-        function load() {
-            $("#images").viewer({
-                inline: true,
+        function initializeViewerInModal() {
+            const imagesContainer = document.getElementById('images');
+            const viewButton = document.getElementById('view-images-btn');
+
+            if (!imagesContainer) {
+                console.log('No images container found');
+                return;
+            }
+
+            // Wait for Viewer to be loaded
+            if (typeof Viewer === 'undefined') {
+                console.warn('Viewer.js library not loaded yet, waiting...');
+                setTimeout(initializeViewerInModal, 200);
+                return;
+            }
+
+            console.log('Viewer.js loaded, initializing...');
+
+            // Add click handler to button
+            if (viewButton) {
+                viewButton.addEventListener('click', function() {
+                    openViewerModal();
+                });
+            }
+
+            // Add click handler to thumbnails
+            const thumbnails = imagesContainer.querySelectorAll('.image-thumbnail');
+            thumbnails.forEach(function(img, index) {
+                img.addEventListener('click', function() {
+                    openViewerModal(index);
+                });
+            });
+        }
+
+        function openViewerModal(startIndex) {
+            const imagesContainer = document.getElementById('images');
+
+            if (!imagesContainer) {
+                alert('Зураг олдсонгүй.');
+                return;
+            }
+
+            // Check if Viewer.js is loaded
+            if (typeof Viewer === 'undefined') {
+                alert('Зургийг харах боломжгүй байна. Viewer.js ачаалагдаагүй байна.');
+                console.error('Viewer.js not loaded. Check if the library is included.');
+                return;
+            }
+
+            console.log('Opening viewer with Viewer.js');
+
+            // Use vanilla JS Viewer
+            const viewer = new Viewer(imagesContainer, {
+                inline: false,
                 viewed: function() {
-                    $("#images").viewer('zoomTo', 1);
-                }
-            })
+                    viewer.zoomTo(1);
+                },
+                navbar: true,
+                title: true,
+                toolbar: {
+                    zoomIn: 1,
+                    zoomOut: 1,
+                    oneToOne: 1,
+                    reset: 1,
+                    prev: 1,
+                    play: 0,
+                    next: 1,
+                    rotateLeft: 1,
+                    rotateRight: 1,
+                    flipHorizontal: 1,
+                    flipVertical: 1
+                },
+                tooltip: true,
+                movable: true,
+                zoomable: true,
+                rotatable: true,
+                scalable: true,
+                transition: true,
+                fullscreen: true,
+                keyboard: true
+            });
+
+            // Show viewer starting at specific index
+            if (typeof startIndex === 'number') {
+                viewer.view(startIndex);
+            } else {
+                viewer.show();
+            }
         }
 
-        function viewerClose() {
-            $("#images").viewer('destroy')
+        function closeGradeModal() {
+            const modal = document.getElementById('grading-modal');
+            modal.classList.remove('active');
+
+            // Viewer will auto cleanup when modal closes
         }
+
+        function setupFormSubmit() {
+            // Handle form submission via AJAX if form exists
+            $(document).off('submit', '#grading-form').on('submit', '#grading-form', function(e) {
+                e.preventDefault();
+
+                const form = $(this);
+                const formData = new FormData(this);
+
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        // Close modal and reload page
+                        closeGradeModal();
+                        location.reload();
+                    },
+                    error: function() {
+                        alert('Алдаа гарлаа. Дахин оролдоно уу.');
+                    }
+                });
+            });
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('grading-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeGradeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeGradeModal();
+            }
+        });
     </script>
 {% endblock %}
