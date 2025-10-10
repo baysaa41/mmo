@@ -1,15 +1,33 @@
 # emails/models.py
 from django.db import models
 from django.contrib.auth.models import User
+from ckeditor_uploader.fields import RichTextUploadingField
+
+# --- ШИНЭЧЛЭЛ: Илгээгч хаягийн сонголтуудыг энд тодорхойлно ---
+FROM_EMAIL_CHOICES = [
+    ('baysa@mmo.mn', 'baysa@mmo.mn'),
+    ('baysa@integral.mn', 'baysa@integral.mn'),
+    ('baysa@mathminds.club', 'baysa@mathminds.club'),
+    ('info@mmo.mn', 'info@mmo.mn'),
+    ('registration@mmo.mn', 'registration@mmo.mn'),
+]
 
 class EmailCampaign(models.Model):
     name = models.CharField(max_length=200)
     subject = models.CharField(max_length=200)
     message = models.TextField()
-    html_message = models.TextField(blank=True, null=True)
+    html_message = RichTextUploadingField(null=True, blank=True, verbose_name="HTML мессеж")
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    # --- ШИНЭЧЛЭЛ: Илгээгч имэйлийг сонгох талбар нэмэгдсэн ---
+    from_email = models.CharField(
+        max_length=255,
+        choices=FROM_EMAIL_CHOICES,
+        default=FROM_EMAIL_CHOICES[0][0],
+        verbose_name='Илгээгч имэйл хаяг'
+    )
 
     is_tested = models.BooleanField(default=False, verbose_name='Тест илгээсэн эсэх')
     test_sent_at = models.DateTimeField(null=True, blank=True, verbose_name='Тест илгээсэн огноо')

@@ -4,357 +4,399 @@
 {% block title %}Email Campaign үүсгэх{% endblock %}
 
 {% block extra_css %}
-<style>
-    .form-section {
-        background: #f8f9fa;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-    .form-section h5 {
-        color: #495057;
-        margin-bottom: 15px;
-        font-weight: 600;
-    }
-    .filter-option {
-        padding: 10px;
-        background: white;
-        border-radius: 5px;
-        margin-bottom: 10px;
-    }
-    .help-text-custom {
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-top: 5px;
-    }
-</style>
+    <style>
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-section h5 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .filter-option {
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .help-text-custom {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        /* CKEditor-ийн label-г засах */
+        label[for='id_html_message'] {
+            display: block;
+            width: 100%;
+        }
+
+        /* CKEditor-ийн бүрээсийг бүтэн мөр эзлүүлэх (хэвээрээ) */
+        .django-ckeditor-widget {
+            display: block !important;
+            width: 100%;
+        }
+
+        /* --- ШИНЭЧИЛСЭН ХЭСЭГ --- */
+        /* ЗӨВХӨН CKEditor-ийн үндсэн хүрээг 100% болгох */
+        .django-ckeditor-widget .cke_chrome {
+            width: 100% !important;
+        }
+    </style>
+    {{ form.media }}
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-lg-10 mx-auto">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="fas fa-envelope"></i> Email Campaign үүсгэх</h2>
-                <a href="{% url 'campaign_list' %}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Буцах
-                </a>
-            </div>
-
-            <!-- Alerts -->
-            {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                {% endfor %}
-            {% endif %}
-
-            <!-- Form -->
-            <form method="post" id="campaign-form">
-                {% csrf_token %}
-
-                {% if form.non_field_errors %}
-                <div class="alert alert-danger">
-                    {{ form.non_field_errors }}
-                </div>
-                {% endif %}
-
-                <!-- Campaign үндсэн мэдээлэл -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Campaign мэдээлэл</h5>
-                    </div>
-                    <div class="card-body">
-                        <!-- Campaign нэр -->
-                        <div class="mb-3">
-                            <label for="{{ form.name.id_for_label }}" class="form-label fw-bold">
-                                {{ form.name.label }} <span class="text-danger">*</span>
-                            </label>
-                            {{ form.name }}
-                            {% if form.name.errors %}
-                                <div class="text-danger mt-1">{{ form.name.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Имэйл гарчиг -->
-                        <div class="mb-3">
-                            <label for="{{ form.subject.id_for_label }}" class="form-label fw-bold">
-                                {{ form.subject.label }} <span class="text-danger">*</span>
-                            </label>
-                            {{ form.subject }}
-                            {% if form.subject.errors %}
-                                <div class="text-danger mt-1">{{ form.subject.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Text мессеж -->
-                        <div class="mb-3">
-                            <label for="{{ form.message.id_for_label }}" class="form-label fw-bold">
-                                {{ form.message.label }} <span class="text-danger">*</span>
-                            </label>
-                            {{ form.message }}
-                            <div class="help-text-custom">
-                                <i class="fas fa-info-circle"></i> {{ form.message.help_text }}
-                            </div>
-                            {% if form.message.errors %}
-                                <div class="text-danger mt-1">{{ form.message.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <!-- HTML мессеж -->
-                        <div class="mb-3">
-                            <label for="{{ form.html_message.id_for_label }}" class="form-label fw-bold">
-                                {{ form.html_message.label }}
-                            </label>
-                            {{ form.html_message }}
-                            <div class="help-text-custom">
-                                <i class="fas fa-info-circle"></i> {{ form.html_message.help_text }}
-                            </div>
-                            {% if form.html_message.errors %}
-                                <div class="text-danger mt-1">{{ form.html_message.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recipients сонголт -->
-                <div class="card mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="fas fa-users"></i> Хүлээн авагчид</h5>
-                    </div>
-                    <div class="card-body">
-
-                        <!-- Custom имэйл жагсаалт checkbox -->
-                        <div class="form-section">
-                            <div class="form-check">
-                                {{ form.use_custom_list }}
-                                <label class="form-check-label fw-bold" for="{{ form.use_custom_list.id_for_label }}">
-                                    <i class="fas fa-list"></i> {{ form.use_custom_list.label }}
-                                </label>
-                            </div>
-                            <div class="help-text-custom ms-4">
-                                {{ form.use_custom_list.help_text }}
-                            </div>
-                        </div>
-
-                        <!-- Custom имэйл жагсаалт textarea -->
-                        <div id="custom-email-list" style="display: none;">
-                            <div class="mb-3">
-                                <label for="{{ form.email_list.id_for_label }}" class="form-label fw-bold">
-                                    {{ form.email_list.label }}
-                                </label>
-                                {{ form.email_list }}
-                                <div class="help-text-custom">
-                                    <i class="fas fa-info-circle"></i> {{ form.email_list.help_text }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Filter checkboxes -->
-                        <div id="filter-checkboxes">
-                            <div class="form-section">
-                                <h5><i class="fas fa-filter"></i> Хэрэглэгчийн төрөл</h5>
-                                <p class="text-muted small mb-3">Нэг буюу хэд хэдэн сонголт хийж болно (OR логик)</p>
-
-                                <!-- Идэвхитэй хэрэглэгчид -->
-                                <div class="filter-option">
-                                    <div class="form-check">
-                                        {{ form.filter_active_year }}
-                                        <label class="form-check-label" for="{{ form.filter_active_year.id_for_label }}">
-                                            <strong>{{ form.filter_active_year.label }}</strong>
-                                        </label>
-                                    </div>
-                                    <div class="help-text-custom ms-4">
-                                        {{ form.filter_active_year.help_text }}
-                                    </div>
-                                </div>
-
-                                <!-- Багш нар -->
-                                <div class="filter-option">
-                                    <div class="form-check">
-                                        {{ form.filter_teachers }}
-                                        <label class="form-check-label" for="{{ form.filter_teachers.id_for_label }}">
-                                            <strong>{{ form.filter_teachers.label }}</strong>
-                                        </label>
-                                    </div>
-                                    <div class="help-text-custom ms-4">
-                                        {{ form.filter_teachers.help_text }}
-                                    </div>
-                                </div>
-
-                                <!-- Сурагчид -->
-                                <div class="filter-option">
-                                    <div class="form-check">
-                                        {{ form.filter_students }}
-                                        <label class="form-check-label" for="{{ form.filter_students.id_for_label }}">
-                                            <strong>{{ form.filter_students.label }}</strong>
-                                        </label>
-                                    </div>
-                                    <div class="help-text-custom ms-4">
-                                        {{ form.filter_students.help_text }}
-                                    </div>
-                                </div>
-
-                                <!-- Сургуулийн менежер -->
-                                <div class="filter-option">
-                                    <div class="form-check">
-                                        {{ form.filter_school_managers }}
-                                        <label class="form-check-label" for="{{ form.filter_school_managers.id_for_label }}">
-                                            <strong>{{ form.filter_school_managers.label }}</strong>
-                                        </label>
-                                    </div>
-                                    <div class="help-text-custom ms-4">
-                                        {{ form.filter_school_managers.help_text }}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Байршлын шүүлтүүр -->
-                            <div class="form-section">
-                                <h5><i class="fas fa-map-marker-alt"></i> Байршлын шүүлтүүр (Optional)</h5>
-                                <p class="text-muted small mb-3">Тодорхой аймаг эсвэл сургуулийн хэрэглэгчдийг сонгох</p>
-
-                                <!-- Аймаг -->
-                                <div class="mb-3">
-                                    <label for="{{ form.specific_province.id_for_label }}" class="form-label fw-bold">
-                                        {{ form.specific_province.label }}
-                                    </label>
-                                    {{ form.specific_province }}
-                                    <div class="help-text-custom">
-                                        <i class="fas fa-info-circle"></i> {{ form.specific_province.help_text }}
-                                    </div>
-                                </div>
-
-                                <!-- Сургууль -->
-                                <div class="mb-3">
-                                    <label for="{{ form.specific_school.id_for_label }}" class="form-label fw-bold">
-                                        {{ form.specific_school.label }}
-                                    </label>
-                                    {{ form.specific_school }}
-                                    <div class="help-text-custom">
-                                        <i class="fas fa-info-circle"></i> {{ form.specific_school.help_text }}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Тохиргоо -->
-                <div class="card mb-4">
-                    <div class="card-header bg-warning">
-                        <h5 class="mb-0"><i class="fas fa-cog"></i> Тохиргоо</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="{{ form.daily_limit.id_for_label }}" class="form-label fw-bold">
-                                {{ form.daily_limit.label }}
-                            </label>
-                            {{ form.daily_limit }}
-                            <div class="help-text-custom">
-                                <i class="fas fa-info-circle"></i> {{ form.daily_limit.help_text }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Submit buttons -->
-                <div class="d-grid gap-2 mb-4">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-check-circle"></i> Campaign үүсгэх
-                    </button>
-                    <a href="{% url 'campaign_list' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-times"></i> Болих
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-envelope"></i> Email Campaign үүсгэх</h2>
+                    <a href="{% url 'campaign_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Буцах
                     </a>
                 </div>
-            </form>
 
+                <!-- Alerts -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Form -->
+                <form method="post" id="campaign-form">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <!-- Campaign үндсэн мэдээлэл -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Campaign мэдээлэл</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Campaign нэр -->
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label fw-bold">
+                                    {{ form.name.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger mt-1">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Имэйл гарчиг -->
+                            <div class="mb-3">
+                                <label for="{{ form.subject.id_for_label }}" class="form-label fw-bold">
+                                    {{ form.subject.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.subject }}
+                                {% if form.subject.errors %}
+                                    <div class="text-danger mt-1">{{ form.subject.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.from_email.id_for_label }}" class="form-label fw-bold">
+                                    {{ form.from_email.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.from_email }}
+                                <div class="help-text-custom">
+                                    <i class="fas fa-info-circle"></i> {{ form.from_email.help_text }}
+                                </div>
+                                {% if form.from_email.errors %}
+                                    <div class="text-danger mt-1">{{ form.from_email.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Text мессеж -->
+                            <div class="mb-3">
+                                <label for="{{ form.message.id_for_label }}" class="form-label fw-bold">
+                                    {{ form.message.label }} <span class="text-danger">*</span>
+                                </label>
+                                {{ form.message }}
+                                <div class="help-text-custom">
+                                    <i class="fas fa-info-circle"></i> {{ form.message.help_text }}
+                                </div>
+                                {% if form.message.errors %}
+                                    <div class="text-danger mt-1">{{ form.message.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- HTML мессеж -->
+                            <div class="mb-3">
+                                <label for="{{ form.html_message.id_for_label }}" class="form-label fw-bold">
+                                    {{ form.html_message.label }}
+                                </label>
+                                <div>{{ form.html_message }}</div>
+                                <div class="help-text-custom">
+                                    <i class="fas fa-info-circle"></i> {{ form.html_message.help_text }}
+                                </div>
+                                {% if form.html_message.errors %}
+                                    <div class="text-danger mt-1">{{ form.html_message.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recipients сонголт -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-users"></i> Хүлээн авагчид</h5>
+                        </div>
+                        <div class="card-body">
+
+                            <!-- Custom имэйл жагсаалт checkbox -->
+                            <div class="form-section">
+                                <div class="form-check">
+                                    {{ form.use_custom_list }}
+                                    <label class="form-check-label fw-bold"
+                                           for="{{ form.use_custom_list.id_for_label }}">
+                                        <i class="fas fa-list"></i> {{ form.use_custom_list.label }}
+                                    </label>
+                                </div>
+                                <div class="help-text-custom ms-4">
+                                    {{ form.use_custom_list.help_text }}
+                                </div>
+                            </div>
+
+                            <!-- Custom имэйл жагсаалт textarea -->
+                            <div id="custom-email-list" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="{{ form.email_list.id_for_label }}" class="form-label fw-bold">
+                                        {{ form.email_list.label }}
+                                    </label>
+                                    {{ form.email_list }}
+                                    <div class="help-text-custom">
+                                        <i class="fas fa-info-circle"></i> {{ form.email_list.help_text }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Filter checkboxes -->
+                            <div id="filter-checkboxes">
+                                <div class="form-section">
+                                    <h5><i class="fas fa-filter"></i> Хэрэглэгчийн төрөл</h5>
+                                    <p class="text-muted small mb-3">Нэг буюу хэд хэдэн сонголт хийж болно (OR
+                                        логик)</p>
+
+                                    <!-- Идэвхитэй хэрэглэгчид -->
+                                    <div class="filter-option">
+                                        <div class="form-check">
+                                            {{ form.filter_active_year }}
+                                            <label class="form-check-label"
+                                                   for="{{ form.filter_active_year.id_for_label }}">
+                                                <strong>{{ form.filter_active_year.label }}</strong>
+                                            </label>
+                                        </div>
+                                        <div class="help-text-custom ms-4">
+                                            {{ form.filter_active_year.help_text }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Багш нар -->
+                                    <div class="filter-option">
+                                        <div class="form-check">
+                                            {{ form.filter_teachers }}
+                                            <label class="form-check-label"
+                                                   for="{{ form.filter_teachers.id_for_label }}">
+                                                <strong>{{ form.filter_teachers.label }}</strong>
+                                            </label>
+                                        </div>
+                                        <div class="help-text-custom ms-4">
+                                            {{ form.filter_teachers.help_text }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Сурагчид -->
+                                    <div class="filter-option">
+                                        <div class="form-check">
+                                            {{ form.filter_students }}
+                                            <label class="form-check-label"
+                                                   for="{{ form.filter_students.id_for_label }}">
+                                                <strong>{{ form.filter_students.label }}</strong>
+                                            </label>
+                                        </div>
+                                        <div class="help-text-custom ms-4">
+                                            {{ form.filter_students.help_text }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Сургуулийн менежер -->
+                                    <div class="filter-option">
+                                        <div class="form-check">
+                                            {{ form.filter_school_managers }}
+                                            <label class="form-check-label"
+                                                   for="{{ form.filter_school_managers.id_for_label }}">
+                                                <strong>{{ form.filter_school_managers.label }}</strong>
+                                            </label>
+                                        </div>
+                                        <div class="help-text-custom ms-4">
+                                            {{ form.filter_school_managers.help_text }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Байршлын шүүлтүүр -->
+                                <div class="form-section">
+                                    <h5><i class="fas fa-map-marker-alt"></i> Байршлын шүүлтүүр (Optional)</h5>
+                                    <p class="text-muted small mb-3">Тодорхой аймаг эсвэл сургуулийн хэрэглэгчдийг
+                                        сонгох</p>
+
+                                    <!-- Аймаг -->
+                                    <div class="mb-3">
+                                        <label for="{{ form.specific_province.id_for_label }}"
+                                               class="form-label fw-bold">
+                                            {{ form.specific_province.label }}
+                                        </label>
+                                        {{ form.specific_province }}
+                                        <div class="help-text-custom">
+                                            <i class="fas fa-info-circle"></i> {{ form.specific_province.help_text }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Сургууль -->
+                                    <div class="mb-3">
+                                        <label for="{{ form.specific_school.id_for_label }}" class="form-label fw-bold">
+                                            {{ form.specific_school.label }}
+                                        </label>
+                                        {{ form.specific_school }}
+                                        <div class="help-text-custom">
+                                            <i class="fas fa-info-circle"></i> {{ form.specific_school.help_text }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Тохиргоо -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning">
+                            <h5 class="mb-0"><i class="fas fa-cog"></i> Тохиргоо</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="{{ form.daily_limit.id_for_label }}" class="form-label fw-bold">
+                                    {{ form.daily_limit.label }}
+                                </label>
+                                {{ form.daily_limit }}
+                                <div class="help-text-custom">
+                                    <i class="fas fa-info-circle"></i> {{ form.daily_limit.help_text }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit buttons -->
+                    <div class="d-grid gap-2 mb-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-check-circle"></i> Campaign үүсгэх
+                        </button>
+                        <a href="{% url 'campaign_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Болих
+                        </a>
+                    </div>
+                </form>
+
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const useCustomCheckbox = document.getElementById('{{ form.use_custom_list.id_for_label }}');
-    const customEmailList = document.getElementById('custom-email-list');
-    const filterCheckboxes = document.getElementById('filter-checkboxes');
-    const provinceSelect = document.getElementById('province-select');
-    const schoolSelect = document.getElementById('school-select');
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const useCustomCheckbox = document.getElementById('{{ form.use_custom_list.id_for_label }}');
+            const customEmailList = document.getElementById('custom-email-list');
+            const filterCheckboxes = document.getElementById('filter-checkboxes');
+            const provinceSelect = document.getElementById('province-select');
+            const schoolSelect = document.getElementById('school-select');
 
-    // Custom list checkbox toggle
-    function toggleCustomList() {
-        if (useCustomCheckbox && useCustomCheckbox.checked) {
-            customEmailList.style.display = 'block';
-            filterCheckboxes.style.display = 'none';
-        } else {
-            customEmailList.style.display = 'none';
-            filterCheckboxes.style.display = 'block';
-        }
-    }
-
-    if (useCustomCheckbox) {
-        useCustomCheckbox.addEventListener('change', toggleCustomList);
-        toggleCustomList(); // Initial state
-    }
-
-    // Province сонгоход school шүүлтийг шинэчлэх
-    if (provinceSelect) {
-        provinceSelect.addEventListener('change', function() {
-            const provinceId = this.value;
-
-            if (provinceId) {
-                // AJAX request
-                fetch(`/emails/schools-by-province/?province_id=${provinceId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        schoolSelect.innerHTML = '<option value="">--- Сургууль сонгоно уу ---</option>';
-
-                        if (data.schools && data.schools.length > 0) {
-                            data.schools.forEach(school => {
-                                const option = document.createElement('option');
-                                option.value = school.id;
-                                option.textContent = school.name;
-                                schoolSelect.appendChild(option);
-                            });
-                            schoolSelect.disabled = false;
-                        } else {
-                            schoolSelect.disabled = true;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading schools:', error);
-                        schoolSelect.innerHTML = '<option value="">Алдаа гарлаа</option>';
-                        schoolSelect.disabled = true;
-                    });
-            } else {
-                schoolSelect.innerHTML = '<option value="">--- Эхлээд аймаг сонгоно уу ---</option>';
-                schoolSelect.disabled = true;
+            // Custom list checkbox toggle
+            function toggleCustomList() {
+                if (useCustomCheckbox && useCustomCheckbox.checked) {
+                    customEmailList.style.display = 'block';
+                    filterCheckboxes.style.display = 'none';
+                } else {
+                    customEmailList.style.display = 'none';
+                    filterCheckboxes.style.display = 'block';
+                }
             }
+
+            if (useCustomCheckbox) {
+                useCustomCheckbox.addEventListener('change', toggleCustomList);
+                toggleCustomList(); // Initial state
+            }
+
+            // Province сонгоход school шүүлтийг шинэчлэх
+            if (provinceSelect) {
+                provinceSelect.addEventListener('change', function () {
+                    const provinceId = this.value;
+
+                    if (provinceId) {
+                        // AJAX request
+                        fetch(`/emails/schools-by-province/?province_id=${provinceId}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                schoolSelect.innerHTML = '<option value="">--- Сургууль сонгоно уу ---</option>';
+
+                                if (data.schools && data.schools.length > 0) {
+                                    data.schools.forEach(school => {
+                                        const option = document.createElement('option');
+                                        option.value = school.id;
+                                        option.textContent = school.name;
+                                        schoolSelect.appendChild(option);
+                                    });
+                                    schoolSelect.disabled = false;
+                                } else {
+                                    schoolSelect.disabled = true;
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error loading schools:', error);
+                                schoolSelect.innerHTML = '<option value="">Алдаа гарлаа</option>';
+                                schoolSelect.disabled = true;
+                            });
+                    } else {
+                        schoolSelect.innerHTML = '<option value="">--- Эхлээд аймаг сонгоно уу ---</option>';
+                        schoolSelect.disabled = true;
+                    }
+                });
+            }
+
+            // Form validation before submit
+            document.getElementById('campaign-form').addEventListener('submit', function (e) {
+                const useCustom = useCustomCheckbox && useCustomCheckbox.checked;
+                const emailListValue = document.getElementById('{{ form.email_list.id_for_label }}').value.trim();
+
+                if (useCustom && !emailListValue) {
+                    e.preventDefault();
+                    alert('Custom имэйл жагсаалт сонгосон бол имэйл хаягууд оруулна уу!');
+                    return false;
+                }
+
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Боловсруулж байна...';
+            });
         });
-    }
-
-    // Form validation before submit
-    document.getElementById('campaign-form').addEventListener('submit', function(e) {
-        const useCustom = useCustomCheckbox && useCustomCheckbox.checked;
-        const emailListValue = document.getElementById('{{ form.email_list.id_for_label }}').value.trim();
-
-        if (useCustom && !emailListValue) {
-            e.preventDefault();
-            alert('Custom имэйл жагсаалт сонгосон бол имэйл хаягууд оруулна уу!');
-            return false;
-        }
-
-        // Show loading state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Боловсруулж байна...';
-    });
-});
-</script>
+    </script>
 {% endblock %}

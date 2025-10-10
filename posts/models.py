@@ -1,6 +1,6 @@
 from django.db import models
 from olympiad.models import SchoolYear
-from ckeditor.fields import RichTextField
+from ckeditor_uploader.fields import RichTextUploadingField
 from accounts.models import Author
 from django.utils import timezone
 from datetime import date # date-г ашиглахын тулд нэмнэ
@@ -18,7 +18,7 @@ class Post(models.Model):
     oldid = models.IntegerField(default=1)
     title = models.CharField(max_length=500,null=True, blank=True)
     intro = models.TextField(null=True, blank=True)
-    descr = RichTextField(null=True, blank=True)
+    descr = RichTextUploadingField(null=True, blank=True)
 
     # --- ӨӨРЧЛӨЛТ ---
     # default-д дээрх функцийг зааж өгсөн

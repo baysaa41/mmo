@@ -67,7 +67,7 @@ def create_recipients_from_filters(campaign_id):
 
         if total_users == 0:
             campaign.status = 'draft'; campaign.save()
-            return "No users found matching filters"
+            return "No users found"
 
         batch_size = 2000
         for i in range(0, total_users, batch_size):
@@ -132,7 +132,7 @@ def check_daily_limit(campaign):
 
 @shared_task
 def send_email_batch_ses(campaign_id, recipient_ids):
-    """Имэйл багцыг илгээх (хэрэглэгчийн unsubscribe шалгалттай)"""
+    """Имэйл багцыг илгээх"""
     try:
         campaign = EmailCampaign.objects.get(id=campaign_id)
         recipients = EmailRecipient.objects.filter(id__in=recipient_ids, status='pending').select_related('user')
@@ -155,13 +155,15 @@ def send_email_batch_ses(campaign_id, recipient_ids):
                 text_template = Template(campaign.message + "\n\n---\nТатгалзах: {{ unsubscribe_url }}")
                 personalized_message = text_template.render(context)
 
-                msg = EmailMultiAlternatives(subject=campaign.subject, body=personalized_message, from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient.email])
+                msg = EmailMultiAlternatives(
+                    subject=campaign.subject,
+                    body=personalized_message,
+                    from_email=campaign.from_email,  # --- ШИНЭЧЛЭЛ: Campaign-аас from_email-г ашиглах ---
+                    to=[recipient.email]
+                )
                 if campaign.html_message:
-                    html_template = Template(campaign.html_message + '<hr><p style="font-size:12px;color:#666;text-align:center;">Татгалзах: <a href="{{ unsubscribe_url }}">энд дарна уу</a></p>')
+                    html_template = Template(campaign.html_message + '<hr><p style="font-size:12px;text-align:center;">Татгалзах: <a href="{{ unsubscribe_url }}">энд дарна уу</a></p>')
                     msg.attach_alternative(html_template.render(context), "text/html")
-
-                #if settings.DEBUG:
-                #    msg.to = ['baysa.edu@gmail.com'] # Таны тест хаяг
 
                 msg.send()
 
@@ -266,7 +268,8 @@ def send_test_email_task(campaign_id, recipient_id):
         msg = EmailMultiAlternatives(
             subject=f"[ТЕСТ] {campaign.subject}",
             body=personalized_message,
-            from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient.email]
+            from_email=campaign.from_email, # --- ШИНЭЧЛЭЛ: Campaign-аас from_email-г ашиглах ---
+            to=[recipient.email]
         )
         if campaign.html_message:
             html_template = Template('''<div style="background:#fff3cd;padding:15px;margin-bottom:20px;"><strong>ТЕСТ ИМЭЙЛ</strong></div>''' + campaign.html_message + '''
