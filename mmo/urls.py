@@ -12,6 +12,7 @@ urlpatterns = ([
     path('schools/', include('schools.urls')),
     path('files/', include('file_management.urls')),
     path('', include('posts.urls')),  # Homepage now points to the posts app
+    path('emails/', include('emails.urls')),
     path('admin/clearcache/', include('clearcache.urls')),
     path('admin/', admin.site.urls),
     path('tinymce/', include('tinymce.urls')),

@@ -131,7 +131,7 @@ def manage_school_by_level(request, school_id, level_id):
     group = school.group
 
     # --- ШИНЭЧИЛСЭН ЛОГИК ---
-    if level_id == 100: # 10 нь "Бүх сурагчид" гэсэн утгатай
+    if level_id == 100: # 100 нь "Бүх сурагчид" гэсэн утгатай
         selected_level = {'id': 100, 'name': 'Бүх сурагчид'}
         users_in_level = group.user_set.all().select_related('data__grade')
     elif level_id == 0:
@@ -170,6 +170,10 @@ def manage_school_by_level(request, school_id, level_id):
                             'province': request.user.data.province,
                         }
                         if level_id != 0:
+                            meta_data['level'] = selected_level
+
+                        if level_id == 100:
+                            selected_level = Level.objects.get(pk=8)
                             meta_data['level'] = selected_level
 
                         UserMeta.objects.create(**meta_data)
