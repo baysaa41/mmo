@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.core import signing
 from django.core.exceptions import SuspiciousOperation
 import json
+import requests  # <--- ЭНЭ МӨРИЙГ НЭМЭЭРЭЙ
 import logging
 
 from .models import EmailCampaign, EmailUnsubscribe, EmailRecipient, EmailBounce
