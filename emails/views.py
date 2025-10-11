@@ -250,33 +250,71 @@ def unsubscribe_success(request):
     """Unsubscribe амжилттай хуудас"""
     return render(request, 'emails/unsubscribe_success.html')
 
-
 @csrf_exempt
 def handle_sns_notification(request):
-    """AWS SNS Bounce/Complaint notification хүлээн авах webhook"""
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
     try:
-        data = json.loads(request.body)
-        message_type = request.META.get('HTTP_X_AMZ_SNS_MESSAGE_TYPE')
+        data = json.loads(request.body.decode('utf-8'))
 
-        if message_type == 'SubscriptionConfirmation':
-            logger.info(f"SNS Subscription URL: {data.get('SubscribeURL')}")
-            return JsonResponse({'status': 'pending_confirmation'})
+        # 1️⃣ SNS Subscription Confirm
+        if data.get('Type') == 'SubscriptionConfirmation':
+            subscribe_url = data.get('SubscribeURL')
+            token = data.get('Token')
 
-        elif message_type == 'Notification':
+            if not subscribe_url or not token:
+                logger.error("SNS confirmation missing SubscribeURL or Token")
+                return HttpResponse("Missing Token", status=400)
+
+            # SNS рүү автоматаар баталгаажуулах хүсэлт илгээнэ
+            try:
+                response = requests.get(subscribe_url)
+                if response.status_code == 200:
+                    logger.info("✅ SNS subscription confirmed successfully")
+                    return HttpResponse("Subscription confirmed", status=200)
+                else:
+                    logger.error(f"Subscription confirm failed: {response.text}")
+                    return HttpResponse("Failed to confirm", status=500)
+            except Exception as e:
+                logger.error(f"Error confirming SNS subscription: {e}")
+                return HttpResponse("Error confirming", status=500)
+
+        # 2️⃣ Notification event
+        if data.get('Type') == 'Notification':
             message = json.loads(data.get('Message', '{}'))
             notification_type = message.get('notificationType')
-            if notification_type == 'Bounce':
-                handle_bounce(message)
-            elif notification_type == 'Complaint':
-                handle_complaint(message)
-            return JsonResponse({'status': 'success'})
 
-        return JsonResponse({'status': 'ignored'})
+            if notification_type in ['Bounce', 'Complaint']:
+                if notification_type == 'Bounce':
+                    bounce = message['bounce']
+                    bounce_type = bounce.get('bounceType', 'Unknown').lower()
+                    for recipient in bounce.get('bouncedRecipients', []):
+                        email = recipient.get('emailAddress')
+                        EmailBounce.objects.create(
+                            email=email,
+                            bounce_type='hard' if bounce_type == 'permanent' else 'soft',
+                            message_id=message.get('mail', {}).get('messageId', ''),
+                            notification_data=message
+                        )
+                        EmailRecipient.objects.filter(email=email).update(status='bounced')
+                        logger.warning(f"Bounce logged: {email} ({bounce_type})")
+
+                elif notification_type == 'Complaint':
+                    for recipient in message.get('complaint', {}).get('complainedRecipients', []):
+                        email = recipient.get('emailAddress')
+                        EmailBounce.objects.create(
+                            email=email,
+                            bounce_type='complaint',
+                            message_id=message.get('mail', {}).get('messageId', ''),
+                            notification_data=message
+                        )
+                        EmailRecipient.objects.filter(email=email).update(status='bounced')
+                        logger.warning(f"Complaint logged: {email}")
+
+            return HttpResponse("Notification processed", status=200)
+
+        return HttpResponse("Unhandled SNS message type", status=400)
     except Exception as e:
-        logger.error(f"SNS notification error: {str(e)}")
-        return JsonResponse({'error': str(e)}, status=400)
+        logger.error(f"SNS handler error: {e}")
+        return HttpResponse(status=500)
 
 
 def handle_bounce(message):
