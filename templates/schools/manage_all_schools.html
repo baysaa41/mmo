@@ -15,7 +15,7 @@
                     <th class="text-center align-middle">Аймаг/Дүүрэг</th>
                     <th class="text-center align-middle">Админ</th>
                     <th class="text-center align-middle">Сүүлд нэвтэрсэн</th>
-                    <th class="text-center align-middle" colspan="3">Үйлдэл</th>
+                    <th class="text-center align-middle" colspan="4">Үйлдэл</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -47,6 +47,15 @@
                             <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary" target="_blank">
                                 <i class="fas fa-user-cog"></i> Админ&nbsp;солих
                             </a>
+                        </td>
+                        <td class="text-center">
+                            {% if school.user %}
+                                <a href="{% url 'change_school_admin_password' school.user.id %}" class="btn btn-sm btn-primary" target="_blank">
+                                    <i class="fas fa-user-edit"></i> Админ&nbsp;нууц&nbsp;үг
+                                </a>
+                            {% else %}
+                                <span class="text-muted">Админгүй</span>
+                            {% endif %}
                         </td>
                         <td class="text-center">
                             {% if school.user %}

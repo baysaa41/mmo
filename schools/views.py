@@ -733,7 +733,7 @@ def change_student_password_view(request, user_id):
         'form': form,
         'target_user': target_user,
     }
-    return render(request, 'schools/change_student_password.html', context)
+    return render(request, 'schools/change_password.html', context)
 
 
 #@staff_member_required
@@ -858,7 +858,7 @@ def change_school_admin_password_view(request, user_id):
     if target_user.is_staff or target_user.is_superuser:
         # Өөрийнхөөс бусад staff-ийн нууц үгийг солихгүй
         if target_user != request.user:
-            messages.error(request, "Та өөр staff эрхтэй хэрэглэгчийн нууц үгийг эндээс солих боломжгүй.")
+            messages.error(request, "Та өөр staff эрхтэй хэрэглэгчийн нууц үгийг солих боломжгүй.")
             return redirect('manage_all_schools')
 
     if request.method == 'POST':
@@ -874,7 +874,7 @@ def change_school_admin_password_view(request, user_id):
         'form': form,
         'target_user': target_user,
     }
-    return render(request, 'schools/change_student_password.html', context) # Өмнөх template-г дахин ашиглаж болно
+    return render(request, 'schools/change_password.html', context) # Өмнөх template-г дахин ашиглаж болно
 
 
 def school_list_view(request):
