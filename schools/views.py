@@ -707,8 +707,10 @@ def change_student_password_view(request, user_id):
 
     # 2. Модератор нь тухайн сурагчийн сургуульд хамааралтай эсэхийг шалгах.
     try:
-        # Сурагчийн сургуулийг олох
+        # Сурагчийн сургууль
         student_school = target_user.data.school
+        if not student_school:
+            student_school = moderator.data.school
         # Модераторын удирддаг сургуулиудыг олох
         moderator_schools = School.objects.filter(user=moderator)
 
@@ -719,13 +721,14 @@ def change_student_password_view(request, user_id):
         messages.error(request, "Сурагчийн профайлын мэдээлэл олдсонгүй.")
         return redirect('school_dashboard', school_id=moderator.data.school.id)
 
+
     if request.method == 'POST':
         form = SchoolAdminPasswordChangeForm(user=target_user, data=request.POST)
         if form.is_valid():
             form.save()
             messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн нууц үгийг амжилттай солилоо.")
             # Буцах замыг зөв тодорхойлох
-            return redirect('manage_school_by_level', school_id=student_school.id, level_id=target_user.data.level.id)
+            return redirect('manage_school_by_level', school_id=student_school.id, level_id=100)
     else:
         form = SchoolAdminPasswordChangeForm(user=target_user)
 
