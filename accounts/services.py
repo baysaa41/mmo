@@ -23,18 +23,18 @@ def generate_styled_user_dataframe_html(users_queryset, is_staff=False):
     """
     if is_staff:
         fieldnames = ['id', 'username', 'last_name', 'first_name', 'data__province__name',
-                      'data__school', 'data__grade__name', 'data__reg_num', 'data__mobile', 'email']
+                      'data__school__name', 'data__grade__name', 'data__reg_num', 'data__mobile', 'email']
         rename_map = {
             'id': 'ID', 'first_name': 'Нэр', 'last_name': 'Овог', 'username': 'Хэрэглэгчийн нэр',
-            'data__province__name': 'Аймаг/Дүүрэг', 'data__school': 'Cургууль', 'data__grade__name': 'Анги',
+            'data__province__name': 'Аймаг/Дүүрэг', 'data__school__name': 'Cургууль', 'data__grade__name': 'Анги',
             'data__reg_num': 'Регистрын дугаар', 'data__mobile': 'Гар утас', 'email': 'И-мэйл'
         }
     else:
         fieldnames = ['id', 'username', 'last_name', 'first_name', 'data__province__name',
-                      'data__school', 'data__grade__name']
+                      'data__school__name', 'data__grade__name']
         rename_map = {
             'id': 'ID', 'first_name': 'Нэр', 'last_name': 'Овог', 'username': 'Хэрэглэгчийн нэр',
-            'data__province__name': 'Аймаг/Дүүрэг', 'data__school': 'Cургууль', 'data__grade__name': 'Анги'
+            'data__province__name': 'Аймаг/Дүүрэг', 'data__school__name': 'Cургууль', 'data__grade__name': 'Анги'
         }
 
     pd.options.display.float_format = '{:,.0f}'.format
