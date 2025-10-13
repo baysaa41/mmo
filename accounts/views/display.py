@@ -47,7 +47,7 @@ def users(request):
 
 def group_users(request, group_id):
     group = get_object_or_404(Group, pk=group_id)
-    users = group.user_set.all().order_by('data__province__zone', 'data__province', 'data__school')
+    users = group.user_set.all().order_by('data__province__zone', 'data__province', 'data__school__name')
 
     # Filtering logic can also be moved to a service if it gets more complex
     # ...
