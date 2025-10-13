@@ -5,7 +5,12 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime
 from .models import Olympiad, Problem, Result, SchoolYear, ScoreSheet
+from accounts.models import Province
+from schools.models import School
 from django.contrib.auth.models import User
+import pandas as pd
+import numpy as np
+import re
 
 from django.core.cache import cache
 

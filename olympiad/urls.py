@@ -39,6 +39,7 @@ urlpatterns = [
     path('stats/<int:problem_id>/', views_results.problem_stats_view, name='problem_stats'),
     path('stats/olympiad/<int:olympiad_id>/', views_admin.olympiad_problem_stats, name='olympiad_problem_stats'),
     path('stats/<int:olympiad_id>/top/', views_public.olympiad_top_stats, name='olympiad_top_stats'),
+    path('answers/<int:olympiad_id>/', views_results.answers_view, name='olympiad_answer_view'),
 
     # === IV. Бодлого ба агуулга ===
     path('problems/<int:olympiad_id>/', views_public.problems_view, name='olympiad_problems_view'),
