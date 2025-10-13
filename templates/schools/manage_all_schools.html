@@ -15,7 +15,11 @@
                     <th class="text-center align-middle">Аймаг/Дүүрэг</th>
                     <th class="text-center align-middle">Админ</th>
                     <th class="text-center align-middle">Сүүлд нэвтэрсэн</th>
-                    <th class="text-center align-middle" colspan="4">Үйлдэл</th>
+
+                    {# --- ЭНЭ ХЭСЭГТ ӨӨРЧЛӨЛТ ОРСОН --- #}
+                    {% if request.user.is_staff %}
+                        <th class="text-center align-middle" colspan="4">Үйлдэл</th>
+                    {% endif %}
                 </tr>
                 </thead>
                 <tbody>
@@ -38,34 +42,38 @@
                             <div><label>И-мэйл:</label> {{ school.user.email }}</div>
                         </td>
                         <td>{{ school.user.last_login|date:"Y-m-d" }}</td>
-                        <td class="text-center">
-                            <a href="{% url 'edit_school_info' school.id %}" class="btn btn-sm btn-primary" target="_blank">
-                                <i class="fas fa-school"></i> Сургууль
-                            </a>
-                        </td>
-                        <td class="text-center">
-                            <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary" target="_blank">
-                                <i class="fas fa-user-cog"></i> Админ&nbsp;солих
-                            </a>
-                        </td>
-                        <td class="text-center">
-                            {% if school.user %}
-                                <a href="{% url 'change_school_admin_password' school.user.id %}" class="btn btn-sm btn-primary" target="_blank">
-                                    <i class="fas fa-user-edit"></i> Админ&nbsp;нууц&nbsp;үг
+
+                        {# --- ЭНЭ ХЭСЭГТ ӨӨРЧЛӨЛТ ОРСОН --- #}
+                        {% if request.user.is_staff %}
+                            <td class="text-center">
+                                <a href="{% url 'edit_school_info' school.id %}" class="btn btn-sm btn-primary" target="_blank">
+                                    <i class="fas fa-school"></i> Сургууль
                                 </a>
-                            {% else %}
-                                <span class="text-muted">Админгүй</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            {% if school.user %}
-                                <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary" target="_blank">
-                                    <i class="fas fa-user-edit"></i> Админ&nbsp;профайл
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary" target="_blank">
+                                    <i class="fas fa-user-cog"></i> Админ&nbsp;солих
                                 </a>
-                            {% else %}
-                                <span class="text-muted">Админгүй</span>
-                            {% endif %}
-                        </td>
+                            </td>
+                            <td class="text-center">
+                                {% if school.user %}
+                                    <a href="{% url 'change_school_admin_password' school.user.id %}" class="btn btn-sm btn-primary" target="_blank">
+                                        <i class="fas fa-user-edit"></i> Админ&nbsp;нууц&nbsp;үг
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Админгүй</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if school.user %}
+                                    <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary" target="_blank">
+                                        <i class="fas fa-user-edit"></i> Админ&nbsp;профайл
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Админгүй</span>
+                                {% endif %}
+                            </td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
                 </tbody>

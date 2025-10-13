@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Count, Q
-from django.core.mail import send_mail
+from django.utils import timezone
+
 from .email_service import SchoolEmailService
 import random
 import string
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 import io
 import re
 from django.http import HttpResponse
-from datetime import date
+from datetime import date, timedelta
 from openpyxl.styles import Border, Side, Font, Alignment
 
 from .models import School
@@ -771,6 +772,8 @@ def manage_all_schools_view(request):
     name_query = request.GET.get('q', '')
     province_id = request.GET.get('p', '')
     zone_id = request.GET.get('z', '')
+    inactive_filter = request.GET.get('inactive', '')
+    active_filter = request.GET.get('active', '')
 
     # Шүүлтүүрүүдийг хийх
     if name_query:
@@ -779,6 +782,20 @@ def manage_all_schools_view(request):
         all_schools = all_schools.filter(province_id=province_id)
     if zone_id:
         all_schools = all_schools.filter(province__zone_id=zone_id)
+
+    if inactive_filter == '1': # Хэрэв URL-д ?inactive=1 гэж ирвэл
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        # 7 хоногоос өмнө нэвтэрсэн ЭСВЭЛ огт нэвтрээгүй (last_login is NULL) хэрэглэгчдийг шүүнэ.
+        all_schools = all_schools.filter(
+            Q(user__last_login__lt=seven_days_ago) | Q(user__last_login__isnull=True)
+        )
+
+    if active_filter == '1': # Хэрэв URL-д ?active=1 гэж ирвэл
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        # 7 хоногоос дотор нэвтэрсэн хэрэглэгчдийг шүүнэ.
+        all_schools = all_schools.filter(
+            Q(user__last_login__gt=seven_days_ago)
+        )
 
     # Эрэмбэлэх
     all_schools = all_schools.order_by('province__name', 'name')
