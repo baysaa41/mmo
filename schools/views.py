@@ -736,7 +736,7 @@ def change_student_password_view(request, user_id):
     return render(request, 'schools/change_student_password.html', context)
 
 
-@staff_member_required
+#@staff_member_required
 def manage_all_schools_view(request):
     """
     Бүх сургуулийн жагсаалтыг дэлгэрэнгүй мэдээлэлтэй харуулж,
