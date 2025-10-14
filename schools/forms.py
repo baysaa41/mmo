@@ -13,7 +13,7 @@ import re
 class UserForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['username','last_name', 'first_name', 'email']
+        fields = ['last_name', 'first_name', 'email']
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control','disabled': True}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Овог'}),
