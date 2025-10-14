@@ -12,8 +12,9 @@ from django.core.exceptions import ValidationError
 class UserForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['last_name', 'first_name', 'email']
+        fields = ['username','last_name', 'first_name', 'email']
         widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control','disabled': True}),
             'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Овог'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Нэр'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Имэйл'}),
