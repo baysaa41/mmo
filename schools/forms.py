@@ -8,6 +8,7 @@ from schools.models import School
 from schools.models import UploadedExcel
 from django.core.validators import EmailValidator
 from django.core.exceptions import ValidationError
+import re
 
 class UserForm(forms.ModelForm):
     class Meta:
@@ -99,6 +100,12 @@ class UserSearchForm(forms.Form):
         query = self.cleaned_data.get('query')
         if not query:
             return User.objects.none()
+
+        # --- ID=... гэсэн хэлбэрийг шалгах хэсэг ---
+        id_match = re.match(r'^id=(\d+)$', query.strip())
+        if id_match:
+            user_id = int(id_match.group(1))
+            return User.objects.filter(id=user_id)
 
         filters = (
             Q(username__icontains=query) |
