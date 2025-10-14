@@ -70,7 +70,7 @@ class AddUserForm(forms.ModelForm):
 class UserMetaForm(forms.ModelForm):
     class Meta:
         model = UserMeta
-        fields = ['grade', 'level', 'gender', 'mobile', 'is_valid']
+        fields = ['province', 'grade', 'level', 'gender', 'mobile', 'is_valid']
         widgets = {
             'mobile': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Гар утас'}),
             'is_valid': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
