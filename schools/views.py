@@ -228,11 +228,15 @@ def manage_school_by_level(request, school_id, level_id):
 
             # админыг нэмж болохгүй
             if user_to_add.is_superuser:
-                messages.error(request, "Танд энэ хэрэглэгчийг нэмэх эрх байхгүй.")
+                messages.error(request, "Танд супер хэрэглэгчийг нэмэх эрх байхгүй.")
                 return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
+            is_in_old_group = False
+            if user_meta.school and user_meta.school.group:
+                is_in_old_group = user_to_add.groups.filter(pk=user_meta.school.group.pk).exists()
+
             # Хуучин сургууль нь өөр байвал зөвхөн staff эрхтэй хүн сольж чадна
-            if user_meta.school and user_meta.school != school and not request.user.is_staff:
+            if user_meta.school and user_meta.school != school and is_in_old_group and not request.user.is_staff:
                 messages.error(
                     request,
                     f"'{user_to_add.get_full_name()}' хэрэглэгч '{user_meta.school.name}' сургуульд бүртгэлтэй тул нэмэх боломжгүй. "
