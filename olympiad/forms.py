@@ -25,10 +25,14 @@ class ResultsGraderForm(ModelForm):
             'grader_comment': 'Тайлбар'
         }
 
+class MultiFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
 
 class UploadForm(ModelForm):
-    file = forms.ImageField(widget=forms.ClearableFileInput(attrs={'multiple': True}),label='Бодолтын зураг:')
-    # file = forms.ImageField(widget=MultiFileInput(attrs={'multiple': True}), label='Бодолтын зураг:')
+    file = forms.ImageField(
+        widget=MultiFileInput(attrs={'multiple': True}),
+        label='Бодолтын зураг:'
+    )
 
     class Meta:
         model = Upload
@@ -36,9 +40,6 @@ class UploadForm(ModelForm):
         widgets = {
             'result': forms.HiddenInput()
         }
-
-class UploadFileForm(forms.Form):
-    file = forms.FileField()
 
 
 # forms.py

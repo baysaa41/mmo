@@ -181,11 +181,18 @@ class LoginForm(forms.Form):
             raise forms.ValidationError("Ийм хэрэглэгч бүртгэгдээгүй байна.")
         return username
 
+
+class MultiFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
 class EmailForm(forms.Form):
     subject = forms.CharField(max_length=100)
     message = forms.CharField(widget=forms.Textarea)
-    attachments = forms.FileField(widget=forms.ClearableFileInput(attrs={'multiple': True}), required=False)
-
+    attachments = forms.FileField(
+        widget=MultiFileInput(attrs={'multiple': True}),
+        required=False
+    )
 
 class BulkAddUsersToSchoolForm(forms.Form):
     school = forms.ModelChoiceField(

@@ -11,6 +11,48 @@ from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, 
 from ..models import UserMeta
 import re
 
+from oauth2_provider.decorators import protected_resource
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+@protected_resource(scopes=['profile'])
+@require_http_methods(["GET"])
+def user_info(request):
+    """
+    Access token ашиглан хэрэглэгчийн мэдээлэл буцаана
+    """
+    user = request.resource_owner  # OAuth токеноос хэрэглэгч авах
+
+    return JsonResponse({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone': user.profile.phone if hasattr(user, 'profile') else None,
+        'avatar': user.profile.avatar.url if hasattr(user, 'profile') and user.profile.avatar else None,
+    })
+
+
+@protected_resource(scopes=['profile'])
+@require_http_methods(["GET"])
+def user_full_profile(request):
+    """
+    Илүү дэлгэрэнгүй мэдээлэл
+    """
+    user = request.resource_owner
+
+    return JsonResponse({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'date_joined': user.date_joined.isoformat(),
+        'last_login': user.last_login.isoformat() if user.last_login else None,
+        'is_active': user.is_active,
+    })
+
 @login_required(login_url='/accounts/login/')
 def profile(request):
     user_meta, created = UserMeta.objects.get_or_create(user_id=request.user.id)

@@ -11,10 +11,6 @@ from schools.models import School
 
 import re
 
-# create_diploms_mail, create_emails, create_mails зэрэг функцууд энд орно
-# ...
-
-@login_required(login_url='/accounts/login/')
 @login_required
 def send_email_to_schools(request):
     if request.method == "POST":

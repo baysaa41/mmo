@@ -49,4 +49,7 @@ urlpatterns = [
         ),
         name='password_reset_complete'
     ),
+
+    path('user-info/', auth.user_info, name='user_info'),
+    path('user-profile/', auth.user_full_profile, name='user_profile'),
 ]
