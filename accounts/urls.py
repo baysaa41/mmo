@@ -51,5 +51,5 @@ urlpatterns = [
     ),
 
     path('user-info/', auth.user_info, name='user_info'),
-    path('user-profile/', auth.user_full_profile, name='user_profile'),
+    path('user-profile/', auth.user_full_profile, name='user_full_profile'),
 ]
