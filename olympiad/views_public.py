@@ -1,10 +1,8 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from datetime import datetime, timezone, timedelta
-from olympiad.models import SchoolYear
-
-from .models import Olympiad, Problem, Topic
-from django.db.models import Q
+from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic
+from django.db.models import Q, Count
 
 
 def olympiads_home(request):
