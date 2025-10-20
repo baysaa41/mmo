@@ -10,6 +10,8 @@ import random
 import string
 from django.urls import reverse
 
+from django.utils.crypto import get_random_string
+
 import numpy as np
 import logging
 # Logger үүсгэх
@@ -159,7 +161,8 @@ def manage_school_by_level(request, school_id, level_id):
                     with transaction.atomic():
                         new_user = add_user_form.save(commit=False)
                         new_user.username = ''.join(random.choice(string.ascii_letters) for _ in range(32))
-                        temp_password = User.objects.make_random_password(length=20)
+                        # temp_password = User.objects.make_random_password(length=20)
+                        temp_password = get_random_string(20)
                         new_user.set_password(temp_password)
                         new_user.save()
                         new_user.username = f'u{new_user.id}'
