@@ -69,16 +69,31 @@ def olympiad_results(request, olympiad_id):
     zone_id = request.GET.get("z", "0").strip()
     page_number = request.GET.get("page", "1")
 
+    # --- 1. 'update=1' флагийг шалгах ---
+    force_update = request.GET.get('clean', '0') == '1'
+
     # --- cache key үүсгэх ---
     cache_key = f"scores_{olympiad_id}_{province_id}_{zone_id}_{page_number}_{show_all}"
-    score_data = cache.get(cache_key)
 
+    score_data = None # Анхны утгыг None болгох
+
+    # --- 2. 'force_update' ХИЙГЭЭГҮЙ үед л cache-с унших ---
+    if not force_update:
+        score_data = cache.get(cache_key)
+
+    # --- 3. Cache-д байхгүй ЭСВЭЛ 'force_update=1' үед ---
     if not score_data:
+
+        # Хэрэв force_update хийсэн бол мэдээлэх (заавал биш)
+        if force_update:
+            print(f"CACHE FORCED REFRESH: {cache_key}")
+
         # Queryset бэлтгэх
         if show_all:
             scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
         else:
-            scoresheets = ScoreSheet.objects.filter(olympiad=olympiad, total__gt=0)
+            # 0 оноотойг харуулахаар зассан хувилбар (өмнөх асуултын дагуу)
+            scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
 
         problem_range = len(olympiad.problem_set.all()) + 1
 
@@ -101,14 +116,14 @@ def olympiad_results(request, olympiad_id):
         scoresheets = scoresheets.select_related("user__data__school__province", "school").order_by(list_rank_field)
 
         # --- dict болгон хувиргах ---
-        score_data = []
+        score_data_list = [] # Нэрийг нь 'score_data' -аас 'score_data_list' болгов
         for sheet in scoresheets:
             try:
                 province = (
                     (sheet.school.province.name if sheet.school and sheet.school.province else "")
                     or (sheet.user.data.province.name if sheet.user.data and sheet.user.data.province else "")
                 )
-                score_data.append({
+                score_data_list.append({
                     "scoresheet_id": sheet.id,
                     "list_rank": getattr(sheet, list_rank_field),
                     "last_name": sheet.user.last_name,
@@ -126,16 +141,19 @@ def olympiad_results(request, olympiad_id):
                 print("Алдаа:", e, sheet, sheet.user.id)
 
         # --- pagination ---
-        paginator = Paginator(score_data, 50)
+        paginator = Paginator(score_data_list, 50) # 'score_data' биш 'score_data_list'-г ашиглана
         page_obj = paginator.get_page(page_number)
 
         # зөвхөн page_obj хадгалах
         score_data = page_obj
 
-        # cache-д хадгалах
-        cache.set(cache_key, score_data, None)
+        # --- 4. Cache-д шинээр дарж бичих ---
+        # 'None' гэвэл cache хэзээ ч expire болохгүй.
+        # 3600 (1 цаг) гэх мэт хугацаа тавих нь илүү зохимжтой.
+        cache.set(cache_key, score_data, 3600) # 1 цаг (эсвэл None)
 
     else:
+        # Cache-с олдсон (учир нь force_update=False байсан)
         page_obj = score_data
 
     # --- хэрэглэгчийн оноо (динамикаар DB-с авах) ---
@@ -149,7 +167,7 @@ def olympiad_results(request, olympiad_id):
     context = {
         "olympiad": olympiad,
         "page_title": "Нэгдсэн дүн",
-        "score_data": page_obj,     # зөвхөн одоогийн хуудасны өгөгдөл
+        "score_data": page_obj,
         "page_obj": page_obj,
         "user_score_data": user_score_data,
         "problem_range": range(1, len(olympiad.problem_set.all()) + 1),
