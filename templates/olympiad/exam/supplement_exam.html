@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static latex_filter %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" />
+<style>
+    :root {
+        --primary: #2563eb;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-600: #4b5563;
+        --gray-800: #1f2937;
+    }
+    body { background: var(--gray-50); }
+    .exam-container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+    .exam-header {
+        background: white; border-radius: 12px; padding: 2rem; margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .exam-title { font-size: 1.5rem; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem; }
+    .exam-meta { display: flex; gap: 1.5rem; flex-wrap: wrap; color: var(--gray-600); font-size: 0.9rem; }
+    .instructions {
+        background: #fef3c7; border-left: 4px solid var(--warning);
+        padding: 1rem; border-radius: 8px; margin-bottom: 2rem; font-size: 0.9rem;
+    }
+    .problem-card {
+        background: white; border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .problem-number {
+        display: inline-block; background: var(--primary); color: white; font-weight: 600;
+        padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;
+    }
+    .problem-statement { font-size: 1.05rem; line-height: 1.7; color: var(--gray-800); margin-bottom: 1.5rem; }
+    .uploads-section {
+        background: var(--gray-50); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+    }
+    .thumb img {
+        width: 100px; height: 100px; object-fit: cover; border-radius: 6px; margin: 3px; border: 1px solid #ddd;
+    }
+    .btn-back {
+        padding: .7rem 1.4rem; font-size: .9rem; border-radius: 6px;
+        background: var(--gray-600); color: white; border: none; cursor: pointer;
+        text-decoration: none; display: inline-block; margin-top: 2rem;
+    }
+    .btn-back:hover { background: var(--gray-800); }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <div class="exam-container">
+
+        {% csrf_token %}
+
+        <div class="exam-header">
+            <div class="exam-title">📎 Нэмэлт материал оруулах</div>
+            <div class="exam-meta">
+                <span>{{ olympiad.name }}</span>
+                <span>👤 {{ contestant.first_name }}, {{ contestant.last_name }}</span>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <strong>📝 Анхааруулга:</strong> Та энд зөвхөн нэмэлт нотолгоо, тайлбар, зураг, файл оруулна.
+            <br>Энэ материал нь <b>баталгаажаагүй</b> (is_accepted=False) төлөвтэй хадгалагдаж, зөвхөн багш/шүүгч зөвшөөрсний дараа хүчинтэй болно.
+        </div>
+
+        {% autoescape off %}
+        {% for result in results %}
+        <div class="problem-card">
+            <div class="problem-number">Бодлого {{ result.problem.order }}</div>
+
+            <div class="problem-statement">{{ result.problem.statement|latex|linebreaksbr }}</div>
+
+            <!-- ✅ UPLOADED FILES LIST -->
+            <div id="uploaded-list-{{ result.id }}">
+                {% include 'olympiad/exam/uploaded_list.html' with result=result %}
+            </div>
+
+            <div id="supplement-list-{{ result.id }}">
+                {% include 'olympiad/exam/supplement_list.html' with result=result %}
+            </div>
+
+            <div class="dropzone" id="supplement-dropzone-{{ result.id }}"></div>
+
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    var dropzoneId = "#supplement-dropzone-{{ result.id }}";
+                    var resultId = "{{ result.id }}";
+                    var postUrl = "{% url 'student_supplement_view' olympiad_id=olympiad.id %}";
+
+                    // Энэ хэсгээс CSRF токенийг уншина
+                    var csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                    new Dropzone(dropzoneId, {
+                        url: postUrl,
+                        paramName: "file",
+                        maxFilesize: 10,
+                        acceptedFiles: ".jpg,.jpeg,.png,.gif,.webp",
+
+                        // 400 алдааг засч буй хэсэг (result_id)
+                        params: {
+                            'result_id': resultId
+                        },
+
+                        // 403 алдааг засч буй хэсэг (CSRF Token)
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        },
+
+                        // Амжилттай болсны дараа жагсаалтыг дахин ачаална
+                        success: function(file, response) {
+                            if (response && response.success) {
+                                loadSuppplements(resultId);
+                            }
+                            this.removeFile(file);
+                        },
+
+                        // Алдаа гарвал хэрэглэгчид харуулна
+                        error: function(file, message) {
+                            console.error("Dropzone error:", message);
+                            var errorMsg = "Файл илгээхэд алдаа гарлаа.";
+                            if (typeof message === "object" && message.message) {
+                                errorMsg = "Алдаа: " + message.message;
+                            } else if (typeof message === "string") {
+                                errorMsg = message.includes("CSRF token missing") ? "Алдаа: CSRF токен олдсонгүй." : message;
+                            }
+                            alert(errorMsg);
+                             this.removeFile(file);
+                        }
+                    });
+                });
+            </script>
+            </div>
+        {% endfor %}
+        {% endautoescape %}
+
+        <a href="{% url 'olympiad_home' %}" class="btn-back">⬅ Буцах</a>
+
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+
+<script>
+    // Dropzone-г автоматаар ажиллахыг зогсооно
+    Dropzone.autoDiscover = false;
+
+
+    function loadUploads(resultId) {
+        $("#uploaded-list-" + resultId).load(
+            "/olympiads/exam/uploads/" + resultId + "/"
+        );
+    }
+
+    // Энэ функц нь 'supplement-list.html'-г дахин ачаалахад ашиглагдана
+    function loadSuppplements(resultId) {
+        var listContainerId = "#supplement-list-" + resultId;
+        $(listContainerId).load("/olympiads/exam/supplements/list/" + resultId + "/");
+    }
+</script>
+{% endblock %}

@@ -314,7 +314,16 @@
 
         {% if result.get_uploads %}
             <div id="images" class="images-gallery">
+                <span><b>Бодолт:</b></span>
                 {% for upload in result.get_uploads %}
+                    <img src="/media/{{ upload.file }}"
+                         class="image-thumbnail"
+                         alt="Бодолт {{ forloop.counter }}"
+                         data-index="{{ forloop.counter0 }}"
+                         title="Дарж том харах">
+                {% endfor %}
+                <span><b>Нэмэлт:</b></span>
+                {% for upload in result.get_accepted_supplements %}
                     <img src="/media/{{ upload.file }}"
                          class="image-thumbnail"
                          alt="Бодолт {{ forloop.counter }}"

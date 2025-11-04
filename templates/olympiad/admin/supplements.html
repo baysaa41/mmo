@@ -41,7 +41,7 @@
                         {{ upload.result.contestant.first_name }},
                         {{ upload.result.contestant.data.mobile }}
                     </td>
-                    <td>{{ upload.result.olympiad.name }}</td>
+                    <td>{{ upload.result.olympiad.name }}, {{ upload.result.olympiad.level.name }}</td>
                     <td>{% autoescape off %}Бодлого №{{ upload.result.problem.order }}<br>
                         {{ upload.result.problem.statement|latex }}{% endautoescape %}
                     </td>

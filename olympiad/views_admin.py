@@ -219,7 +219,7 @@ def approve_supplement(request):
         upload = Upload.objects.filter(pk=id).first()
         upload.result.state = 3
         upload.result.save()
-        upload.is_official = True
+        upload.is_accepted = True
         upload.save()
         return JsonResponse({'msg': 'Оk.'})
     return JsonResponse({'msg': 'No uploads.'})

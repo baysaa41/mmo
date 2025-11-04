@@ -1,0 +1,12 @@
+<div style="margin-bottom: 1rem; font-weight:600;">📂 Бодолт</div>
+<div>
+{% for upload in result.get_uploads %}
+    <span class="thumb">
+        <a href="{{ upload.file.url }}" target="_blank">
+            <img src="{{ upload.file.url }}" style="width:100px;height:100px;border-radius:6px;">
+        </a>
+    </span>
+{% empty %}
+    <p style="color:#666;font-size:0.85rem;">Одоогоор файл илгээгээгүй байна.</p>
+{% endfor %}
+</div>

@@ -1,297 +1,139 @@
 {% extends 'base.html' %}
-
-{% load latex_filter %}
+{% load static latex_filter %}
 
 {% block extra_css %}
-    <style>
-        :root {
-            --primary: #2563eb;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-600: #4b5563;
-            --gray-800: #1f2937;
-        }
-
-        body {
-            background: var(--gray-50);
-        }
-
-        .exam-container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
-
-        /* Header */
-        .exam-header {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .exam-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--gray-800);
-            margin-bottom: 0.5rem;
-        }
-
-        .exam-meta {
-            display: flex;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-            color: var(--gray-600);
-            font-size: 0.9rem;
-        }
-
-        /* Instructions */
-        .instructions {
-            background: #fef3c7;
-            border-left: 4px solid var(--warning);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-
-        /* Problem Card */
-        .problem-card {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            transition: box-shadow 0.2s;
-        }
-
-        .problem-card:hover {
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .problem-number {
-            display: inline-block;
-            background: var(--primary);
-            color: white;
-            font-weight: 600;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-
-        .problem-statement {
-            font-size: 1.05rem;
-            line-height: 1.7;
-            color: var(--gray-800);
-            margin-bottom: 1.5rem;
-        }
-
-        /* Uploads Section */
-        .uploads-section {
-            background: var(--gray-50);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .uploads-section strong {
-            color: var(--gray-800);
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-
-        .upload-link {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background: white;
-            border: 1px solid var(--gray-200);
-            border-radius: 6px;
-            color: var(--primary);
-            text-decoration: none;
-            margin: 0.25rem 0;
-            transition: all 0.2s;
-        }
-
-        .upload-link:hover {
-            background: var(--gray-50);
-            border-color: var(--primary);
-            transform: translateX(4px);
-        }
-
-        /* Upload Button */
-        .upload-btn {
-            background: var(--primary);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .upload-btn:hover {
-            background: #1d4ed8;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-
-        /* Submit Section */
-        .submit-section {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin-top: 2rem;
-        }
-
-        .submit-btn {
-            background: var(--success);
-            color: white;
-            padding: 1rem 3rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .submit-btn:hover {
-            background: #059669;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-
-        /* Form Area */
-        .upload-form-area {
-            background: var(--gray-50);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
-            min-height: 60px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .exam-container {
-                padding: 1rem;
-            }
-
-            .exam-header, .problem-card {
-                padding: 1.5rem;
-            }
-
-            .exam-meta {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-        }
-    </style>
+<link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" />
+<style>
+    :root {
+        --primary: #2563eb;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-600: #4b5563;
+        --gray-800: #1f2937;
+    }
+    body { background: var(--gray-50); }
+    .exam-container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+    .exam-header {
+        background: white; border-radius: 12px; padding: 2rem; margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .exam-title { font-size: 1.5rem; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem; }
+    .exam-meta { display: flex; gap: 1.5rem; flex-wrap: wrap; color: var(--gray-600); font-size: 0.9rem; }
+    .instructions {
+        background: #fef3c7; border-left: 4px solid var(--warning);
+        padding: 1rem; border-radius: 8px; margin-bottom: 2rem; font-size: 0.9rem;
+    }
+    .problem-card {
+        background: white; border-radius: 12px; padding: 2rem; margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); transition: box-shadow 0.2s;
+    }
+    .problem-card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .problem-number {
+        display: inline-block; background: var(--primary); color: white; font-weight: 600;
+        padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;
+    }
+    .problem-statement { font-size: 1.05rem; line-height: 1.7; color: var(--gray-800); margin-bottom: 1.5rem; }
+    .uploads-section {
+        background: var(--gray-50); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+    }
+    .thumb img {
+        width: 100px; height: 100px; object-fit: cover; border-radius: 6px; margin: 3px; border: 1px solid #ddd;
+    }
+    .submit-section {
+        background: white; border-radius: 12px; padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; margin-top: 2rem;
+    }
+    .submit-btn {
+        background: var(--success); color: white; padding: 1rem 3rem; border: none; border-radius: 8px;
+        font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .submit-btn:hover { background: #059669; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+</style>
 {% endblock %}
+
 
 {% block content %}
-    <div class="container">
-        <div class="exam-container">
-            <!-- Header -->
-            <div class="exam-header">
-                <div class="exam-title">{{ olympiad.name }} - Шалгалт</div>
-                <div class="exam-meta">
-                    <span>🆔 ID: {{ contestant.id }}</span>
-                    <span>👤 {{ contestant.first_name }}, {{ contestant.last_name }}</span>
+<div class="container">
+    <div class="exam-container">
+
+        <!-- Header -->
+        <div class="exam-header">
+            <div class="exam-title">{{ olympiad.name }} - Шалгалт</div>
+            <div class="exam-meta">
+                <span>🆔 ID: {{ contestant.id }}</span>
+                <span>👤 {{ contestant.first_name }}, {{ contestant.last_name }}</span>
+            </div>
+            {% if olympiad.description %}
+                <div style="margin-top: 1rem; color: var(--gray-600); font-size: 0.9rem;">
+                    {% autoescape off %}{{ olympiad.description }}{% endautoescape %}
                 </div>
-                {% if olympiad.description %}
-                    <div style="margin-top: 1rem; color: var(--gray-600); font-size: 0.9rem;">
-                        {% autoescape off %}{{ olympiad.description }}{% endautoescape %}
-                    </div>
-                {% endif %}
-            </div>
-
-            <!-- Instructions -->
-            <div class="instructions">
-                <strong>⚠️ Анхааруулга:</strong> Бодолтоо файл хэлбэрээр хуулж илгээнэ үү.
-                Зөвхөн зургийн файл илгээх боломжтой.
-            </div>
-
-            <!-- Problems -->
-            {% autoescape off %}
-                {% for result in results %}
-                    <div class="problem-card">
-                        <div class="problem-number">Бодлого {{ result.problem.order }}</div>
-                        <div class="problem-statement">
-                            {{ result.problem.statement|latex|linebreaksbr }}
-                        </div>
-
-                        {% if result.get_uploads %}
-                            <div class="uploads-section">
-                                <strong>📎 Илгээсэн бодолтууд:</strong>
-                                {% for upload in result.get_uploads %}
-                                    <div>
-                                        <a href="/media/{{ upload.file }}" target="_blank" class="upload-link">
-                                            📄 {{ upload.file }}
-                                        </a>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        <div id="form-{{ result.id }}" class="upload-form-area"></div>
-
-                        <div style="margin-top: 1rem;">
-                            <button type="button" class="upload-btn" onclick="upload({{ result.id }})">
-                                📤 Бодолт илгээх
-                            </button>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% endautoescape %}
-
-            <!-- Submit Section -->
-            <div class="submit-section">
-                <button type="button" class="submit-btn" id="final-submit">
-                    ✅ Шалгалт дуусгах
-                </button>
-                <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--gray-600);">
-                    Бүх бодлогоо илгээсний дараа энэ товчийг дарна уу.
-                </p>
-            </div>
+            {% endif %}
         </div>
+
+        <!-- Instructions -->
+        <div class="instructions"><strong>⚠️ Анхааруулга:</strong> Бодолтоо зураг хэлбэрээр оруулна уу.</div>
+
+        <!-- Problems -->
+        {% autoescape off %}
+        {% for result in results %}
+        <div class="problem-card">
+            <div class="problem-number">Бодлого {{ result.problem.order }}</div>
+            <div class="problem-statement">{{ result.problem.statement|latex|linebreaksbr }}</div>
+
+            <!-- ✅ UPLOADED FILES LIST -->
+            <div id="uploaded-list-{{ result.id }}">
+                {% include 'olympiad/exam/uploaded_list.html' with result=result %}
+            </div>
+
+            <!-- ✅ DROPZONE Upload area -->
+            <div class="dropzone" id="dropzone-{{ result.id }}"></div>
+
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    initDropzone(
+                        "#dropzone-{{ result.id }}",
+                        "{{ result.id }}",
+                        "{% url 'upload_api' %}",
+                        function () { loadUploads({{ result.id }}); }
+                    );
+                });
+            </script>
+
+        </div>
+        {% endfor %}
+        {% endautoescape %}
+
+        <!-- ✅ Submit Final -->
+        <div class="submit-section">
+            <button type="button" class="submit-btn" id="final-submit">✅ Шалгалт дуусгах</button>
+            <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--gray-600);">
+                Бүх бодлогоо илгээсний дараа энэ товчийг дарна уу.
+            </p>
+        </div>
+
     </div>
+</div>
 {% endblock %}
 
+
 {% block extra_js %}
-    <script>
-        function upload(i) {
-            // Бусад upload form-уудыг хаах
-            document.querySelectorAll('.upload-form-area').forEach(form => {
-                form.innerHTML = '';
-            });
+<script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+<script src="{% static 'js/dropzone.init.js' %}"></script>
 
-            // Тухайн бодлогын form-ийг дуудах
-            $.get('{% url 'olympiad_get_result_form' %}', {
-                'result_id': i,
-                'is_supplement': false  // ← ШИНЭ: exam гэдгийг зааж өгөх
-            }, function (data) {
-                const formArea = document.getElementById('form-' + i);
-                formArea.innerHTML = '';
-                formArea.innerHTML = data;
-            });
-        }
-
-        // Шалгалт дуусгах товч
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('final-submit').addEventListener('click', function() {
-                if (confirm('Та шалгалтаа дуусгахдаа итгэлтэй байна уу? Дуусгасны дараа засвар хийх боломжгүй.')) {
-                    window.location.href = '{% url "contest_end" olympiad_id=olympiad.id %}';
-                }
-            });
-        });
-    </script>
+<script>
+function loadUploads(resultId) {
+    $("#uploaded-list-" + resultId).load(
+        "/olympiads/exam/uploads/" + resultId + "/"
+    );
+}
+document.getElementById("final-submit").addEventListener("click", function () {
+    if (confirm("Та шалгалтыг дуусгахдаа итгэлтэй байна уу?")) {
+        window.location.href = "{% url 'contest_end' olympiad_id=olympiad.id %}";
+    }
+});
+</script>
 {% endblock %}

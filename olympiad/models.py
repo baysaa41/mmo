@@ -264,13 +264,16 @@ class Result(models.Model):
         return self.upload_set.filter(is_accepted=True).count()
 
     def get_uploads(self):
-        return self.upload_set.filter(is_accepted=True)
+        return self.upload_set.filter(is_accepted=True, is_supplement=False)
 
     def get_supplements_num(self):
-        return self.upload_set.filter(is_accepted=False).count()
+        return self.upload_set.filter(is_supplement=True).count()
 
     def get_supplements(self):
-        return self.upload_set.filter(is_accepted=False)
+        return self.upload_set.filter(is_supplement=True)
+
+    def get_accepted_supplements(self):
+        return self.upload_set.filter(is_supplement=True,is_accepted=True)
 
     def get_score(self):
         if self.score:

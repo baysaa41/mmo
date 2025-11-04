@@ -8,10 +8,14 @@ from . import (
     result_views,
 )
 from .views_contest_cbv import (
-    # StudentQuizView,
+    StudentQuizView,
     StudentExamView,
     StudentSupplementView,
     ContestEndView,
+    UploadAPI,
+    DeleteUploadAPI,
+    UploadedListView,
+    SupplementListView,
 )
 from .views_api import SaveAnswerAPIView
 
@@ -25,12 +29,23 @@ urlpatterns = [
     path('grading/home/', views_admin.grading_home, name='olympiad_grading_home'),
 
     # === II. Оролцогчийн хэсэг (Contestant Views) ===
-    # path('quiz/<int:olympiad_id>/', StudentQuizView.as_view(), name='student_quiz'),
+    path('quiz/<int:olympiad_id>/', StudentQuizView.as_view(), name='student_quiz'),
     path('exam/<int:olympiad_id>/', StudentExamView.as_view(), name='student_exam'),
     path('supplements/<int:olympiad_id>/', StudentSupplementView.as_view(), name='student_supplement_view'),
     path('end/<int:olympiad_id>/', ContestEndView.as_view(), name='contest_end'),
     path('student/materials', views_contest.student_exam_materials_view, name='student_exam_materials'),
     path('api/save-answer/', SaveAnswerAPIView.as_view(), name='api_save_answer'),
+    path("exam/uploads/<int:result_id>/", UploadedListView.as_view(), name="uploaded_list"),
+
+    # path("exam/supplement/<int:olympiad_id>/", SupplementExamView.as_view(), name="supplement_exam"), <-- Устгасан
+    # path("api/supplement/upload/", SupplementUploadAPI.as_view(), name="supplement_upload_api"), <-- Устгасан
+    path("exam/supplements/list/<int:result_id>/", SupplementListView.as_view(), name="supplement_list"),
+
+
+
+    path('api/upload/', UploadAPI.as_view(), name='upload_api'),
+    path('api/upload/delete/<int:upload_id>/', DeleteUploadAPI.as_view(), name='upload_delete_api'),
+
 
     # === III. Дүн ба статистик ===
     path('results/<int:olympiad_id>/', views_results.olympiad_results, name='olympiad_result_view'),

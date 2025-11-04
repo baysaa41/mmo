@@ -1,0 +1,10 @@
+<div style="margin-bottom: 1rem; font-weight:600;">📂 Нэмэлт материал</div>
+<div>
+{% for file in result.get_supplements %}
+    <span class="thumb">
+        <img src="{{ file.file.url }}">
+    </span>
+{% empty %}
+    <div style="font-size:.9rem; color:#6b7280;">Одоогоор материал оруулаагүй байна.</div>
+{% endfor %}
+</div>
