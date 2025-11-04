@@ -8,7 +8,7 @@ from . import (
     result_views,
 )
 from .views_contest_cbv import (
-    StudentQuizView,
+    # StudentQuizView,
     StudentExamView,
     StudentSupplementView,
     ContestEndView,
@@ -25,7 +25,7 @@ urlpatterns = [
     path('grading/home/', views_admin.grading_home, name='olympiad_grading_home'),
 
     # === II. Оролцогчийн хэсэг (Contestant Views) ===
-    path('quiz/<int:olympiad_id>/', StudentQuizView.as_view(), name='student_quiz'),
+    # path('quiz/<int:olympiad_id>/', StudentQuizView.as_view(), name='student_quiz'),
     path('exam/<int:olympiad_id>/', StudentExamView.as_view(), name='student_exam'),
     path('supplements/<int:olympiad_id>/', StudentSupplementView.as_view(), name='student_supplement_view'),
     path('end/<int:olympiad_id>/', ContestEndView.as_view(), name='contest_end'),

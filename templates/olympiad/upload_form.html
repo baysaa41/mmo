@@ -5,7 +5,9 @@
         📎 Бодлого {{ result.problem.order }} — Файл сонгох
     </div>
 
-    <form method="post" enctype="multipart/form-data" id="student-result-{{ result.id }}" action="{{ form_action_url }}">
+    <form method="post" enctype="multipart/form-data"
+          id="upload-form-{{ result.id }}"
+          action="{{ form_action_url }}">
         {% csrf_token %}
         {{ form|crispy }}
 
@@ -21,92 +23,3 @@
 
     <div id="upload-results-{{ result.id }}" class="upload-results" style="display:none;"></div>
 </div>
-
-<script>
-(function() {
-    const formId = 'student-result-{{ result.id }}';
-    const form = document.getElementById(formId);
-    const resultsDiv = document.getElementById('upload-results-{{ result.id }}');
-
-    if (!form) return;
-
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const formData = new FormData(form);
-        const submitBtn = form.querySelector('.upload-submit-btn');
-        const fileInput = form.querySelector('input[type="file"]');
-
-        if (!fileInput.files.length) {
-            alert('⚠️ Зураг сонгоно уу.');
-            return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.innerText = '⏳ Хуулж байна...';
-        resultsDiv.style.display = 'block';
-        resultsDiv.innerHTML = '<p style="color:gray;">⏳ Файл хуулж байна...</p>';
-
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(res => res.json().then(data => ({status: res.status, data})))
-        .then(resp => {
-            submitBtn.disabled = false;
-            submitBtn.innerText = '✅ Серверт хуулах';
-
-            const data = resp.data;
-
-            // ✅ UI дээр үр дүн харуулах
-            resultsDiv.innerHTML = buildResultHTML(data);
-
-            // ✅ Supplement upload хийх үед LIVE refresh
-            if (data.success && typeof refreshUploadedList === "function" && '{{ is_supplement }}' === 'True') {
-                refreshUploadedList({{ result.id }}, data.uploaded_files);
-            }
-
-            // ✅ Exam upload хийх үед list refresh (optional)
-            if (data.success && typeof refreshUploadedUploads === "function" && '{{ is_supplement }}' === 'False') {
-                refreshUploadedUploads({{ result.id }}, data.uploaded_files);
-            }
-
-            fileInput.value = '';
-        })
-        .catch(err => {
-            console.error(err);
-            resultsDiv.innerHTML = `<div class="upload-result-item upload-result-error">❌ Алдаа гарлаа: ${err}</div>`;
-            submitBtn.disabled = false;
-            submitBtn.innerText = '✅ Серверт хуулах';
-        });
-    });
-
-    function buildResultHTML(data) {
-        let html = '';
-
-        if (data.uploaded_files?.length) {
-            html += `<div><strong style="color:#10b981;">✅ Амжилттай:</strong>`;
-            data.uploaded_files.forEach(f => {
-                html += `<div class="upload-result-item upload-result-success">📄 ${f.name}</div>`;
-            });
-            html += '</div>';
-        }
-
-        if (data.failed_files?.length) {
-            html += `<div style="margin-top:.5rem;"><strong style="color:#ef4444;">❌ Амжилтгүй:</strong>`;
-            data.failed_files.forEach(f => {
-                html += `<div class="upload-result-item upload-result-error">📄 ${f.name}<br><small>${f.reason}</small></div>`;
-            });
-            html += '</div>';
-        }
-
-        html += `<p style="margin-top:1rem; font-weight:bold;">${data.message}</p>`;
-        return html;
-    }
-})();
-
-function cancelUpload(id) {
-    document.getElementById('form-' + id).innerHTML = '';
-}
-</script>
