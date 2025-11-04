@@ -1,138 +1,112 @@
 {% load crispy_forms_filters %}
 
-<style>
-    .upload-form-container {
-        background: white;
-        border: 2px dashed #d1d5db;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-top: 1rem;
-    }
-
-    .upload-form-title {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .upload-form-container form {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .upload-form-container .form-group {
-        margin-bottom: 0;
-    }
-
-    .upload-form-container input[type="file"] {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        background: #f9fafb;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .upload-form-container input[type="file"]:hover {
-        border-color: #2563eb;
-        background: white;
-    }
-
-    .upload-form-container input[type="file"]:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-
-    .upload-form-actions {
-        display: flex;
-        gap: 0.75rem;
-        margin-top: 0.5rem;
-    }
-
-    .upload-submit-btn {
-        background: #2563eb;
-        color: white;
-        padding: 0.65rem 1.5rem;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        flex: 1;
-    }
-
-    .upload-submit-btn:hover {
-        background: #1d4ed8;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-    }
-
-    .upload-cancel-btn {
-        background: #6b7280;
-        color: white;
-        padding: 0.65rem 1.5rem;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .upload-cancel-btn:hover {
-        background: #4b5563;
-    }
-
-    .file-info {
-        font-size: 0.8rem;
-        color: #6b7280;
-        margin-top: 0.5rem;
-    }
-
-    .upload-icon {
-        font-size: 1.2rem;
-    }
-</style>
-
 <div class="upload-form-container">
     <div class="upload-form-title">
-        <span class="upload-icon">📎</span>
-        Бодлого {{ result.problem.order }} - Файл сонгох
+        📎 Бодлого {{ result.problem.order }} — Файл сонгох
     </div>
 
-    <form method="post" enctype="multipart/form-data" id="student-result-{{ result.id }}">
+    <form method="post" enctype="multipart/form-data" id="student-result-{{ result.id }}" action="{{ form_action_url }}">
         {% csrf_token %}
-        {{ form | crispy }}
+        {{ form|crispy }}
 
         <div class="file-info">
-            💡 Зөвхөн зураг (.jpg, .png) форматтай файл хүлээн авна
+            💡 Зөвхөн зураг (.jpg, .png, .gif, .webp) формат. Олон зураг зэрэг сонгож болно. Файл тус бүр 10MB-аас бага байх ёстой.
         </div>
 
         <div class="upload-form-actions">
-            <button type="submit" class="upload-submit-btn">
-                ✅ Серверт хуулах
-            </button>
-            <button type="button" class="upload-cancel-btn" onclick="cancelUpload({{ result.id }})">
-                ❌ Болих
-            </button>
+            <button type="submit" class="upload-submit-btn">✅ Серверт хуулах</button>
+            <button type="button" class="upload-cancel-btn" onclick="cancelUpload({{ result.id }})">❌ Болих</button>
         </div>
     </form>
+
+    <div id="upload-results-{{ result.id }}" class="upload-results" style="display:none;"></div>
 </div>
 
 <script>
-    function cancelUpload(resultId) {
-        const formArea = document.getElementById('form-' + resultId);
-        if (formArea) {
-            formArea.innerHTML = '';
+(function() {
+    const formId = 'student-result-{{ result.id }}';
+    const form = document.getElementById(formId);
+    const resultsDiv = document.getElementById('upload-results-{{ result.id }}');
+
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const submitBtn = form.querySelector('.upload-submit-btn');
+        const fileInput = form.querySelector('input[type="file"]');
+
+        if (!fileInput.files.length) {
+            alert('⚠️ Зураг сонгоно уу.');
+            return;
         }
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = '⏳ Хуулж байна...';
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = '<p style="color:gray;">⏳ Файл хуулж байна...</p>';
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json().then(data => ({status: res.status, data})))
+        .then(resp => {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '✅ Серверт хуулах';
+
+            const data = resp.data;
+
+            // ✅ UI дээр үр дүн харуулах
+            resultsDiv.innerHTML = buildResultHTML(data);
+
+            // ✅ Supplement upload хийх үед LIVE refresh
+            if (data.success && typeof refreshUploadedList === "function" && '{{ is_supplement }}' === 'True') {
+                refreshUploadedList({{ result.id }}, data.uploaded_files);
+            }
+
+            // ✅ Exam upload хийх үед list refresh (optional)
+            if (data.success && typeof refreshUploadedUploads === "function" && '{{ is_supplement }}' === 'False') {
+                refreshUploadedUploads({{ result.id }}, data.uploaded_files);
+            }
+
+            fileInput.value = '';
+        })
+        .catch(err => {
+            console.error(err);
+            resultsDiv.innerHTML = `<div class="upload-result-item upload-result-error">❌ Алдаа гарлаа: ${err}</div>`;
+            submitBtn.disabled = false;
+            submitBtn.innerText = '✅ Серверт хуулах';
+        });
+    });
+
+    function buildResultHTML(data) {
+        let html = '';
+
+        if (data.uploaded_files?.length) {
+            html += `<div><strong style="color:#10b981;">✅ Амжилттай:</strong>`;
+            data.uploaded_files.forEach(f => {
+                html += `<div class="upload-result-item upload-result-success">📄 ${f.name}</div>`;
+            });
+            html += '</div>';
+        }
+
+        if (data.failed_files?.length) {
+            html += `<div style="margin-top:.5rem;"><strong style="color:#ef4444;">❌ Амжилтгүй:</strong>`;
+            data.failed_files.forEach(f => {
+                html += `<div class="upload-result-item upload-result-error">📄 ${f.name}<br><small>${f.reason}</small></div>`;
+            });
+            html += '</div>';
+        }
+
+        html += `<p style="margin-top:1rem; font-weight:bold;">${data.message}</p>`;
+        return html;
     }
+})();
+
+function cancelUpload(id) {
+    document.getElementById('form-' + id).innerHTML = '';
+}
 </script>

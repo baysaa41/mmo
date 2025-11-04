@@ -3,46 +3,90 @@
 {% load crispy_forms_tags %}
 {% load latex_filter %}
 
-{% block title %}Шалгалт{% endblock %}
+{% block title %}Нэмэлт материал илгээх{% endblock %}
 
-{% block menu %}
-{% endblock %}
+{% block menu %}{% endblock %}
 
 {% block content %}
-    <h3>ID: {{ contestant.id }}. {{ contestant.first_name }}, {{ contestant.last_name }}</h3>
-    <p class="alert alert-danger">Бодлого хамгаалах хүсэлт ирүүлэхдээ цаасны дээр <strong>Бодлого хамгаалах хүсэлт</strong>
-        гэж тодоор бичиж ирүүлнэ.
-        Дүгнэх аргачлалын аль заалтаар оноо авах үндэслэл үүсч буйг тодорхой бичээрэй. Бодлого хамгаалах сурагч өөрийн үндсэн материалын зураг системд ороогүй, эсвэл шаардлага хангахгүй гэж үзвэл
-        нэмэлтээр оруулах хүсэлт ирүүлж болно (өөрт зураг нь байхгүй бол материалыг нэмүүлэх хүсэлт ирүүлнэ).
-        Хүсэлтийг хүлээн авсан тохиолдолд материал үндсэн материалд нэмэгдэх (дүнгийн хуудаснаас харж болно) ба энэ хуудсанд харагдахгүй. Шаардлага хангаагүй материалыг системээс устгана. Энэ тохиолдолд дүнгийн хуудас болон энэ хуудасны алинд ч материал харагдахгүй.</p>
-    <h4>Бодлогууд</h4>
+    <h3>🆔 ID: {{ contestant.id }} — {{ contestant.first_name }} {{ contestant.last_name }}</h3>
+
+    <p class="alert alert-info">
+        Нэмэлт материал илгээх үед зураг нь <strong>“Шалгаж байна”</strong> төлөвтэй хадгалагдана.
+        Хэрэв зөвшөөрөгдвөл гол материал руу шилжинэ. Татгалзсан материал харагдахгүй.
+    </p>
+
+    <h4>📘 Бодлогууд</h4>
+
     {% autoescape off %}
-        {% for result in results %}
-            <div>{{ result.problem.order }}. {{ result.problem.statement|latex|linebreaksbr }}</div>
-            <div class="my-3">
+    {% for result in results %}
+        <div class="card mb-4 p-3">
+            <div class="mb-2"><strong>{{ result.problem.order }}.</strong> {{ result.problem.statement|latex|linebreaksbr }}</div>
+
+            <!-- ==== SUPPLEMENT UPLOAD LIST (LIVE) ==== -->
+            <div id="uploaded-list-{{ result.id }}" class="mb-3">
                 {% if result.get_supplements %}
-                    <h5>Илгээсэн бодолтууд:</h5>
-                        {% for upload in result.upload_set.all %}
-                            <li class="list-inline-item"><img src="/media/{{ upload.file }}" style="height: 60px"></li>
+                    <h6>📎 Илгээсэн нэмэлт материалууд:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for upload in result.get_supplements %}
+                            <div class="border p-1 rounded" style="width:90px; text-align:center;">
+                                <img src="{{ upload.file.url }}" style="width: 100%; height: 70px; object-fit: cover;">
+                                <div style="font-size: 0.7rem; margin-top:4px;">
+                                    {% if upload.is_accepted %}
+                                        <span class="badge bg-success">Зөвшөөрөгдсөн</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Шалгаж байна</span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         {% endfor %}
-                    <a href="{% url 'olympiad_result_viewer' %}?result_id={{ result.id }}"
-                       target="_blank" class="btn btn-sm btn-secondary">Харах</a>
+                    </div>
                 {% endif %}
             </div>
-            <div id="form-{{ result.id }}" class="upload-form"></div>
-            <div class="my-3">
-                <button type="submit" class="btn btn-sm btn-primary" onclick="upload({{ result.id }})">Бодолт илгээх
-                </button>
-            </div>
-        {% endfor %}
+
+            <!-- ==== AJAX FORM AREA ==== -->
+            <div id="form-{{ result.id }}"></div>
+
+            <button type="button" class="btn btn-primary btn-sm mt-2" onclick="openUploadForm({{ result.id }})">
+                📤 Бодолт илгээх
+            </button>
+        </div>
+    {% endfor %}
     {% endautoescape %}
+
     <script>
-        function upload(i) {
-            $(".upload-form").empty()
-            $.get('{% url 'olympiad_get_result_form' %}', {'result_id': i}, function (data) {
-                $("#form-" + i).empty()
-                $("#form-" + i).append(data)
-            })
+        function openUploadForm(resultId) {
+            // clear all other forms
+            document.querySelectorAll('[id^="form-"]').forEach(e => e.innerHTML = "");
+
+            $.get('{% url "olympiad_get_result_form" %}', {
+                result_id: resultId,
+                is_supplement: true
+            }, function (data) {
+                document.getElementById('form-' + resultId).innerHTML = data;
+            });
+        }
+
+        // CALL THIS AFTER SUCCESSFUL AJAX UPLOAD:
+        function refreshUploadedList(resultId, items) {
+            const container = document.getElementById("uploaded-list-" + resultId);
+
+            let html = `<h6>📎 Илгээсэн нэмэлт материалууд:</h6><div class="d-flex flex-wrap gap-2">`;
+
+            items.forEach(f => {
+                html += `
+                    <div class="border p-1 rounded" style="width:90px; text-align:center;">
+                        <img src="${f.url}" style="width: 100%; height: 70px; object-fit: cover;">
+                        <div style="font-size: 0.7rem; margin-top:4px;">
+                            <span class="badge bg-warning text-dark">Шалгаж байна</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+
+            container.innerHTML = html;
         }
     </script>
+
 {% endblock %}

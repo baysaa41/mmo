@@ -31,7 +31,8 @@ class MultiFileInput(forms.ClearableFileInput):
 class UploadForm(ModelForm):
     file = forms.ImageField(
         widget=MultiFileInput(attrs={'multiple': True}),
-        label='Бодолтын зураг:'
+        label='Бодолтын зураг:',
+        required=False  # Олон файл авах тул required=False
     )
 
     class Meta:
@@ -40,6 +41,11 @@ class UploadForm(ModelForm):
         widgets = {
             'result': forms.HiddenInput()
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Олон файлыг request.FILES.getlist()-ээр шалгах тул энд form validation хийхгүй
+        return cleaned_data
 
 
 # forms.py
@@ -72,4 +78,3 @@ class ChangeScoreSheetSchoolForm(forms.Form):
                 pass
         elif self.initial.get("province"):
             self.fields["school"].queryset = School.objects.filter(province=self.initial["province"]).order_by("name")
-

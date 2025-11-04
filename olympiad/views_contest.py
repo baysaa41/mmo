@@ -232,14 +232,35 @@ def quiz_staff_view(request, quiz_id, contestant_id):
 
 
 def get_result_form(request):
-    result_id = int(request.GET.get('result_id', 0))
-    if result_id > 0:
-        result = Result.objects.get(pk=result_id)
-        upload = Upload(result_id=result_id)
-        form = UploadForm(instance=upload)
-        return render(request, "olympiad/upload_form.html", {'form': form, 'result': result})
+    """
+    AJAX request-аар UploadForm буцаах
+    """
+    result_id = request.GET.get('result_id')
+    result = get_object_or_404(Result, pk=result_id)
+
+    # Form үүсгэх
+    form = UploadForm(initial={'result': result})
+
+    # Form action URL үүсгэх
+    olympiad_id = result.olympiad.id
+
+    # StudentExamView эсвэл StudentSupplementView-н URL
+    # Хэрэв exam бол 'student_exam', supplement бол 'student_supplement_view'
+    is_supplement = request.GET.get('is_supplement', False)
+
+    if is_supplement:
+        form_action_url = reverse('student_supplement_view', kwargs={'olympiad_id': olympiad_id})
     else:
-        return JsonResponse({'status': 'failed'})
+        form_action_url = reverse('student_exam', kwargs={'olympiad_id': olympiad_id})
+
+    context = {
+        'form': form,
+        'result': result,
+        'form_action_url': form_action_url,  # ← ЭНЭ ШИНЭ
+    }
+
+    return render(request, 'olympiad/upload_form.html', context)
+
 
 
 def result_viewer(request):

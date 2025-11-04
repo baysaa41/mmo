@@ -275,7 +275,10 @@
             });
 
             // Тухайн бодлогын form-ийг дуудах
-            $.get('{% url 'olympiad_get_result_form' %}', {'result_id': i}, function (data) {
+            $.get('{% url 'olympiad_get_result_form' %}', {
+                'result_id': i,
+                'is_supplement': false  // ← ШИНЭ: exam гэдгийг зааж өгөх
+            }, function (data) {
                 const formArea = document.getElementById('form-' + i);
                 formArea.innerHTML = '';
                 formArea.innerHTML = data;

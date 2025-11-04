@@ -310,8 +310,13 @@ class Upload(models.Model):
     upload_time = models.DateTimeField(auto_created=True,auto_now_add=True)
     is_accepted = models.BooleanField(default=True)
     is_supplement = models.BooleanField(default=False)
+
+    # --- ЗАСВАРЛАСАН ХЭСЭГ ---
     def file_to(instance, filename):
-        return 'static/results/' + str(filename)
+        # Файлыг 'media/results/result_{id}/filename' гэх мэт цэгцтэй замд хадгална
+        # 'static' хавтас руу хадгалах нь буруу юм.
+        return f'results/result_{instance.result.id}/{filename}'
+
     file = models.ImageField(upload_to=file_to)
 
     def __str__(self):
@@ -447,4 +452,3 @@ class ScoreSheet(models.Model):
         # нийт оноо тооцох
         self.total = sum(getattr(self, f"s{i+1}") or 0 for i in range(20))
         super().save(*args, **kwargs)
-

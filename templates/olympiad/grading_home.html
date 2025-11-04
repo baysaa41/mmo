@@ -28,7 +28,7 @@
             {% for problem in olympiad.problem_set.all|dictsort:"order" %}
                 <tr>
                     <td>{{ forloop.parentloop.counter }}.{{ forloop.counter }}</td>
-                    <td>{{ problem.olympiad.name }}</td>
+                    <td>{{ problem.olympiad.name }}, {{ problem.olympiad.level.name }}</td>
                     <td>Бодлого №{{ problem.order }} ({{ problem.id }})<br>{% autoescape off %}{{ problem.statement|latex|linebreaksbr }}{% endautoescape %}</td>
                     <td>{{ problem.get_nongraded }}</td>
                     <td>{{ problem.get_graded }}</td>
