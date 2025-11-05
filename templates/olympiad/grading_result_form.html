@@ -295,7 +295,6 @@
 </style>
 
 <div class="grading-form-container">
-    <!-- Problem Section -->
     <div class="problem-section">
         <div class="problem-label">📝 Бодлого {{ result.problem.order }}</div>
         <div class="problem-statement">
@@ -303,35 +302,35 @@
         </div>
     </div>
 
-    <!-- Images Section -->
     <div class="images-section">
         <div class="images-section-title">
             <span>🖼️ Илгээсэн бодолт</span>
             <span style="color: #6b7280; font-weight: normal; font-size: 0.875rem;">
-                ({{ result.get_uploads|length }} файл)
+                ({{ result.get_upload_num }} файл)
             </span>
         </div>
 
-        {% if result.get_uploads %}
+        {% if result.get_uploads or result.get_accepted_supplements %}
             <div id="images" class="images-gallery">
                 <span><b>Бодолт:</b></span>
                 {% for upload in result.get_uploads %}
-                    <img src="/media/{{ upload.file }}"
+                    <img src="{{ upload.file.url }}"
                          class="image-thumbnail"
                          alt="Бодолт {{ forloop.counter }}"
                          data-index="{{ forloop.counter0 }}"
                          title="Дарж том харах">
                 {% endfor %}
+
                 <span><b>Нэмэлт:</b></span>
                 {% for upload in result.get_accepted_supplements %}
-                    <img src="/media/{{ upload.file }}"
+                    <img src="{{ upload.file.url }}"
                          class="image-thumbnail"
-                         alt="Бодолт {{ forloop.counter }}"
-                         data-index="{{ forloop.counter0 }}"
+                         alt="Нэмэлт {{ forloop.counter }}"
+                         data-index="{{ forloop.parentloop.counter0|add:result.get_uploads|length }}"
                          title="Дарж том харах">
                 {% endfor %}
             </div>
-            <button type="button" class="view-images-btn" id="view-images-btn">
+            <button typeb="button" class="view-images-btn" id="view-images-btn">
                 🔍 Зургийг том харах (эргүүлэх боломжтой)
             </button>
         {% else %}
@@ -341,7 +340,6 @@
         {% endif %}
     </div>
 
-    <!-- Grading Form -->
     <div class="grading-form-section">
         <form method="post" id="grading-form" action="{% url 'olympiad_grade_result' %}?result_id={{ result.id }}">
             {% csrf_token %}

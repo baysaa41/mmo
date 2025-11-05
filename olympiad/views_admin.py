@@ -208,7 +208,7 @@ def exam_staff_view(request, olympiad_id, contestant_id):
 
 @staff_member_required
 def staff_supplements_view(request):
-    uploads = Upload.objects.filter(is_accepted=False).order_by('upload_time')
+    uploads = Upload.objects.filter(is_accepted=False, is_supplement=True).order_by('upload_time')
     return render(request, 'olympiad/admin/supplements.html', {'uploads': uploads})
 
 
