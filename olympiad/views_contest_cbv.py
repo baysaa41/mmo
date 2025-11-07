@@ -321,25 +321,56 @@ class OlympiadResultViewerView(LoginRequiredMixin, TemplateView):
 
 
 class UploadAPI(View):
+    """
+    Dropzone.js-ээс ирэх AJAX хүсэлтийг боловсруулах (Student болон Staff-д)
+    exam.html template-ээс дуудагддаг.
+    """
+
+    # Validation тохиргоог бусад view-ээс хуулах
+    ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
     def post(self, request, *args, **kwargs):
         result_id = request.POST.get('result_id')
 
-        # ✅ Dropzone-д paramName="file" → бүх файл request.FILES.values() дотор байна
+        # Dropzone нь 'file' эсвэл 'file[]' гэж илгээж болно
         files = request.FILES.getlist('file') or request.FILES.getlist('file[]') or list(request.FILES.values())
 
         if not result_id:
-            return JsonResponse({'success': False, 'message': 'result_id дутуу байна'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Result ID дутуу байна'}, status=400)
         if not files:
             return JsonResponse({'success': False, 'message': 'Файл илгээгээгүй байна'}, status=400)
 
-        result = Result.objects.filter(id=result_id, contestant=request.user).first()
-        if not result:
-            return JsonResponse({'success': False, 'message': 'Result олдсонгүй'}, status=44)
+        # --- 1. RESULT-Г ОЛОХ (Шалгалтгүйгээр) ---
+        try:
+            result = Result.objects.get(id=result_id)
+        except Result.DoesNotExist:
+             return JsonResponse({'success': False, 'message': 'Result олдсонгүй (ID буруу)'}, status=404)
 
+        # --- 2. ХАНДАЛТЫГ ШАЛГАХ (❗️ЗАДАГ БАГ❗️) ---
+        # Нэвтэрсэн хэрэглэгч STAFF биш БӨГӨӨД
+        # мөн Result-ийн эзэн (contestant) биш бол алдаа буцаах
+        if not request.user.is_staff and result.contestant != request.user:
+            return JsonResponse({'success': False, 'message': 'Хандах эрхгүй'}, status=403)
+
+        # --- 3. ФАЙЛУУДЫГ ШАЛГАХ (САЙН LOGIC НЭМСЭН) ---
         uploaded, failed = [], []
 
         for file in files:
+            # Файлын өргөтгөл шалгах
+            ext = file.name.split('.')[-1].lower()
+            if ext not in self.ALLOWED_EXTENSIONS:
+                failed.append({'name': file.name, 'reason': f'Зөвхөн {", ".join(self.ALLOWED_EXTENSIONS)} зөвшөөрнө.'})
+                continue
+
+            # Файлын хэмжээ шалгах
+            if file.size > self.MAX_FILE_SIZE:
+                failed.append({'name': file.name, 'reason': '10MB-аас бага файл оруулна уу.'})
+                continue
+
             try:
+                # Staff-н хуулсан файл: is_accepted=True, is_supplement=False
+                # Сурагчийн хуулсан файл ч мөн адил.
                 upload = Upload.objects.create(
                     result=result,
                     file=file,
@@ -352,10 +383,12 @@ class UploadAPI(View):
                     'name': upload.file.name
                 })
             except Exception as e:
-                failed.append({'name': file.name, 'reason': str(e)})
+                # Жишээ нь, ImageField эвдрэлтэй зураг авбал энд алдаа гарна
+                failed.append({'name': file.name, 'reason': f'Хадгалахад алдаа гарлаа: {e}'})
 
         if uploaded:
-            Result.objects.filter(pk=result_id).update(state=1)
+            # Хамгийн багадаа 1 файл амжилттай хуулсан бол state-г өөрчлөх
+            Result.objects.filter(pk=result_id).update(state=1) # 1 = submitted
 
         return JsonResponse({
             'success': len(uploaded) > 0,
@@ -394,11 +427,6 @@ class UploadedListView(TemplateView):
         ctx["result"] = Result.objects.get(id=result_id)
         return ctx
 
-
-# ⛔️ [SupplementUploadAPI КЛАССЫГ ЭНДЭЭС УСТГАСАН] ⛔️
-
-
-# ⛔️ [SupplementExamView КЛАССЫГ ЭНДЭЭС УСТГАСАН] ⛔️
 
 
 class SupplementListView(TemplateView):

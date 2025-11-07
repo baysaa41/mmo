@@ -13,6 +13,7 @@ from .forms import ChangeScoreSheetSchoolForm, ResultsGraderForm, UploadForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 
 @require_POST
 @csrf_exempt  # production-д бол csrf token ашиглаарай
@@ -177,34 +178,115 @@ def scoresheet_change_school(request, scoresheet_id):
 
 @staff_member_required
 def exam_staff_view(request, olympiad_id, contestant_id):
-    if request.user.is_staff:
-        contestant = User.objects.get(pk=contestant_id)
-        if request.method == 'POST':
-            form = UploadForm(request.POST, request.FILES)
-            if form.is_valid():
-                files = request.FILES.getlist('file')
-                for f in files:
-                    upload = Upload(file=f, result_id=request.POST['result'])
-                    upload.result.state = 3
-                    upload.result.save()
-                    upload.save()
-            else:
-                print("it is not valid!")
+    if not request.user.is_staff:
+        return render(request, 'error.html', {'message':'Хандах эрхгүй.'})
+
+    # --- Объектуудыг эхлээд авах ---
+    contestant = get_object_or_404(User, pk=contestant_id)
+    olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+
+    # --- POST ХҮСЭЛТ (ФАЙЛ ХУУЛАХ) ---
+    if request.method == 'POST':
+        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+        form = UploadForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            files = request.FILES.getlist('file')
+            result_id = request.POST.get('result')
+
+            # Аюулгүй байдлын шалгалт: Энэ Result нь тухайн сурагчийнх мөн үү?
+            result = Result.objects.filter(pk=result_id, contestant=contestant, olympiad=olympiad).first()
+            if not result:
+                msg = 'Result ID олдсонгүй эсвэл буруу сурагчийнх байна.'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': msg}, status=400)
+                messages.error(request, msg)
+                return redirect('olympiad_exam_staff', olympiad_id=olympiad_id, contestant_id=contestant_id)
+
+            # --- Файл шалгах (views_contest_cbv.py-аас хуулсан сайн логик) ---
+            ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+            MAX_SIZE = 10 * 1024 * 1024  # 10MB
+            uploaded_files, failed_files = [], []
+
+            for f in files:
+                ext = f.name.split('.')[-1].lower()
+                if ext not in ALLOWED_EXT:
+                    failed_files.append({'name': f.name, 'reason': f'Зөвхөн {", ".join(ALLOWED_EXT)} өргөтгөл зөвшөөрнө.'})
+                    continue
+                if f.size > MAX_SIZE:
+                    failed_files.append({'name': f.name, 'reason': '10MB-аас бага файл оруулна уу.'})
+                    continue
+
+                try:
+                    # Staff-н хуулсан файл: is_accepted=True, is_supplement=False
+                    up = Upload.objects.create(
+                        file=f,
+                        result=result,
+                        is_accepted=True,
+                        is_supplement=False
+                    )
+                    uploaded_files.append({'name': f.name, 'url': up.file.url, 'id': up.id})
+                except Exception as e:
+                    failed_files.append({'name': f.name, 'reason': f'Хадгалахад алдаа гарлаа: {e}'})
+
+            if uploaded_files:
+                # Таны хуучин кодонд 'state = 3' (Маргаантай) байсан
+                # Гэхдээ staff хуулж байгаа бол 'state = 1' (Засагдаагүй) байх нь зөв
+                result.state = 1
+                result.save()
+
+            # --- Хэрэглэгчид хариу өгөх ---
+            message = (
+                f'✅ {len(uploaded_files)} файлыг амжилттай илгээлээ.' if uploaded_files and not failed_files else
+                f'⚠️ {len(uploaded_files)} амжилттай, {len(failed_files)} амжилтгүй.' if uploaded_files else
+                '❌ Бүх файл алдаатай.'
+            )
+            success = bool(uploaded_files)
+
+            if is_ajax:
+                return JsonResponse({
+                    'success': success,
+                    'message': message,
+                    'uploaded_files': uploaded_files,
+                    'failed_files': failed_files
+                }, status=200 if success else 400)
+
+            (messages.success if success else messages.error)(request, message)
+            for it in failed_files:
+                messages.warning(request, f"{it['name']}: {it['reason']}")
+
             return redirect('olympiad_exam_staff', olympiad_id=olympiad_id, contestant_id=contestant_id)
 
-        olympiad = Olympiad.objects.filter(pk=olympiad_id).first()
-        if olympiad:
-            problems = olympiad.problem_set.all().order_by('order')
-            for problem in problems:
-                Result.objects.get_or_create(contestant_id=contestant_id, olympiad_id=olympiad_id,
-                                             problem_id=problem.id)
+        else:
+            # --- FORM БУРУУ (INVALID) ҮЕД ---
+            error_msg = "Форм буруу байна. " + \
+                        ". ".join([f"{field}: {err[0]}" for field, err in form.errors.items()])
 
-        results = Result.objects.filter(contestant_id=contestant_id, olympiad_id=olympiad_id).order_by('problem__order')
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': error_msg}, status=400)
 
-        return render(request, 'olympiad/exam/exam.html',
-                      {'results': results, 'olympiad': olympiad, 'contestant': contestant})
-    else:
-        return render(request, 'error.html', {'message':'Хандах эрхгүй.'})
+            messages.error(request, error_msg)
+            # Хуудас дахин ачаалахад алдааг харуулна
+            return redirect('olympiad_exam_staff', olympiad_id=olympiad_id, contestant_id=contestant_id)
+
+    # --- GET ХҮСЭЛТ (Хуудсыг анх харуулах) ---
+    # Result-үүд байгаа эсэхийг шалгаж, үүсгэх
+    problems = olympiad.problem_set.all().order_by('order')
+    with transaction.atomic():
+        for problem in problems:
+            Result.objects.get_or_create(
+                contestant=contestant,
+                olympiad=olympiad,
+                problem=problem
+            )
+
+    results = Result.objects.filter(
+        contestant=contestant,
+        olympiad=olympiad
+    ).order_by('problem__order')
+
+    return render(request, 'olympiad/exam/exam.html',
+                  {'results': results, 'olympiad': olympiad, 'contestant': contestant})
 
 @staff_member_required
 def staff_supplements_view(request):
