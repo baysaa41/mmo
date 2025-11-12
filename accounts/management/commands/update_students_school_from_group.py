@@ -1,47 +1,62 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.contrib.auth.models import User
-from accounts.models import UserMeta, SchoolData
+from accounts.models import UserMeta
 from schools.models import School
+from collections import defaultdict
 
 
 class Command(BaseCommand):
-    help = ("School.group-т харьяалагдаж буй бүх хэрэглэгчийн "
-            "UserMeta.school талбарыг шинэчилж, "
-            "харгалзах SchoolData мөрийг устгана.")
+    help = ("School.group-д харьяалагдаж буй хэрэглэгчдийн UserMeta.school талбарыг шинэчилнэ. "
+            "Зөвхөн 1 сургуулийн group-д харьяалагдаж буй хэрэглэгчдийг шинэчилнэ, "
+            "олон сургуульд харьяалагдсан бол өөрчлөхгүй.")
 
     @transaction.atomic
     def handle(self, *args, **options):
         updated_count = 0
-        deleted_count = 0
+        skipped_multiple = 0
 
-        # Бүх сургуулиудыг шалгах
+        # Хэрэглэгч -> [сургуулиуд] толь бичиг үүсгэх
+        user_schools = defaultdict(list)
+
+        # Бүх сургуулиудыг шалгаж, хэрэглэгч бүр ямар сургуулиудад байгааг тодорхойлох
         for school in School.objects.select_related('group'):
             if not school.group:
-                continue  # group байхгүй бол алгасана
+                continue
 
-            # тухайн сургуулийн group-д байгаа бүх хэрэглэгч
             users_in_group = school.group.user_set.all()
-
             for user in users_in_group:
-                try:
-                    meta = UserMeta.objects.get(user=user)
-                except UserMeta.DoesNotExist:
-                    continue
+                user_schools[user.id].append(school)
 
-                # Хэрэв school хоосон бол тухайн сургуулиар шинэчилнэ
+        # Одоо хэрэглэгч бүрийг шалгаад шинэчлэх
+        for user_id, schools in user_schools.items():
+            if len(schools) > 1:
+                # Олон сургуульд харьяалагдсан бол алгасах
+                skipped_multiple += 1
+                user = User.objects.get(id=user_id)
+                school_names = ', '.join([s.name for s in schools])
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Алгасав: {user.username} нь {len(schools)} сургуульд байна: {school_names}"
+                    )
+                )
+                continue
+
+            # Зөвхөн 1 сургуульд байвал шинэчлэх
+            school = schools[0]
+            try:
+                meta = UserMeta.objects.get(user_id=user_id)
                 if not meta.school:
                     meta.school = school
                     meta.save(update_fields=['school'])
                     updated_count += 1
-
-                # SchoolData хүснэгтэд байвал устгана
-                deleted, _ = SchoolData.objects.filter(user_id=user.id).delete()
-                deleted_count += deleted
+                    self.stdout.write(f"Шинэчилсэн: {meta.user.username} → {school.name}")
+            except UserMeta.DoesNotExist:
+                continue
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"UserMeta.school шинэчилсэн: {updated_count}, "
-                f"устгасан SchoolData мөр: {deleted_count}"
+                f"\nУспех: {updated_count} хэрэглэгчийн сургуулийг шинэчиллээ\n"
+                f"Алгасав: {skipped_multiple} хэрэглэгч олон сургуульд харьяалагдсан байна"
             )
         )

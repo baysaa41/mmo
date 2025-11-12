@@ -1,0 +1,92 @@
+{% extends "oauth2_provider/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block oauth_content %}
+<div class="text-center mb-4">
+    <img src="{% static 'logo.png' %}" alt="ММО Лого" class="oauth-logo img-fluid">
+    <h4 class="fw-bold mb-2">Монголын Математикийн Олимпиад</h4>
+    <small class="text-muted">Зөвшөөрөл олгох</small>
+</div>
+
+{% if not error %}
+    <div class="text-center mb-3">
+        <p class="mb-2">
+            <span class="oauth-app-name">{{ application.name }}</span>
+            апликэйшн таны мэдээлэлд хандах эрх хүсч байна.
+        </p>
+    </div>
+
+    <form id="authorizationForm" method="post">
+        {% csrf_token %}
+
+        {% for field in form %}
+            {% if field.is_hidden %}
+                {{ field }}
+            {% endif %}
+        {% endfor %}
+
+        <div class="permission-list">
+            <h6 class="fw-bold mb-3">
+                <i class="fas fa-shield-alt text-primary me-2"></i>
+                Хүсч буй эрхүүд:
+            </h6>
+            <ul class="list-unstyled mb-0">
+                {% for scope in scopes_descriptions %}
+                    <li>
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        {{ scope }}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% if form.errors %}
+            <div class="alert alert-danger" role="alert">
+                {{ form.errors }}
+            </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-outline-secondary btn-lg flex-fill">
+                <i class="fas fa-times me-2"></i>
+                Татгалзах
+            </button>
+            <button type="submit" name="allow" class="btn btn-primary btn-lg flex-fill">
+                <i class="fas fa-check me-2"></i>
+                Зөвшөөрөх
+            </button>
+        </div>
+    </form>
+
+    <div class="text-center mt-4">
+        <small class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Зөвшөөрлийг дараа нь тохиргооноос цуцлах боломжтой
+        </small>
+    </div>
+
+{% else %}
+    <div class="text-center">
+        <div class="alert alert-danger" role="alert">
+            <h5 class="alert-heading">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Алдаа: {{ error.error }}
+            </h5>
+            <hr>
+            <p class="mb-0">{{ error.description }}</p>
+        </div>
+
+        <a href="/" class="btn btn-primary mt-3">
+            <i class="fas fa-home me-2"></i>
+            Нүүр хуудас руу буцах
+        </a>
+    </div>
+{% endif %}
+{% endblock %}
