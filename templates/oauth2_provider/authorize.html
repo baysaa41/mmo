@@ -349,9 +349,9 @@
                           {% endfor %}
 
                           <div class="app-info">
-                              <div class="app-name">{{ application.name }}</div>
+                              <div class="app-name">MathMinds.Club</div>
                               <div class="app-description">
-                                  {% trans "Application requires the following permissions" %}
+                                  Дараах зөвшөөрлийг хүсч байна
                               </div>
                           </div>
 
@@ -363,21 +363,19 @@
                           {% endif %}
 
                           <div class="permissions">
-                              <h3>{% trans "Requested Permissions" %}</h3>
+                              <h3>Шаардлагатай зөвшөөрөл</h3>
                               <ul>
-                                  {% for scope in scopes_descriptions %}
-                                      <li>{{ scope }}</li>
-                                  {% endfor %}
+                                  <li>Хэрэглэгчийн мэдээлэл</li>
                               </ul>
                           </div>
 
                           <div class="button-group">
-                              <input type="submit" class="btn-cancel" value="{% trans 'Cancel' %}" name="cancel"/>
-                              <input type="submit" class="btn-authorize" name="allow" value="{% trans 'Authorize' %}"/>
+                              <input type="submit" class="btn-cancel" value="Татгалзах" name="cancel"/>
+                              <input type="submit" class="btn-authorize" name="allow" value="Зөвшөөрөх"/>
                           </div>
 
                           <div class="security-note">
-                              <p>{% trans "You can revoke this authorization anytime from your account settings" %}</p>
+                              <p>Үүнийг та дараа нь хэзээч цуцлах боломжтой.</p>
                           </div>
                       </form>
                   {% else %}
