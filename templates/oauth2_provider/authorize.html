@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+  {% load i18n %}
+  <!DOCTYPE html>
   <html lang="mn">
   <head>
       <meta charset="utf-8">
-      <title>MathMinds - Зөвшөөрөл</title>
+      <title>{% trans "Authorize" %} - MathMinds</title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
           * {
@@ -22,7 +23,7 @@
           }
 
           .container {
-              max-width: 450px;
+              max-width: 480px;
               width: 100%;
           }
 
@@ -31,13 +32,13 @@
               border-radius: 20px;
               box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
               overflow: hidden;
-              animation: slideUp 0.4s ease;
+              animation: slideUp 0.5s ease;
           }
 
           @keyframes slideUp {
               from {
                   opacity: 0;
-                  transform: translateY(30px);
+                  transform: translateY(40px);
               }
               to {
                   opacity: 1;
@@ -47,81 +48,111 @@
 
           .auth-header {
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              padding: 40px 30px;
+              padding: 45px 35px;
               text-align: center;
               color: white;
+              position: relative;
+              overflow: hidden;
+          }
+
+          .auth-header::before {
+              content: '';
+              position: absolute;
+              top: -50%;
+              right: -50%;
+              width: 200%;
+              height: 200%;
+              background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+              animation: pulse 8s ease-in-out infinite;
+          }
+
+          @keyframes pulse {
+              0%, 100% { transform: scale(1); }
+              50% { transform: scale(1.1); }
           }
 
           .logo {
-              width: 80px;
-              height: 80px;
+              width: 85px;
+              height: 85px;
               background: white;
-              border-radius: 20px;
+              border-radius: 22px;
               display: inline-flex;
               align-items: center;
               justify-content: center;
-              font-size: 36px;
+              font-size: 40px;
               font-weight: bold;
               color: #667eea;
-              margin-bottom: 15px;
-              box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+              margin-bottom: 18px;
+              box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+              position: relative;
+              z-index: 1;
           }
 
           .auth-header h1 {
-              font-size: 24px;
-              margin-bottom: 5px;
+              font-size: 26px;
+              margin-bottom: 6px;
               font-weight: 600;
+              position: relative;
+              z-index: 1;
           }
 
           .auth-header p {
-              font-size: 14px;
-              opacity: 0.9;
+              font-size: 15px;
+              opacity: 0.95;
+              position: relative;
+              z-index: 1;
           }
 
           .auth-body {
-              padding: 35px 30px;
+              padding: 38px 35px;
           }
 
           .app-info {
               text-align: center;
-              margin-bottom: 30px;
-              padding: 20px;
-              background: #f8f9ff;
-              border-radius: 12px;
+              margin-bottom: 32px;
+              padding: 24px;
+              background: linear-gradient(135deg, #f8f9ff 0%, #fff5f8 100%);
+              border-radius: 14px;
+              border: 2px solid #e9ecff;
           }
 
           .app-name {
-              font-size: 18px;
-              font-weight: 600;
-              color: #667eea;
-              margin-bottom: 8px;
+              font-size: 20px;
+              font-weight: 700;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              margin-bottom: 10px;
           }
 
           .app-description {
-              font-size: 14px;
+              font-size: 15px;
               color: #666;
               line-height: 1.6;
           }
 
           .permissions {
               background: #f8f9fa;
-              border-radius: 12px;
-              padding: 20px;
-              margin-bottom: 25px;
+              border-radius: 14px;
+              padding: 24px;
+              margin-bottom: 28px;
+              border: 2px solid #e9ecef;
           }
 
           .permissions h3 {
-              font-size: 14px;
-              font-weight: 600;
+              font-size: 15px;
+              font-weight: 700;
               color: #333;
-              margin-bottom: 15px;
+              margin-bottom: 18px;
               display: flex;
               align-items: center;
           }
 
           .permissions h3:before {
               content: "🛡️";
-              margin-right: 8px;
+              margin-right: 10px;
+              font-size: 20px;
           }
 
           .permissions ul {
@@ -129,32 +160,76 @@
           }
 
           .permissions li {
-              padding: 10px 0;
+              padding: 12px 0;
               font-size: 14px;
               color: #555;
               display: flex;
               align-items: flex-start;
+              line-height: 1.6;
+              border-bottom: 1px solid #e9ecef;
+          }
+
+          .permissions li:last-child {
+              border-bottom: none;
+              padding-bottom: 0;
           }
 
           .permissions li:before {
               content: "✓";
               color: #10b981;
               font-weight: bold;
+              margin-right: 12px;
+              font-size: 18px;
+              flex-shrink: 0;
+          }
+
+          .error-box {
+              background: #fee;
+              border: 2px solid #fcc;
+              border-radius: 12px;
+              padding: 20px;
+              margin-bottom: 20px;
+              color: #c33;
+          }
+
+          .error-box h2 {
+              font-size: 18px;
+              margin-bottom: 10px;
+              display: flex;
+              align-items: center;
+          }
+
+          .error-box h2:before {
+              content: "⚠️";
               margin-right: 10px;
-              font-size: 16px;
+          }
+
+          .error-box p {
+              font-size: 14px;
+              line-height: 1.6;
+          }
+
+          .form-errors {
+              background: #fff3cd;
+              border: 2px solid #ffc107;
+              border-radius: 10px;
+              padding: 15px;
+              margin-bottom: 20px;
+              color: #856404;
+              font-size: 14px;
           }
 
           .button-group {
               display: flex;
-              gap: 12px;
-              margin-top: 25px;
+              gap: 14px;
+              margin-top: 28px;
           }
 
-          button {
+          input[type="submit"] {
               flex: 1;
-              padding: 14px 20px;
+              padding: 16px 24px;
               border: none;
-              border-radius: 10px;
+              border-radius: 12px;
               font-size: 16px;
               font-weight: 600;
               cursor: pointer;
@@ -169,49 +244,86 @@
 
           .btn-cancel:hover {
               background: #e9ecef;
-              transform: translateY(-2px);
-              box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+              transform: translateY(-3px);
+              box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+          }
+
+          .btn-cancel:active {
+              transform: translateY(-1px);
           }
 
           .btn-authorize {
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               color: white;
+              position: relative;
+              overflow: hidden;
+          }
+
+          .btn-authorize:before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: -100%;
+              width: 100%;
+              height: 100%;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+              transition: left 0.5s;
+          }
+
+          .btn-authorize:hover:before {
+              left: 100%;
           }
 
           .btn-authorize:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+              transform: translateY(-3px);
+              box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+          }
+
+          .btn-authorize:active {
+              transform: translateY(-1px);
           }
 
           .security-note {
               text-align: center;
-              margin-top: 20px;
-              padding-top: 20px;
-              border-top: 1px solid #e9ecef;
+              margin-top: 24px;
+              padding-top: 24px;
+              border-top: 2px solid #e9ecef;
           }
 
           .security-note p {
-              font-size: 12px;
+              font-size: 13px;
               color: #868e96;
-              line-height: 1.6;
+              line-height: 1.7;
           }
 
           .security-note p:before {
               content: "ℹ️";
-              margin-right: 5px;
+              margin-right: 6px;
           }
 
-          @media (max-width: 480px) {
+          @media (max-width: 520px) {
               .auth-header {
-                  padding: 30px 20px;
+                  padding: 35px 25px;
               }
 
               .auth-body {
-                  padding: 25px 20px;
+                  padding: 28px 25px;
               }
 
               .button-group {
                   flex-direction: column;
+                  gap: 12px;
+              }
+
+              input[type="submit"] {
+                  width: 100%;
+              }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+              * {
+                  animation: none !important;
+                  transition: none !important;
               }
           }
       </style>
@@ -222,51 +334,60 @@
               <div class="auth-header">
                   <div class="logo">∑</div>
                   <h1>MathMinds Club</h1>
-                  <p>Зөвшөөрөл олгох</p>
+                  <p>{% trans "Authorize" %}</p>
               </div>
 
               <div class="auth-body">
-                  <form id="authorizationForm" method="post">
-                      <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                  {% if not error %}
+                      <form id="authorizationForm" method="post">
+                          {% csrf_token %}
 
-                      {% for field in form %}
-                          {% if field.is_hidden %}
-                              {{ field }}
-                          {% endif %}
-                      {% endfor %}
+                          {% for field in form %}
+                              {% if field.is_hidden %}
+                                  {{ field }}
+                              {% endif %}
+                          {% endfor %}
 
-                      <div class="app-info">
-                          <div class="app-name">{{ application.name }}</div>
-                          <div class="app-description">
-                              апликэйшн таны мэдээлэлд хандах эрх хүсч байна
+                          <div class="app-info">
+                              <div class="app-name">{{ application.name }}</div>
+                              <div class="app-description">
+                                  {% trans "Application requires the following permissions" %}
+                              </div>
                           </div>
-                      </div>
 
-                      <div class="permissions">
-                          <h3>Хүсч буй эрхүүд</h3>
-                          <ul>
-                              {% for scope in scopes_descriptions %}
-                                  <li>{{ scope }}</li>
-                              {% endfor %}
-                          </ul>
-                      </div>
+                          {% if form.errors or form.non_field_errors %}
+                              <div class="form-errors">
+                                  {{ form.errors }}
+                                  {{ form.non_field_errors }}
+                              </div>
+                          {% endif %}
 
-                      <div class="button-group">
-                          <button type="submit" class="btn-cancel" name="cancel">
-                              Татгалзах
-                          </button>
-                          <button type="submit" class="btn-authorize" name="allow">
-                              Зөвшөөрөх
-                          </button>
-                      </div>
+                          <div class="permissions">
+                              <h3>{% trans "Requested Permissions" %}</h3>
+                              <ul>
+                                  {% for scope in scopes_descriptions %}
+                                      <li>{{ scope }}</li>
+                                  {% endfor %}
+                              </ul>
+                          </div>
 
-                      <div class="security-note">
-                          <p>Зөвшөөрлийг дараа нь тохиргооноос цуцлах боломжтой</p>
+                          <div class="button-group">
+                              <input type="submit" class="btn-cancel" value="{% trans 'Cancel' %}" name="cancel"/>
+                              <input type="submit" class="btn-authorize" name="allow" value="{% trans 'Authorize' %}"/>
+                          </div>
+
+                          <div class="security-note">
+                              <p>{% trans "You can revoke this authorization anytime from your account settings" %}</p>
+                          </div>
+                      </form>
+                  {% else %}
+                      <div class="error-box">
+                          <h2>{% trans "Error" %}: {{ error.error }}</h2>
+                          <p>{{ error.description }}</p>
                       </div>
-                  </form>
+                  {% endif %}
               </div>
           </div>
       </div>
   </body>
   </html>
-
