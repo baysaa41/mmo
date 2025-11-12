@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Засвар үйлчилгээ - ММО</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css">
+    <link rel="shortcut icon" href="{% static 'logo.png' %}">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .maintenance-container {
+            max-width: 600px;
+            text-align: center;
+            background: white;
+            padding: 50px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .maintenance-icon {
+            font-size: 80px;
+            color: #667eea;
+            margin-bottom: 30px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        h1 {
+            color: #333;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 20px;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .contact-info {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .contact-info p {
+            color: #777;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .contact-info a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="maintenance-container">
+    <div class="maintenance-icon">
+        <i class="fas fa-tools"></i>
+    </div>
+
+    <h1>Сургуулийн олимпиад зохион байгуулагдаж байна</h1>
+
+    <div class="description">
+        <p>
+            <strong>Энэ хугацаанд сервер дээрх ачааллыг бууруулахын үүднээс</strong>
+            систем түр хугацаанд хязгаарлагдмал горимд ажиллана. Сургуулийн олимпиад дуусаж дүн нэгтгэсэний дараа систем
+            бүрэн нээгдэнэ.
+        </p>
+    </div>
+
+    <div class="info-box">
+        <p>
+            <i class="fas fa-user-check"></i>
+            <strong>Нэвтрэх боломжтой:</strong>&nbsp;&nbsp;Сургуулийн бүртгэгч багш нар, хорооны гишүүд
+        </p>
+    </div>
+
+    <div class="info-box">
+        <p>
+            <i class="fas fa-clock"></i>
+            <strong>Хугацаа:</strong>&nbsp;&nbsp;Сургуулийн олимпиад дуусаж дүн нэгтгэх хүртэл
+        </p>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="/accounts/login/" class="btn btn-primary">
+            <i class="fas fa-sign-in-alt"></i> Нэвтрэх
+        </a>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

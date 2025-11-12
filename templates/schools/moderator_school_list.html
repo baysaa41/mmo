@@ -4,7 +4,10 @@
 <div class="container">
     {% if user.is_staff %}
         {# Staff хэрэглэгчийн дэлгэц #}
-        <h2 class="mb-4">Сургуулийн удирдлага</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">Сургуулийн удирдлага</h2>
+            <a href="{% url 'manage_all_schools' %}" class="btn btn-warning">⚙️ Бүх сургуулийг удирдах</a>
+        </div>
 
         {# 1. Миний удирдах сургуулиуд #}
         <h4 class="mt-4">Миний удирдах сургуулиуд</h4>
