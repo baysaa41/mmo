@@ -1,393 +1,324 @@
-  {% load i18n %}
-  <!DOCTYPE html>
-  <html lang="mn">
-  <head>
-      <meta charset="utf-8">
-      <title>{% trans "Authorize" %} - MathMinds</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-          * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-          }
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нэвтрэх зөвшөөрөл - MathMinds</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-          body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              min-height: 100vh;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 20px;
-          }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
 
-          .container {
-              max-width: 480px;
-              width: 100%;
-          }
+        .auth-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 480px;
+            width: 100%;
+            overflow: hidden;
+        }
 
-          .auth-card {
-              background: white;
-              border-radius: 20px;
-              box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-              overflow: hidden;
-              animation: slideUp 0.5s ease;
-          }
+        .auth-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
 
-          @keyframes slideUp {
-              from {
-                  opacity: 0;
-                  transform: translateY(40px);
-              }
-              to {
-                  opacity: 1;
-                  transform: translateY(0);
-              }
-          }
+        .auth-header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
 
-          .auth-header {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              padding: 45px 35px;
-              text-align: center;
-              color: white;
-              position: relative;
-              overflow: hidden;
-          }
+        .auth-header p {
+            font-size: 14px;
+            opacity: 0.95;
+        }
 
-          .auth-header::before {
-              content: '';
-              position: absolute;
-              top: -50%;
-              right: -50%;
-              width: 200%;
-              height: 200%;
-              background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-              animation: pulse 8s ease-in-out infinite;
-          }
+        .auth-body {
+            padding: 35px;
+        }
 
-          @keyframes pulse {
-              0%, 100% { transform: scale(1); }
-              50% { transform: scale(1.1); }
-          }
+        .app-info {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
 
-          .logo {
-              width: 85px;
-              height: 85px;
-              background: white;
-              border-radius: 22px;
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 40px;
-              font-weight: bold;
-              color: #667eea;
-              margin-bottom: 18px;
-              box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-              position: relative;
-              z-index: 1;
-          }
+        .app-info h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
 
-          .auth-header h1 {
-              font-size: 26px;
-              margin-bottom: 6px;
-              font-weight: 600;
-              position: relative;
-              z-index: 1;
-          }
+        .app-info p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
 
-          .auth-header p {
-              font-size: 15px;
-              opacity: 0.95;
-              position: relative;
-              z-index: 1;
-          }
+        .app-name {
+            color: #667eea;
+            font-weight: 600;
+        }
 
-          .auth-body {
-              padding: 38px 35px;
-          }
+        .permissions-section {
+            margin-bottom: 30px;
+        }
 
-          .app-info {
-              text-align: center;
-              margin-bottom: 32px;
-              padding: 24px;
-              background: linear-gradient(135deg, #f8f9ff 0%, #fff5f8 100%);
-              border-radius: 14px;
-              border: 2px solid #e9ecff;
-          }
+        .permissions-section h3 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
 
-          .app-name {
-              font-size: 20px;
-              font-weight: 700;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              background-clip: text;
-              margin-bottom: 10px;
-          }
+        .scopes-list {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+        }
 
-          .app-description {
-              font-size: 15px;
-              color: #666;
-              line-height: 1.6;
-          }
+        .scope-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
 
-          .permissions {
-              background: #f8f9fa;
-              border-radius: 14px;
-              padding: 24px;
-              margin-bottom: 28px;
-              border: 2px solid #e9ecef;
-          }
+        .scope-item:last-child {
+            border-bottom: none;
+        }
 
-          .permissions h3 {
-              font-size: 15px;
-              font-weight: 700;
-              color: #333;
-              margin-bottom: 18px;
-              display: flex;
-              align-items: center;
-          }
+        .scope-icon {
+            width: 32px;
+            height: 32px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
 
-          .permissions h3:before {
-              content: "🛡️";
-              margin-right: 10px;
-              font-size: 20px;
-          }
+        .scope-icon svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
 
-          .permissions ul {
-              list-style: none;
-          }
+        .scope-text {
+            font-size: 14px;
+            color: #495057;
+            line-height: 1.5;
+        }
 
-          .permissions li {
-              padding: 12px 0;
-              font-size: 14px;
-              color: #555;
-              display: flex;
-              align-items: flex-start;
-              line-height: 1.6;
-              border-bottom: 1px solid #e9ecef;
-          }
+        .user-info {
+            background: #e7f3ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+        }
 
-          .permissions li:last-child {
-              border-bottom: none;
-              padding-bottom: 0;
-          }
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 20px;
+            color: white;
+            font-weight: 600;
+        }
 
-          .permissions li:before {
-              content: "✓";
-              color: #10b981;
-              font-weight: bold;
-              margin-right: 12px;
-              font-size: 18px;
-              flex-shrink: 0;
-          }
+        .user-details h4 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
 
-          .error-box {
-              background: #fee;
-              border: 2px solid #fcc;
-              border-radius: 12px;
-              padding: 20px;
-              margin-bottom: 20px;
-              color: #c33;
-          }
+        .user-details p {
+            font-size: 13px;
+            color: #666;
+        }
 
-          .error-box h2 {
-              font-size: 18px;
-              margin-bottom: 10px;
-              display: flex;
-              align-items: center;
-          }
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
 
-          .error-box h2:before {
-              content: "⚠️";
-              margin-right: 10px;
-          }
+        .btn {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
 
-          .error-box p {
-              font-size: 14px;
-              line-height: 1.6;
-          }
+        .btn-authorize {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
 
-          .form-errors {
-              background: #fff3cd;
-              border: 2px solid #ffc107;
-              border-radius: 10px;
-              padding: 15px;
-              margin-bottom: 20px;
-              color: #856404;
-              font-size: 14px;
-          }
+        .btn-authorize:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
 
-          .button-group {
-              display: flex;
-              gap: 14px;
-              margin-top: 28px;
-          }
+        .btn-cancel {
+            background: #fff;
+            color: #6c757d;
+            border: 2px solid #dee2e6;
+        }
 
-          input[type="submit"] {
-              flex: 1;
-              padding: 16px 24px;
-              border: none;
-              border-radius: 12px;
-              font-size: 16px;
-              font-weight: 600;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              font-family: inherit;
-          }
+        .btn-cancel:hover {
+            background: #f8f9fa;
+            border-color: #adb5bd;
+        }
 
-          .btn-cancel {
-              background: #f1f3f5;
-              color: #495057;
-          }
+        .security-note {
+            margin-top: 25px;
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
 
-          .btn-cancel:hover {
-              background: #e9ecef;
-              transform: translateY(-3px);
-              box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-          }
+        .security-note p {
+            font-size: 13px;
+            color: #856404;
+            line-height: 1.6;
+        }
 
-          .btn-cancel:active {
-              transform: translateY(-1px);
-          }
+        @media (max-width: 576px) {
+            .auth-header h1 {
+                font-size: 24px;
+            }
 
-          .btn-authorize {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-              position: relative;
-              overflow: hidden;
-          }
+            .auth-body {
+                padding: 25px 20px;
+            }
 
-          .btn-authorize:before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: -100%;
-              width: 100%;
-              height: 100%;
-              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-              transition: left 0.5s;
-          }
+            .button-group {
+                flex-direction: column;
+            }
 
-          .btn-authorize:hover:before {
-              left: 100%;
-          }
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-header">
+            <h1>🔐 Нэвтрэх зөвшөөрөл</h1>
+            <p>Програм таны мэдээлэлд хандах зөвшөөрөл хүсч байна</p>
+        </div>
 
-          .btn-authorize:hover {
-              transform: translateY(-3px);
-              box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
-          }
+        <div class="auth-body">
+            <div class="app-info">
+                <h2>📱 Програмын мэдээлэл</h2>
+                <p>
+                    <span class="app-name">{{ application.name }}</span> програм таны
+                    <strong>MMO.mn</strong> данс руу нэвтрэх зөвшөөрөл хүсч байна.
+                </p>
+            </div>
 
-          .btn-authorize:active {
-              transform: translateY(-1px);
-          }
+            {% if user %}
+            <div class="user-info">
+                <div class="user-avatar">
+                    {{ user.username|first|upper }}
+                </div>
+                <div class="user-details">
+                    <h4>{{ user.username }}</h4>
+                    <p>Нэвтэрсэн хэрэглэгч</p>
+                </div>
+            </div>
+            {% endif %}
 
-          .security-note {
-              text-align: center;
-              margin-top: 24px;
-              padding-top: 24px;
-              border-top: 2px solid #e9ecef;
-          }
+            {% if scopes %}
+            <div class="permissions-section">
+                <h3>🔓 Зөвшөөрөл шаардлагатай хандалтууд:</h3>
+                <div class="scopes-list">
+                    {% for scope in scopes_descriptions %}
+                    <div class="scope-item">
+                        <div class="scope-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                        </div>
+                        <div class="scope-text">{{ scope }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
-          .security-note p {
-              font-size: 13px;
-              color: #868e96;
-              line-height: 1.7;
-          }
+            <div class="security-note">
+                <p>
+                    <strong>⚠️ Анхааруулга:</strong> Зөвшөөрөл өгснөөр энэ програм дээр дурдсан мэдээллүүдэд
+                    хандах эрхтэй болно. Зөвхөн итгэлтэй програмд зөвшөөрөл өгнө үү.
+                </p>
+            </div>
 
-          .security-note p:before {
-              content: "ℹ️";
-              margin-right: 6px;
-          }
+            <form method="post">
+                {% csrf_token %}
 
-          @media (max-width: 520px) {
-              .auth-header {
-                  padding: 35px 25px;
-              }
+                {% for field in form %}
+                    {% if field.is_hidden %}
+                        {{ field }}
+                    {% endif %}
+                {% endfor %}
 
-              .auth-body {
-                  padding: 28px 25px;
-              }
+                <input type="hidden" name="scope" value="{{ scopes }}">
+                <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
+                <input type="hidden" name="response_type" value="{{ response_type }}">
+                <input type="hidden" name="client_id" value="{{ client_id }}">
+                <input type="hidden" name="state" value="{{ state }}">
+                {% if code_challenge %}
+                <input type="hidden" name="code_challenge" value="{{ code_challenge }}">
+                <input type="hidden" name="code_challenge_method" value="{{ code_challenge_method }}">
+                {% endif %}
 
-              .button-group {
-                  flex-direction: column;
-                  gap: 12px;
-              }
-
-              input[type="submit"] {
-                  width: 100%;
-              }
-          }
-
-          @media (prefers-reduced-motion: reduce) {
-              * {
-                  animation: none !important;
-                  transition: none !important;
-              }
-          }
-      </style>
-  </head>
-  <body>
-      <div class="container">
-          <div class="auth-card">
-              <div class="auth-header">
-                  <div class="logo">∑</div>
-                  <h1>MathMinds Club</h1>
-                  <p>{% trans "Authorize" %}</p>
-              </div>
-
-              <div class="auth-body">
-                  {% if not error %}
-                      <form id="authorizationForm" method="post">
-                          {% csrf_token %}
-
-                          {% for field in form %}
-                              {% if field.is_hidden %}
-                                  {{ field }}
-                              {% endif %}
-                          {% endfor %}
-
-                          <div class="app-info">
-                              <div class="app-name">{{ application.name }}</div>
-                              <div class="app-description">
-                                  {% trans "Application requires the following permissions" %}
-                              </div>
-                          </div>
-
-                          {% if form.errors or form.non_field_errors %}
-                              <div class="form-errors">
-                                  {{ form.errors }}
-                                  {{ form.non_field_errors }}
-                              </div>
-                          {% endif %}
-
-                          <div class="permissions">
-                              <h3>{% trans "Requested Permissions" %}</h3>
-                              <ul>
-                                  {% for scope in scopes_descriptions %}
-                                      <li>{{ scope }}</li>
-                                  {% endfor %}
-                              </ul>
-                          </div>
-
-                          <div class="button-group">
-                              <input type="submit" class="btn-cancel" value="{% trans 'Cancel' %}" name="cancel"/>
-                              <input type="submit" class="btn-authorize" name="allow" value="{% trans 'Authorize' %}"/>
-                          </div>
-
-                          <div class="security-note">
-                              <p>{% trans "You can revoke this authorization anytime from your account settings" %}</p>
-                          </div>
-                      </form>
-                  {% else %}
-                      <div class="error-box">
-                          <h2>{% trans "Error" %}: {{ error.error }}</h2>
-                          <p>{{ error.description }}</p>
-                      </div>
-                  {% endif %}
-              </div>
-          </div>
-      </div>
-  </body>
-  </html>
+                <div class="button-group">
+                    <button type="submit" name="cancel" value="Цуцлах" class="btn btn-cancel">
+                        ❌ Цуцлах
+                    </button>
+                    <button type="submit" name="allow" value="Зөвшөөрөх" class="btn btn-authorize">
+                        ✅ Зөвшөөрөх
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
