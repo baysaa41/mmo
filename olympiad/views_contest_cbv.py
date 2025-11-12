@@ -13,6 +13,7 @@ from .models import Olympiad, Result, Upload
 from .forms import ResultsForm, UploadForm
 from .mixins import OlympiadAccessMixin, ResultsEnsureMixin
 
+
 # ----------------------------
 # 0. FormSet
 # ----------------------------
