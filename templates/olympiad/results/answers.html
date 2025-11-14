@@ -9,6 +9,7 @@
     {% if school %}
         <h2 class="mb-1">Сурагчдын хариулт</h2>
         <p class="lead text-muted">{{ school.province.name }}, {{ school.name }}</p>
+        <p class="lead text-muted">{{ school.user.first_name }}, {{ school.user.data.mobile }}</p>
     {% else %}
         <h2>{{ title }}</h2>
     {% endif %}
