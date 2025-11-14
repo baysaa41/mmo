@@ -1,3 +1,4 @@
+from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Avg, Max, Min
@@ -307,7 +308,7 @@ def olympiad_group_result_view(request, group_id):
     }
     return render(request, 'olympiad/pandas_results_view.html', context)
 
-@login_required
+@staff_member_required
 def answers_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     sid = int(request.GET.get('s', 0))
