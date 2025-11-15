@@ -17,6 +17,7 @@
     <p class="lead">{{ name }}</p>
 
     {% if request.user.is_staff %}
+        <p class="lead text-muted">Зөвхөн хорооны гишүүд харна:</p>
         {%  include './school_selection_menu.html' %}
     {% endif %}
 
