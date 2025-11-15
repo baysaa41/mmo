@@ -18,8 +18,9 @@
         {# 1. АЙМГИЙН ТОЙМ (pid > 0 үед) #}
         <div class="mt-4">
             {% for summary in school_summaries %}
-                <div class="card mb-3">
-                    <div class="card-header">
+
+                <div class="card mb-3 {% if summary.total_count == 0 %}bg-warning-subtle border-warning{% endif %}">
+                <div class="card-header">
                         <h4 class="mb-0">{{ summary.school.name }}</h4>
                     </div>
                     <div class="card-body">
