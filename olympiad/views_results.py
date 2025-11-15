@@ -308,7 +308,7 @@ def olympiad_group_result_view(request, group_id):
     }
     return render(request, 'olympiad/pandas_results_view.html', context)
 
-@staff_member_required
+@login_required
 def answers_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     sid = int(request.GET.get('s', 0))

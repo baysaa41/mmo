@@ -16,8 +16,9 @@
 
     <p class="lead">{{ name }}</p>
 
-    {# Шүүлтүүрийн хэсэг #}
-    {%  include './school_selection_menu.html' %}
+    {% if request.user.is_staff %}
+        {%  include './school_selection_menu.html' %}
+    {% endif %}
 
     {# Үр дүнгийн хүснэгт эсвэл зааварчилгааг харуулах #}
     {% if data %}
