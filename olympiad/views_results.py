@@ -404,6 +404,8 @@ def answers_view(request, olympiad_id):
 
 # views_results.py файл дахь функцээ энэ кодоор солино уу
 
+# views_results.py файл дахь функцээ энэ кодоор солино уу
+
 @login_required
 def province_summary_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
@@ -419,74 +421,61 @@ def province_summary_view(request, olympiad_id):
     provinces = Province.objects.all().order_by('name')
     schools = School.objects.filter(province_id=pid).order_by('name') if pid > 0 else School.objects.none()
 
+    # --- ШИНЭ ХУВЬСАГЧДЫГ ЭНД ТУНХАГЛАХ ---
+    total_school_count = None
+    participating_school_count = None
     province = None
+
     if pid > 0:
+        # --- АЙМАГ СОНГОГДСОН ҮЕД (ХУУЧИН ЛОГИК ХЭВЭЭРЭЭ) ---
         try:
             province = Province.objects.get(pk=pid)
         except Province.DoesNotExist:
             pass
 
-        # Тухайн аймгийн *бүх* сургуулийг багшийн мэдээлэлтэй нь хамт авна
         schools_in_province = (School.objects
                                .filter(province_id=pid)
                                .select_related('user', 'user__data')
                                .order_by('name'))
 
         for school in schools_in_province:
-            # Тухайн сургуулийн үр дүнг шүүнэ
             results = Result.objects.filter(olympiad_id=olympiad_id, contestant__data__school_id=school.id)
-
-            # Сурагчдын ID-г ялгаатайгаар авна
             contestant_ids = results.values_list('contestant_id', flat=True).distinct()
             total_count = contestant_ids.count()
-
-            # --- ӨӨРЧЛӨГДСӨН ЛОГИК ---
 
             empty_row_count = 0
             sample_data_html = ""
 
             if total_count > 0:
-                # 1. "Хоосон мөр"-ийн тоо (Зөвхөн оролцогч > 0 үед тоолно)
                 positive_scorers_count = results.filter(score__gt=0).values_list('contestant_id', flat=True).distinct().count()
                 empty_row_count = total_count - positive_scorers_count
 
-                # 2. 5 сурагчийн түүвэр (Зөвхөн оролцогч > 0 үед тоолно)
+                # (5 сурагчийн түүвэр хийх pandas-н логик)
                 sample_contestant_ids = list(contestant_ids[:5])
-
                 sample_results = results.filter(contestant_id__in=sample_contestant_ids)
                 rows = list(sample_results.values_list('contestant_id', 'problem_id', 'answer'))
                 data = pd.DataFrame(rows, columns=['contestant_id', 'problem_id', 'answer'])
-
                 results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='answer', aggfunc='sum')
-
                 problem_ids = results_df.columns.values
                 problem_orders = {p.id: f'№{p.order:02d}' for p in Problem.objects.filter(id__in=problem_ids, olympiad=olympiad)}
                 results_df.columns = [problem_orders.get(col, 'Unknown') for col in results_df.columns]
                 results_df = results_df[sorted(results_df.columns)]
-
                 contestants_data = User.objects.filter(pk__in=sample_contestant_ids).values('id', 'last_name', 'first_name')
                 user_df = pd.DataFrame(list(contestants_data))
                 user_df.columns = ['ID', 'Овог', 'Нэр']
-
                 user_results_df = pd.merge(user_df, results_df, left_on='ID', right_index=True, how='left')
                 sorted_df = user_results_df.sort_values(by=['Овог', 'Нэр']).drop(columns=['ID'])
                 sorted_df.index = np.arange(1, len(sorted_df) + 1)
-
                 numeric_columns = [col for col in sorted_df.columns if str(col).startswith('№')]
                 formatter = lambda val: '{:.0f}'.format(val) if val > 0 else '---'
-
                 styled_df = (sorted_df.style
                                       .format(formatter, subset=numeric_columns, na_rep="-")
                                       .set_table_attributes('class="table table-bordered table-hover"'))
                 sample_data_html = re.sub(r'&nbsp;</th>', r'№</th>', styled_df.to_html())
 
             else:
-                # Оролцогч байхгүй үед харуулах зурвас
                 sample_data_html = "<p class='text-muted fst-italic'>Энэ олимпиадад оролцсон сурагч олдсонгүй.</p>"
 
-            # --- ӨӨРЧЛӨЛТ ДУУСАВ ---
-
-            # Сургуулийг *үргэлж* жагсаалтад нэмнэ
             school_summaries.append({
                 'school': school,
                 'total_count': total_count,
@@ -494,9 +483,21 @@ def province_summary_view(request, olympiad_id):
                 'sample_data_html': sample_data_html,
             })
 
-    # Контекст болон render хэсэг хэвээрээ
+    else:
+        # --- АЙМАГ СОНГОГДООГҮЙ ҮЕД (pid == 0) ---
+        # 1. "ирсэн" буюу нийт бүртгэлтэй сургуулийн тоо
+        total_school_count = School.objects.count()
+
+        # 2. Дор хаяж нэг сурагч оролцсон сургуулийн тоо
+        participating_school_count = (Result.objects
+                                      .filter(olympiad_id=olympiad_id, contestant__data__school__isnull=False)
+                                      .values('contestant__data__school_id') # Сургуулийн ID-гаар бүлэглэх
+                                      .distinct() # Давхцлыг арилгах
+                                      .count()) # Нийт тоог авах
+
+    # --- Контекстыг шинэчлэх ---
     context = {
-        'title': f"{province.name if province else 'Аймгийн'} тойм" if pid > 0 else "Аймгийн тойм",
+        'title': f"{province.name if province else 'Аймгийн'} тойм" if pid > 0 else "Улсын хэмжээний тойм",
         'name': f"{olympiad.name}, {olympiad.level.name} ангилал",
         'olympiad': olympiad,
         'school_summaries': school_summaries,
@@ -505,6 +506,10 @@ def province_summary_view(request, olympiad_id):
         'selected_pid': pid,
         'selected_sid': sid,
         'olympiad_id': olympiad_id,
+
+        # --- ШИНЭ МЭДЭЭЛЛИЙГ CONTEXT РУУ НЭМЭХ ---
+        'total_school_count': total_school_count,
+        'participating_school_count': participating_school_count,
     }
 
     return render(request, 'olympiad/results/province_summary.html', context)
