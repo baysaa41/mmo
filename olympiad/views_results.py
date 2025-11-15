@@ -421,13 +421,14 @@ def province_summary_view(request, olympiad_id):
     provinces = Province.objects.all().order_by('name')
     schools = School.objects.filter(province_id=pid).order_by('name') if pid > 0 else School.objects.none()
 
-    # --- ШИНЭ ХУВЬСАГЧДЫГ ЭНД ТУНХАГЛАХ ---
+    # --- Шинэ хувьсагчдыг энд тунхаглах ---
     total_school_count = None
     participating_school_count = None
     province = None
+    non_participating_schools = None # <-- ШИНЭ: Оролцоогүй сургуулиудын жагсаалт
 
     if pid > 0:
-        # --- АЙМАГ СОНГОГДСОН ҮЕД (ХУУЧИН ЛОГИК ХЭВЭЭРЭЭ) ---
+        # --- АЙМАГ СОНГОГДСОН ҮЕД (Хуучин логик хэвээрээ) ---
         try:
             province = Province.objects.get(pk=pid)
         except Province.DoesNotExist:
@@ -438,19 +439,17 @@ def province_summary_view(request, olympiad_id):
                                .select_related('user', 'user__data')
                                .order_by('name'))
 
+        # (Энэ хэсэгт аймгийн тойм гаргах "for school in schools_in_province:"
+        # давталт болон pandas-н код хэвээрээ байна)
         for school in schools_in_province:
             results = Result.objects.filter(olympiad_id=olympiad_id, contestant__data__school_id=school.id)
             contestant_ids = results.values_list('contestant_id', flat=True).distinct()
             total_count = contestant_ids.count()
-
             empty_row_count = 0
             sample_data_html = ""
-
             if total_count > 0:
                 positive_scorers_count = results.filter(score__gt=0).values_list('contestant_id', flat=True).distinct().count()
                 empty_row_count = total_count - positive_scorers_count
-
-                # (5 сурагчийн түүвэр хийх pandas-н логик)
                 sample_contestant_ids = list(contestant_ids[:5])
                 sample_results = results.filter(contestant_id__in=sample_contestant_ids)
                 rows = list(sample_results.values_list('contestant_id', 'problem_id', 'answer'))
@@ -472,10 +471,8 @@ def province_summary_view(request, olympiad_id):
                                       .format(formatter, subset=numeric_columns, na_rep="-")
                                       .set_table_attributes('class="table table-bordered table-hover"'))
                 sample_data_html = re.sub(r'&nbsp;</th>', r'№</th>', styled_df.to_html())
-
             else:
                 sample_data_html = "<p class='text-muted fst-italic'>Энэ олимпиадад оролцсон сурагч олдсонгүй.</p>"
-
             school_summaries.append({
                 'school': school,
                 'total_count': total_count,
@@ -485,15 +482,23 @@ def province_summary_view(request, olympiad_id):
 
     else:
         # --- АЙМАГ СОНГОГДООГҮЙ ҮЕД (pid == 0) ---
-        # 1. "ирсэн" буюу нийт бүртгэлтэй сургуулийн тоо
+
+        # 1. Оролцсон сургуулиудын ID-г олох
+        participating_school_ids = (Result.objects
+                                      .filter(olympiad_id=olympiad_id, contestant__data__school__isnull=False)
+                                      .values_list('contestant__data__school_id', flat=True)
+                                      .distinct())
+
+        # 2. Тоон мэдээллийг тооцоолох
+        participating_school_count = participating_school_ids.count()
         total_school_count = School.objects.count()
 
-        # 2. Дор хаяж нэг сурагч оролцсон сургуулийн тоо
-        participating_school_count = (Result.objects
-                                      .filter(olympiad_id=olympiad_id, contestant__data__school__isnull=False)
-                                      .values('contestant__data__school_id') # Сургуулийн ID-гаар бүлэглэх
-                                      .distinct() # Давхцлыг арилгах
-                                      .count()) # Нийт тоог авах
+        # 3. Оролцоогүй сургуулиудын жагсаалтыг авах (ШИНЭ ХЭСЭГ)
+        # Аймаг, багшийн мэдээллийг хамт авахын тулд select_related ашиглана
+        non_participating_schools = (School.objects
+                                     .exclude(id__in=participating_school_ids)
+                                     .select_related('province', 'user', 'user__data')
+                                     .order_by('province__id', 'name')) # Аймгаар, дараа нь нэрээр эрэмбэлэх
 
     # --- Контекстыг шинэчлэх ---
     context = {
@@ -507,10 +512,10 @@ def province_summary_view(request, olympiad_id):
         'selected_sid': sid,
         'olympiad_id': olympiad_id,
 
-        # --- ШИНЭ МЭДЭЭЛЛИЙГ CONTEXT РУУ НЭМЭХ ---
+        # Улсын хэмжээний мэдээлэл
         'total_school_count': total_school_count,
         'participating_school_count': participating_school_count,
+        'non_participating_schools': non_participating_schools, # <-- ШИНЭЭР НЭМСЭН
     }
 
     return render(request, 'olympiad/results/province_summary.html', context)
-

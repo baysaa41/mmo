@@ -54,17 +54,16 @@
             {% endfor %}
         </div>
 
-    {% else %}
-        {# 2. МЭДЭЭЛЭЛ БАЙХГҮЙ ҮЕД (Аймаг сонгоогүй эсвэл аймгийн сургуулиудад мэдээлэлгүй) #}
+{% else %}
+        {# 2. МЭДЭЭЛЭЛ БАЙХГҮЙ ҮЕД #}
 
-        {# Хэрэв аймаг сонгосон ч тэр аймгийн сургуулиудад мэдээлэл олдоогүй бол #}
         {% if selected_pid > 0 %}
             <div class="alert alert-warning mt-4">
                 Сонгогдсон аймагт хамаарах сургуулиудын үр дүн олдсонгүй.
             </div>
 
-        {# УЛСЫН ХЭМЖЭЭНИЙ МЭДЭЭЛЭЛ (pid = 0 үед) #}
         {% elif selected_pid == 0 %}
+            {# Улсын хэмжээний тоон мэдээлэл (Энэ хэвээрээ байна) #}
             <div class="alert alert-info mt-4">
                 Дээрээс аймаг, дүүрэг сонгож дэлгэрэнгүй тойм харах, эсвэл доорх улсын хэмжээний мэдээлэлтэй танилцана уу.
             </div>
@@ -87,7 +86,49 @@
                     </div>
                 </div>
             </div>
-        {% endif %}
+
+            <hr class="my-4">
+            <h3 class="mb-3">Оролцоогүй сургуулиудын жагсаалт</h3>
+
+            {% if non_participating_schools %}
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-striped table-hover table-bordered table-sm">
+                        <thead class="table-light" style="position: sticky; top: 0;">
+                            <tr>
+                                <th>№</th>
+                                <th>Аймаг/Дүүрэг</th>
+                                <th>Сургуулийн нэр</th>
+                                <th>Холбоо барих багш</th>
+                                <th>Утас</th>
+                                <th>Сүүлд нэвтэрсэн</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for school in non_participating_schools %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ school.province.name | default:"(аймаггүй)" }}</td>
+                                    <td>{{ school.name }}</td>
+                                    <td>{{ school.user.first_name | default:"(мэдээлэлгүй)" }}</td>
+                                    <td>{{ school.user.data.mobile | default:"(мэдээлэлгүй)" }}</td>
+                                    <td>
+                                        {% if school.user.last_login %}
+                                            {{ school.user.last_login | date:"Y-m-d H:i" }}
+                                        {% else %}
+                                            (нэвтрээгүй)
+                                        {% endif %}
+                                    </td>
+                                r>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-success mt-3">
+                    Бүх сургууль энэ олимпиадад оролцсон байна.
+                </div>
+            {% endif %}
+            {% endif %}
     {% endif %}
 
 {% endblock %}
