@@ -27,6 +27,14 @@
                             <div class="col-md-6">
                                 <p class="mb-1"><strong>Холбоо барих багш:</strong> {{ summary.school.user.first_name | default:"(мэдээлэлгүй)" }}</p>
                                 <p><strong>Утас:</strong> {{ summary.school.user.data.mobile | default:"(мэдээлэлгүй)" }}</p>
+                                <p><strong>Сүүлд нэвтэрсэн:</strong> {{ summary.school.user.data.mobile | default:"(мэдээлэлгүй)" }}</p>
+                                <p><strong>Сүүлд нэвтэрсэн:</strong>
+                                    {% if summary.school.user.last_login %}
+                                        {{ summary.school.user.last_login | date:"Y-m-d H:i" }}
+                                    {% else %}
+                                        (нэвтрээгүй)
+                                    {% endif %}
+                                </p>
                             </div>
                             <div class="col-md-6">
                                 <p class="mb-1"><strong>Нийт оролцогч:</strong> {{ summary.total_count }}</p>
