@@ -1,9 +1,61 @@
-{% comment %}
-province_summary.html файлын доод хэсгийг солих
-{% endcomment %}
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block content %}
+
+    <h2>{{ title }}</h2>
+    <p class="lead">{{ name }}</p>
+
+    {# Шүүлтүүрийн хэсэг #}
+    {% include './school_selection_menu.html' %}
+
+    {# --- Үр дүнгийн хэсэг --- #}
+
+    {% if school_summaries %}
+        {# 1. АЙМГИЙН ТОЙМ (pid > 0 үед) #}
+        <div class="mt-4">
+            {% for summary in school_summaries %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h4 class="mb-0">{{ summary.school.name }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Холбоо барих багш:</strong> {{ summary.school.user.first_name | default:"(мэдээлэлгүй)" }}</p>
+                                <p class="mb-1"><strong>Утас:</strong> {{ summary.school.user.data.mobile | default:"(мэдээлэлгүй)" }}</p>
+
+                                {# Сүүлд нэвтэрсэн мэдээллийг харуулах #}
+                                <p><strong>Сүүлд нэвтэрсэн:</strong>
+                                    {% if summary.school.user.last_login %}
+                                        {{ summary.school.user.last_login | date:"Y-m-d H:i" }}
+                                    {% else %}
+                                        (нэвтрээгүй)
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Нийт оролцогч:</strong> {{ summary.total_count }}</p>
+                                <p><strong>Оноо аваагүй (хоосон мөр):</strong> {{ summary.empty_row_count }}</p>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h5 class="mt-3">Түүвэр (Эхний 5 сурагч)</h5>
+                        <div class="table-responsive">
+                            {# Энэ хэсэгт "Оролцогч олдсонгүй" гэсэн зурвас эсвэл хүснэгт орж ирнэ #}
+                            {{ summary.sample_data_html | safe }}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
 
     {% else %}
-        {# 2. МЭДЭЭЛЭЛ БАЙХГҮЙ ҮЕД #}
+        {# 2. МЭДЭЭЛЭЛ БАЙХГҮЙ ҮЕД (Аймаг сонгоогүй эсвэл аймгийн сургуулиудад мэдээлэлгүй) #}
 
         {# Хэрэв аймаг сонгосон ч тэр аймгийн сургуулиудад мэдээлэл олдоогүй бол #}
         {% if selected_pid > 0 %}
@@ -11,7 +63,7 @@ province_summary.html файлын доод хэсгийг солих
                 Сонгогдсон аймагт хамаарах сургуулиудын үр дүн олдсонгүй.
             </div>
 
-        {# --- ШИНЭЧИЛСЭН ХЭСЭГ (pid = 0 үед) --- #}
+        {# УЛСЫН ХЭМЖЭЭНИЙ МЭДЭЭЛЭЛ (pid = 0 үед) #}
         {% elif selected_pid == 0 %}
             <div class="alert alert-info mt-4">
                 Дээрээс аймаг, дүүрэг сонгож дэлгэрэнгүй тойм харах, эсвэл доорх улсын хэмжээний мэдээлэлтэй танилцана уу.
