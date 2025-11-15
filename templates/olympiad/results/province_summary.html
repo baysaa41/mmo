@@ -20,7 +20,7 @@
             {% for summary in school_summaries %}
 
                 <div class="card mb-3 {% if summary.total_count == 0 %}bg-warning-subtle border-warning{% endif %}">
-                <div class="card-header">
+                    <div class="card-header">
                         <h4 class="mb-0">{{ summary.school.name }}</h4>
                     </div>
                     <div class="card-body">
@@ -28,8 +28,6 @@
                             <div class="col-md-6">
                                 <p class="mb-1"><strong>Холбоо барих багш:</strong> {{ summary.school.user.first_name | default:"(мэдээлэлгүй)" }}</p>
                                 <p class="mb-1"><strong>Утас:</strong> {{ summary.school.user.data.mobile | default:"(мэдээлэлгүй)" }}</p>
-
-                                {# Сүүлд нэвтэрсэн мэдээллийг харуулах #}
                                 <p><strong>Сүүлд нэвтэрсэн:</strong>
                                     {% if summary.school.user.last_login %}
                                         {{ summary.school.user.last_login | date:"Y-m-d H:i" }}
@@ -47,7 +45,6 @@
                         <hr>
                         <h5 class="mt-3">Түүвэр (Эхний 5 сурагч)</h5>
                         <div class="table-responsive">
-                            {# Энэ хэсэгт "Оролцогч олдсонгүй" гэсэн зурвас эсвэл хүснэгт орж ирнэ #}
                             {{ summary.sample_data_html | safe }}
                         </div>
                     </div>
@@ -58,7 +55,6 @@
     {% else %}
         {# 2. МЭДЭЭЛЭЛ БАЙХГҮЙ ҮЕД (Аймаг сонгоогүй эсвэл аймгийн сургуулиудад мэдээлэлгүй) #}
 
-        {# Хэрэв аймаг сонгосон ч тэр аймгийн сургуулиудад мэдээлэл олдоогүй бол #}
         {% if selected_pid > 0 %}
             <div class="alert alert-warning mt-4">
                 Сонгогдсон аймагт хамаарах сургуулиудын үр дүн олдсонгүй.
@@ -70,7 +66,8 @@
                 Дээрээс аймаг, дүүрэг сонгож дэлгэрэнгүй тойм харах, эсвэл доорх улсын хэмжээний мэдээлэлтэй танилцана уу.
             </div>
 
-            <div class="row mt-4">
+            <h3 class="mt-4 mb-3">Сургуулиудын тойм</h3>
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <div class="card text-center">
                         <div class="card-body">
@@ -89,6 +86,25 @@
                 </div>
             </div>
 
+            <h3 class="mt-4 mb-3">Сурагчдын тойм</h3>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Нийт (энэ ангиллын) сурагч</h6>
+                            <h2 class="display-4 fw-bold">{{ total_student_count }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Хариулт ирүүлсэн сурагч</h6>
+                            <h2 class="display-4 fw-bold">{{ participating_student_count }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <hr class="my-4">
             <h3 class="mb-3">Оролцоогүй сургуулиудын жагсаалт</h3>
 
@@ -130,7 +146,8 @@
                     Бүх сургууль энэ олимпиадад оролцсон байна.
                 </div>
             {% endif %}
-            {% endif %}
+
+        {% endif %}
     {% endif %}
 
 {% endblock %}

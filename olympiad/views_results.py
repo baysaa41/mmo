@@ -422,10 +422,13 @@ def province_summary_view(request, olympiad_id):
     schools = School.objects.filter(province_id=pid).order_by('name') if pid > 0 else School.objects.none()
 
     # --- Шинэ хувьсагчдыг энд тунхаглах ---
+    province = None
     total_school_count = None
     participating_school_count = None
-    province = None
-    non_participating_schools = None # <-- ШИНЭ: Оролцоогүй сургуулиудын жагсаалт
+    non_participating_schools = None
+    total_student_count = None
+    participating_student_count = None
+
 
     if pid > 0:
         # --- АЙМАГ СОНГОГДСОН ҮЕД (Хуучин логик хэвээрээ) ---
@@ -439,8 +442,6 @@ def province_summary_view(request, olympiad_id):
                                .select_related('user', 'user__data')
                                .order_by('name'))
 
-        # (Энэ хэсэгт аймгийн тойм гаргах "for school in schools_in_province:"
-        # давталт болон pandas-н код хэвээрээ байна)
         for school in schools_in_province:
             results = Result.objects.filter(olympiad_id=olympiad_id, contestant__data__school_id=school.id)
             contestant_ids = results.values_list('contestant_id', flat=True).distinct()
@@ -483,27 +484,48 @@ def province_summary_view(request, olympiad_id):
     else:
         # --- АЙМАГ СОНГОГДООГҮЙ ҮЕД (pid == 0) ---
 
-        # 1. Оролцсон сургуулиудын ID-г олох
+        # 1. Сургуулийн тоон мэдээлэл
         participating_school_ids = (Result.objects
                                       .filter(olympiad_id=olympiad_id, contestant__data__school__isnull=False)
                                       .values_list('contestant__data__school_id', flat=True)
                                       .distinct())
-
-        # 2. Тоон мэдээллийг тооцоолох
         participating_school_count = participating_school_ids.count()
         total_school_count = School.objects.count()
 
-        # 3. Оролцоогүй сургуулиудын жагсаалтыг авах (ШИНЭ ХЭСЭГ)
-        # Аймаг, багшийн мэдээллийг хамт авахын тулд select_related ашиглана
+        # 2. Оролцоогүй сургуулиудын жагсаалт
         non_participating_schools = (School.objects
                                      .exclude(id__in=participating_school_ids)
                                      .select_related('province', 'user', 'user__data')
-                                     .order_by('province__id', 'name')) # Аймгаар, дараа нь нэрээр эрэмбэлэх
+                                     .order_by('province__id', 'name'))
+
+        # 3. Сурагчдын тоон мэдээлэл (ШИНЭЧЛЭГДСЭН ХЭСЭГ)
+
+        # "Нийт (энэ ангиллын) сурагч"
+        # Хэрэглэгчийн хүсэлтээр нийт сурагчдыг олимпиадын
+        # ангилалтай (level) таарч буй нийт хэрэглэгчээр тооцоолно.
+        # Энэ нь user.data.level гэж талбар байхыг шаардана.
+        try:
+            if olympiad.level:
+                # User.data.level нь olympiad.level-тэй ижил сурагчдыг тоолно
+                total_student_count = User.objects.filter(data__level=olympiad.level).count()
+            else:
+                # Олимпиадад level тохируулаагүй бол 0 гэж үзэх
+                total_student_count = 0
+        except Exception as e:
+            # `data__level` гэж талбар байхгүй эсвэл алдаа гарвал
+            print(f"Total student count error (falling back to ScoreSheet): {e}")
+            # ХУУЧИН АРГА: Зөвхөн ScoreSheet үүссэн сурагчдыг тоолно
+            total_student_count = ScoreSheet.objects.filter(olympiad_id=olympiad_id).count()
+
+
+        # "Хариулт ирүүлсэн" (Энэ хэвээрээ)
+        participating_student_count = Result.objects.filter(olympiad_id=olympiad_id).values('contestant_id').distinct().count()
+
 
     # --- Контекстыг шинэчлэх ---
     context = {
         'title': f"{province.name if province else 'Аймгийн'} тойм" if pid > 0 else "Улсын хэмжээний тойм",
-        'name': f"{olympiad.name}, {olympiad.level.name} ангилал",
+        'name': f"{olympiad.name}, {olympiad.level.name if olympiad.level else 'Ангилалгүй'} ангилал",
         'olympiad': olympiad,
         'school_summaries': school_summaries,
         'provinces': provinces,
@@ -512,10 +534,11 @@ def province_summary_view(request, olympiad_id):
         'selected_sid': sid,
         'olympiad_id': olympiad_id,
 
-        # Улсын хэмжээний мэдээлэл
         'total_school_count': total_school_count,
         'participating_school_count': participating_school_count,
-        'non_participating_schools': non_participating_schools, # <-- ШИНЭЭР НЭМСЭН
+        'non_participating_schools': non_participating_schools,
+        'total_student_count': total_student_count,
+        'participating_student_count': participating_student_count,
     }
 
     return render(request, 'olympiad/results/province_summary.html', context)
