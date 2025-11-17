@@ -542,3 +542,92 @@ def province_summary_view(request, olympiad_id):
     }
 
     return render(request, 'olympiad/results/province_summary.html', context)
+
+
+@login_required
+def first_round_stats(request):
+    """
+    1-р даваа (Сургуулийн олимпиад)-д аймаг, дүүрэг бүрээс
+    хэдэн сургууль, хэдэн сурагч оролцсоныг харуулах
+    """
+    # Хичээлийн жилийг сонгох
+    now = datetime.now(timezone.utc)
+    school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
+    year_id = request.GET.get('year', school_year.id if school_year else None)
+    year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
+
+    # Олимпиад сонгох (заавал биш, сонгоогүй бол хамгийг багтаана)
+    olympiad_id = request.GET.get('olympiad', None)
+
+    prev = SchoolYear.objects.filter(pk=year.id - 1).first() if year else None
+    next = SchoolYear.objects.filter(pk=year.id + 1).first() if year else None
+
+    # 1-р даваа (round=1) олимпиадуудыг авах
+    olympiads = Olympiad.objects.filter(round=1, is_open=True)
+    if year:
+        olympiads = olympiads.filter(school_year=year)
+
+    olympiads = olympiads.order_by('name', 'level')
+
+    # Тухайн олимпиад(ууд)-аас үр дүн авах
+    if olympiad_id:
+        # Нэг олимпиадыг сонгосон бол
+        results_query = Result.objects.filter(olympiad_id=olympiad_id)
+        selected_olympiad = Olympiad.objects.filter(pk=olympiad_id).first()
+    else:
+        # Сонгоогүй бол бүх 1-р даваа олимпиадыг багтаана
+        results_query = Result.objects.filter(olympiad__in=olympiads)
+        selected_olympiad = None
+
+    # Бүх аймгийг авах
+    provinces = Province.objects.all().order_by('name')
+
+    # Аймаг бүрээр статистик бэлтгэх
+    province_stats = []
+
+    for province in provinces:
+        # Энэ аймгаас оролцсон ScoreSheet-үүд (сурагч бүрд нэг бүртгэл)
+        if olympiad_id:
+            # Нэг олимпиад сонгосон бол
+            province_scoresheets = ScoreSheet.objects.filter(
+                olympiad_id=olympiad_id,
+                school__province=province
+            )
+        else:
+            # Бүх 1-р даваа олимпиадууд
+            province_scoresheets = ScoreSheet.objects.filter(
+                olympiad__in=olympiads,
+                school__province=province
+            )
+
+        # Сургуулийн тоо (давхардсан тоолохгүйгээр)
+        school_count = province_scoresheets.values('school').distinct().count()
+
+        # Сурагчдын тоо (давхардсан тоолохгүйгээр)
+        student_count = province_scoresheets.values('user').distinct().count()
+
+        # Хэрэв оролцсон бол жагсаалтанд нэмэх
+        if school_count > 0 or student_count > 0:
+            province_stats.append({
+                'province': province,
+                'school_count': school_count,
+                'student_count': student_count,
+            })
+
+    # Нийт тоо
+    total_schools = sum(s['school_count'] for s in province_stats)
+    total_students = sum(s['student_count'] for s in province_stats)
+
+    context = {
+        'title': '1-р даваа - Аймаг, дүүргээр',
+        'province_stats': province_stats,
+        'total_schools': total_schools,
+        'total_students': total_students,
+        'olympiads': olympiads,
+        'selected_olympiad': selected_olympiad,
+        'year': year,
+        'prev': prev,
+        'next': next,
+    }
+
+    return render(request, 'olympiad/results/first_round_stats.html', context)
