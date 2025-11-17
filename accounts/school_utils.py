@@ -148,6 +148,7 @@ def set_students_school(school_id):
     for user in school.group.user_set.all():
         user.data.school=school
         user.data.save()
+        user.data.is_valid=True
         user.save()
         count = count + 1
     return count
