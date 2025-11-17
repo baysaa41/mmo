@@ -24,7 +24,7 @@
                     </div>
                 </div>
             </div>
-            {% if not request.user.is_staff %}
+            {% if request.user.is_staff %}
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body d-flex flex-column">
