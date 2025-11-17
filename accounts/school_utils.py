@@ -2,6 +2,7 @@ import re
 import unicodedata
 from rapidfuzz import fuzz
 from schools.models import School
+from accounts.models import UserMeta
 
 CYR_TO_LAT = {
     'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'j','з':'z',
@@ -146,10 +147,18 @@ def set_students_school(school_id):
     count = 0
     school = School.objects.get(pk=school_id)
     for user in school.group.user_set.all():
-        user.data.school=school
-        user.data.save()
-        user.is_active=True
-        user.data.is_valid=True
-        user.save()
-        count = count + 1
+        try:
+            user.data.school=school
+            user.data.save()
+            user.is_active=True
+            user.data.is_valid=True
+            user.save()
+            count = count + 1
+        except:
+            _, m = UserMeta.objects.get_or_create(user=user)
+            m.school=school
+            m.is_valid=True
+            m.user.is_active=True
+            m.save()
+            m.user.save()
     return count
