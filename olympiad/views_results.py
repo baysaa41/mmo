@@ -586,25 +586,18 @@ def first_round_stats(request):
     province_stats = []
 
     for province in provinces:
-        # Энэ аймгаас оролцсон ScoreSheet-үүд (сурагч бүрд нэг бүртгэл)
-        if olympiad_id:
-            # Нэг олимпиад сонгосон бол
-            province_scoresheets = ScoreSheet.objects.filter(
-                olympiad_id=olympiad_id,
-                school__province=province
-            )
-        else:
-            # Бүх 1-р даваа олимпиадууд
-            province_scoresheets = ScoreSheet.objects.filter(
-                olympiad__in=olympiads,
-                school__province=province
-            )
+        # Энэ аймгаас оролцсон Results-үүд
+        province_results = results_query.filter(
+            contestant__data__province=province
+        )
 
         # Сургуулийн тоо (давхардсан тоолохгүйгээр)
-        school_count = province_scoresheets.values('school').distinct().count()
+        school_count = province_results.filter(
+            contestant__data__school__isnull=False
+        ).values('contestant__data__school').distinct().count()
 
         # Сурагчдын тоо (давхардсан тоолохгүйгээр)
-        student_count = province_scoresheets.values('user').distinct().count()
+        student_count = province_results.values('contestant').distinct().count()
 
         # Хэрэв оролцсон бол жагсаалтанд нэмэх
         if school_count > 0 or student_count > 0:
