@@ -140,3 +140,14 @@ def guess_school(user_meta) -> School | None:
             return best
 
     return None
+
+# surguuliin buh burtgeltei suragchdiin surguuliig update hiih
+def set_students_school(school_id):
+    count = 0
+    school = School.objects.get(pk=school_id)
+    for user in school.group.user_set.all():
+        user.data.school=school
+        user.data.save()
+        user.save()
+        count = count + 1
+    return count
