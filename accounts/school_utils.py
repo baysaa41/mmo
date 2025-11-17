@@ -155,7 +155,7 @@ def set_students_school(school_id):
             user.save()
             count = count + 1
         except:
-            _, m = UserMeta.objects.get_or_create(user=user)
+            m, _ = UserMeta.objects.get_or_create(user=user)
             m.school=school
             m.is_valid=True
             m.user.is_active=True
