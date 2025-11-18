@@ -28,6 +28,12 @@ class MaintenanceModeMiddleware:
                 '/accounts/logout/',
                 '/password_reset/',
                 '/accounts/password_reset/',
+                '/password_reset/done/',
+                '/reset/',  # Password reset confirm URL-ууд (/reset/<uidb64>/<token>/)
+                '/accounts/password-reset/',  # Alternative password reset URLs
+                '/password_change/',  # Password change
+                '/accounts/password/',  # User password change
+                '/o/',  # OAuth2 endpoints
             ]
 
             # Debug logging
