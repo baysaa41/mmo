@@ -117,6 +117,7 @@
                                 <th>Аймаг/Дүүрэг</th>
                                 <th>Сургуулийн нэр</th>
                                 <th>Холбоо барих багш</th>
+                                <th>Имэйл</th>
                                 <th>Утас</th>
                                 <th>Сүүлд нэвтэрсэн</th>
                             </tr>
@@ -128,6 +129,7 @@
                                     <td>{{ school.province.name | default:"(аймаггүй)" }}</td>
                                     <td>{{ school.name }}</td>
                                     <td>{{ school.user.first_name | default:"(мэдээлэлгүй)" }}</td>
+                                    <td>{{ school.user.email | default:"(мэдээлэлгүй)" }}</td>
                                     <td>{{ school.user.data.mobile | default:"(мэдээлэлгүй)" }}</td>
                                     <td>
                                         {% if school.user.last_login %}
