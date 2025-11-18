@@ -45,22 +45,21 @@
                         </div>
                     </div>
                 </div>
-            {% else %}
-                <div class="col-md-4">
-                    <div class="card h-100">
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-center">2. Хариулт харах</h5>
-                            <p class="card-text text-center">Импорт хийсэн олимпиадын дүнг харах.</p>
-                            <div class="mt-auto text-center">
-                                <a href="{% url 'olympiad_answer_view' olympiad.id %}?s={{ school.id }}"
-                                   class="btn btn-primary">
-                                    <i class="fas fa-chart-bar"></i> Хариулт харах
-                                </a>
-                            </div>
+            {% endif %}
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-center">2. Хариулт харах</h5>
+                        <p class="card-text text-center">Импорт хийсэн олимпиадын дүнг харах.</p>
+                        <div class="mt-auto text-center">
+                            <a href="{% url 'olympiad_answer_view' olympiad.id %}?s={{ school.id }}"
+                               class="btn btn-primary">
+                                <i class="fas fa-chart-bar"></i> Хариулт харах
+                            </a>
                         </div>
                     </div>
                 </div>
-            {% endif %}
+            </div>
 
             <div class="col-md-4">
                 <div class="card h-100">
