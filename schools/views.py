@@ -294,14 +294,11 @@ def manage_school_by_level(request, school_id, level_id):
     return render(request, 'schools/manage_school_users_level.html', context)
 
 @login_required
-def school_level_olympiad_view(request, school_id, level_id, olympiad_id):
+def school_olympiad_view(request, school_id, olympiad_id):
     school = get_object_or_404(School, id=school_id)
     olympiad = get_object_or_404(Olympiad, id=olympiad_id)
 
-    if level_id == 0:
-        selected_level = {'id': 0, 'name': 'Ангилалгүй'}
-    else:
-        selected_level = get_object_or_404(Level, id=level_id)
+    selected_level = olympiad.level if olympiad.level else {'id': 0, 'name': 'Ангилалгүй'}
 
     upload_form = UploadExcelForm()
     context = {
@@ -435,7 +432,7 @@ def import_school_answer_sheet(request, school_id, olympiad_id):
                 # Зөв сургууль, зөв олимпиад эсэхийг шалгах
                 if int(info_dict.get('olympiad_id')) != olympiad.id or int(info_dict.get('school_id')) != school.id:
                     messages.error(request, "Файл өөр олимпиад/сургуульд зориулагдсан байна.")
-                    return redirect('school_level_olympiad_view', school_id=school_id, level_id=level_id, olympiad_id=olympiad_id)
+                    return redirect('school_olympiad_view', school_id=school_id, olympiad_id=olympiad_id)
 
                 # --- Хариулт sheet унших ---
                 df = pd.read_excel(excel_file, sheet_name='Хариулт')
