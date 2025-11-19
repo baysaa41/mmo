@@ -295,9 +295,6 @@ def manage_school_by_level(request, school_id, level_id):
 
 @login_required
 def school_level_olympiad_view(request, school_id, level_id, olympiad_id):
-    if not request.user.is_staff:
-        return render(request,'error.html',{'message' : 'Хариулт хүлээж авах хугацаа \
-        дууссан. Шаардлагатай тохиолдолд baysa@mmo.mn хаягаар холбогдоорой.'})
     school = get_object_or_404(School, id=school_id)
     olympiad = get_object_or_404(Olympiad, id=olympiad_id)
 
