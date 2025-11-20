@@ -54,6 +54,11 @@ class MaintenanceModeMiddleware:
                 if hasattr(request.user, 'moderating') and request.user.moderating.exists():
                     return self.get_response(request)
 
+                # School manager эсэхийг шалгах
+                # School.manager field-ээр тодорхойлогддог
+                if hasattr(request.user, 'managing') and request.user.managing.exists():
+                    return self.get_response(request)
+
             # Бусад бүх тохиолдолд maintenance page харуулах
             return render(request, 'maintenance.html', status=503)
 

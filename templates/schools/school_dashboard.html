@@ -1,9 +1,45 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container">
-    <h2 class="mb-1">{{ school.name }}</h2>
-    <p class="lead text-muted">{{ school.province.name }}</p>
-    <a href="{% url 'school_moderators_list' %}" class="btn btn-secondary btn-sm mb-4">&larr; Сургуулийн жагсаалт руу буцах</a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">{{ school.name }}</h2>
+            <p class="lead text-muted mb-0">{{ school.province.name }}</p>
+        </div>
+        {% if is_manager %}
+            <a href="{% url 'manager_change_moderator' school.id %}" class="btn btn-warning btn-sm">👤 Бүртгэгч багш солих</a>
+        {% endif %}
+    </div>
+
+    <a href="{% url 'my_managed_schools' %}" class="btn btn-secondary btn-sm mb-4">&larr; Миний сургуулиуд</a>
+
+    <!-- School Info Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Сургуулийн мэдээлэл</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Менежер:</strong>
+                        {% if school.manager %}
+                            {{ school.manager.get_full_name|default:school.manager.username }} ({{ school.manager.username }})
+                        {% else %}
+                            <span class="text-muted">(Тодорхойгүй)</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Бүртгэгч багш:</strong>
+                        {% if school.user %}
+                            {{ school.user.get_full_name|default:school.user.username }} ({{ school.user.username }})
+                        {% else %}
+                            <span class="text-muted">(Тодорхойгүй)</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <hr>
 
     <div class="mb-4">
@@ -41,38 +77,6 @@
             </a>
         {% endif %}
     </div>
-
-<hr class="my-4">
-
-<h4>Элсэх хүсэлттэй сурагчид</h4>
-<p>Эдгээр сурагчид өөрийн профайл дээр танай сургуулийг сонгосон боловч сургуулийн бүлэгт хараахан ороогүй байна.</p>
-
-{% if pending_students %}
-    <div class="table-responsive">
-        <table class="table table-sm table-bordered">
-            <thead>
-                <tr>
-                    <th>Сурагч</th>
-                    <th>Ангилал</th>
-                    <th>Үйлдэл</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for student in pending_students %}
-                <tr>
-                    <td>{{ student.get_full_name }} (ID: {{ student.id }})</td>
-                    <td>{{ student.data.level.name|default:"Тодорхойгүй" }}</td>
-                    <td>
-                        <a href="{% url 'add_student_to_group' school.id student.id %}" class="btn btn-sm btn-success">Бүлэгт нэмэх</a>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-{% else %}
-    <p class="text-muted">Шинээр элсэх хүсэлттэй сурагч байхгүй байна.</p>
-{% endif %}
 
     <hr class="my-4">
 

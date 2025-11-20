@@ -43,9 +43,9 @@
                         </ul>
                     </li>
 
-                    {% if user.is_staff or user.moderating.exists %}
+                    {% if user.is_staff or user.moderating.exists or user.managing.exists %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'school_moderators_list' %}"><i
+                            <a class="nav-link" href="{% url 'my_managed_schools' %}"><i
                                     class="fas fa-school me-1"></i>
                                 СУРГУУЛЬ</a>
                         </li>

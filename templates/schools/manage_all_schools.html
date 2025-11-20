@@ -4,80 +4,181 @@
 {% block content %}
     <div class="container-fluid">
         <h2 class="mb-4">Сургуулиудын нэгдсэн удирдлага</h2>
-        <p>Сургуулийн нэр, аймаг/дүүрэг, админыг засах болон админ хэрэглэгчийн мэдээллийг шинэчлэх боломжтой.</p>
+        <p>Сургуулийн нэр, аймаг/дүүрэг, бүртгэгч багш болон менежерийг засах, шинэчлэх боломжтой.</p>
         {% include 'selection_menu.html' %}
 
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover align-middle">
-                <thead class="table-light">
-                <tr>
-                    <th class="text-center align-middle">Сургууль</th>
-                    <th class="text-center align-middle">Аймаг/Дүүрэг</th>
-                    <th class="text-center align-middle">Админ</th>
-                    <th class="text-center align-middle">Сүүлд нэвтэрсэн</th>
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs mb-4" id="schoolManagementTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="moderator-tab" data-bs-toggle="tab" data-bs-target="#moderator" type="button" role="tab" aria-controls="moderator" aria-selected="true">
+                    👨‍🏫 Бүртгэгч багш
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="manager-tab" data-bs-toggle="tab" data-bs-target="#manager" type="button" role="tab" aria-controls="manager" aria-selected="false">
+                    👔 Менежер
+                </button>
+            </li>
+        </ul>
 
-                    {# --- ЭНЭ ХЭСЭГТ ӨӨРЧЛӨЛТ ОРСОН --- #}
-                    {% if request.user.is_staff %}
-                        <th class="text-center align-middle" colspan="4">Үйлдэл</th>
-                    {% endif %}
-                </tr>
-                </thead>
-                <tbody>
-                {% for school in schools %}
-                    <tr>
-                        <td>
-                            <strong>{{ school.name }}</strong>
-                            <span class="badge bg-secondary ms-2">{{ school.student_count }}</span>
-                            {% if  school.alias %}
-                                <div class="text-muted mt-1">{{ school.alias }}</div>
+        <!-- Tab Content -->
+        <div class="tab-content" id="schoolManagementTabsContent">
+            <!-- Moderator Tab -->
+            <div class="tab-pane fade show active" id="moderator" role="tabpanel" aria-labelledby="moderator-tab">
+                <h4 class="mb-3">Бүртгэгч багш удирдлага</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th class="text-center align-middle">Сургууль</th>
+                            <th class="text-center align-middle">Аймаг/Дүүрэг</th>
+                            <th class="text-center align-middle">Бүртгэгч багш</th>
+                            <th class="text-center align-middle">Сүүлд нэвтэрсэн</th>
+                            {% if request.user.is_staff %}
+                                <th class="text-center align-middle" colspan="4">Үйлдэл</th>
                             {% endif %}
-                        </td>
-                        <td>{{ school.province.name }}</td>
-                        <td>
-                            <div><label>Хэрэглэгчийн нэр:</label> {{ school.user.username }}</div>
-                            <div><label>Овог,
-                                нэр:</label> {{ school.user.last_name }} {{ school.user.first_name|upper }}
-                            </div>
-                            <div><label>Гар утас:</label> {{ school.user.data.mobile|default:"-" }}</div>
-                            <div><label>И-мэйл:</label> {{ school.user.email }}</div>
-                        </td>
-                        <td>{{ school.user.last_login|date:"Y-m-d" }}</td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for school in schools %}
+                            <tr>
+                                <td>
+                                    <strong>{{ school.name }}</strong>
+                                    <span class="badge bg-secondary ms-2">{{ school.student_count }}</span>
+                                    {% if school.alias %}
+                                        <div class="text-muted mt-1">{{ school.alias }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ school.province.name }}</td>
+                                <td>
+                                    {% if school.user %}
+                                        <div><label>Хэрэглэгчийн нэр:</label> {{ school.user.username }}</div>
+                                        <div><label>Овог, нэр:</label> {{ school.user.last_name }} {{ school.user.first_name|upper }}</div>
+                                        <div><label>Гар утас:</label> {{ school.user.data.mobile|default:"-" }}</div>
+                                        <div><label>И-мэйл:</label> {{ school.user.email }}</div>
+                                    {% else %}
+                                        <span class="text-muted">Тодорхойгүй</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if school.user %}
+                                        {{ school.user.last_login|date:"Y-m-d" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                {% if request.user.is_staff %}
+                                    <td class="text-center">
+                                        <a href="{% url 'edit_school_info' school.id %}" class="btn btn-sm btn-primary" target="_blank">
+                                            <i class="fas fa-school"></i> Сургууль
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-warning" target="_blank">
+                                            <i class="fas fa-user-cog"></i> Багш&nbsp;солих
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if school.user %}
+                                            <a href="{% url 'change_school_admin_password' school.user.id %}" class="btn btn-sm btn-secondary" target="_blank">
+                                                <i class="fas fa-key"></i> Нууц&nbsp;үг
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if school.user %}
+                                            <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-info" target="_blank">
+                                                <i class="fas fa-user-edit"></i> Профайл
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-                        {# --- ЭНЭ ХЭСЭГТ ӨӨРЧЛӨЛТ ОРСОН --- #}
-                        {% if request.user.is_staff %}
-                            <td class="text-center">
-                                <a href="{% url 'edit_school_info' school.id %}" class="btn btn-sm btn-primary" target="_blank">
-                                    <i class="fas fa-school"></i> Сургууль
-                                </a>
-                            </td>
-                            <td class="text-center">
-                                <a href="{% url 'change_school_admin' school.id %}" class="btn btn-sm btn-primary" target="_blank">
-                                    <i class="fas fa-user-cog"></i> Админ&nbsp;солих
-                                </a>
-                            </td>
-                            <td class="text-center">
-                                {% if school.user %}
-                                    <a href="{% url 'change_school_admin_password' school.user.id %}" class="btn btn-sm btn-primary" target="_blank">
-                                        <i class="fas fa-user-edit"></i> Админ&nbsp;нууц&nbsp;үг
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted">Админгүй</span>
+            <!-- Manager Tab -->
+            <div class="tab-pane fade" id="manager" role="tabpanel" aria-labelledby="manager-tab">
+                <h4 class="mb-3">Менежер удирдлага</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th class="text-center align-middle">Сургууль</th>
+                            <th class="text-center align-middle">Аймаг/Дүүрэг</th>
+                            <th class="text-center align-middle">Менежер</th>
+                            <th class="text-center align-middle">Сүүлд нэвтэрсэн</th>
+                            {% if request.user.is_staff %}
+                                <th class="text-center align-middle" colspan="3">Үйлдэл</th>
+                            {% endif %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for school in schools %}
+                            <tr>
+                                <td>
+                                    <strong>{{ school.name }}</strong>
+                                    <span class="badge bg-secondary ms-2">{{ school.student_count }}</span>
+                                    {% if school.alias %}
+                                        <div class="text-muted mt-1">{{ school.alias }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ school.province.name }}</td>
+                                <td>
+                                    {% if school.manager %}
+                                        <div><label>Хэрэглэгчийн нэр:</label> {{ school.manager.username }}</div>
+                                        <div><label>Овог, нэр:</label> {{ school.manager.last_name }} {{ school.manager.first_name|upper }}</div>
+                                        <div><label>Гар утас:</label> {{ school.manager.data.mobile|default:"-" }}</div>
+                                        <div><label>И-мэйл:</label> {{ school.manager.email }}</div>
+                                    {% else %}
+                                        <span class="text-muted">Тодорхойгүй</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if school.manager %}
+                                        {{ school.manager.last_login|date:"Y-m-d" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                {% if request.user.is_staff %}
+                                    <td class="text-center">
+                                        <a href="{% url 'change_school_manager' school.id %}" class="btn btn-sm btn-success" target="_blank">
+                                            <i class="fas fa-user-tie"></i> Менежер&nbsp;солих
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if school.manager %}
+                                            <a href="{% url 'change_school_manager_password' school.manager.id %}" class="btn btn-sm btn-secondary" target="_blank">
+                                                <i class="fas fa-key"></i> Нууц&nbsp;үг
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if school.manager %}
+                                            <a href="{% url 'edit_school_admin' school.manager.id %}" class="btn btn-sm btn-info" target="_blank">
+                                                <i class="fas fa-user-edit"></i> Профайл
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                 {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if school.user %}
-                                    <a href="{% url 'edit_school_admin' school.user.id %}" class="btn btn-sm btn-primary" target="_blank">
-                                        <i class="fas fa-user-edit"></i> Админ&nbsp;профайл
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted">Админгүй</span>
-                                {% endif %}
-                            </td>
-                        {% endif %}
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}

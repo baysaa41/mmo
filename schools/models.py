@@ -5,6 +5,7 @@ from django.db.models import UniqueConstraint
 
 class School(models.Model):
     user = models.ForeignKey(User, related_name='moderating', on_delete=models.SET_NULL, null=True, blank=True)
+    manager = models.ForeignKey(User, related_name='managing', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Сургуулийн удирдлага/менежер")
     group = models.OneToOneField(Group, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Хамаарах бүлэг")
     province = models.ForeignKey("accounts.Province", related_name='moderators', on_delete=models.CASCADE)
     name = models.CharField(max_length=200, default='ЕБС')
@@ -25,6 +26,19 @@ class School(models.Model):
 
     def __str__(self):
         return "{}".format(self.name)
+
+    def user_has_access(self, user):
+        """
+        Хэрэглэгч энэ сургуулийг удирдах эрхтэй эсэхийг шалгана.
+        Staff, moderator, эсвэл manager бол эрхтэй.
+        """
+        if user.is_staff:
+            return True
+        if self.user == user:
+            return True
+        if self.manager == user:
+            return True
+        return False
 
 
 class UploadedExcel(models.Model):
