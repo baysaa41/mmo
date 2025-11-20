@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-1">Менежер солих</h2>
+    <p class="lead text-muted">{{ school.name }}</p>
+    <a href="{% url 'manage_all_schools' %}" class="btn btn-secondary btn-sm mb-4">&larr; Буцах</a>
+    <hr>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Одоогийн менежер:</h5>
+            {% if school.manager %}
+                <p class="mb-0">
+                    <strong>{{ school.manager.get_full_name|default:school.manager.username }}</strong>
+                    {% if school.manager.email %}
+                        ({{ school.manager.email }})
+                    {% endif %}
+                </p>
+            {% else %}
+                <p class="text-muted mb-0">Одоогоор менежер томилогдоогүй байна.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Шинэ менежер хайх</h5>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    {{ search_form.query.label_tag }}
+                    {{ search_form.query }}
+                    <small class="form-text text-muted">Хэрэглэгчийн нэр, и-мэйл эсвэл ID оруулна уу.</small>
+                </div>
+                <button type="submit" name="search_users" class="btn btn-primary">Хайх</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    {% if search_results %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Хайлтын үр дүн</h5>
+                {% if search_results %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Нэр</th>
+                                    <th>И-мэйл</th>
+                                    <th>Сургууль</th>
+                                    <th>Үйлдэл</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result_user in search_results %}
+                                    <tr>
+                                        <td>{{ result_user.id }}</td>
+                                        <td>{{ result_user.get_full_name|default:result_user.username }}</td>
+                                        <td>{{ result_user.email|default:"-" }}</td>
+                                        <td>
+                                            {% if result_user.data.school %}
+                                                {{ result_user.data.school.name }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <form method="post" style="display:inline;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="user_id" value="{{ result_user.id }}">
+                                                <button type="submit"
+                                                        name="assign_manager"
+                                                        class="btn btn-sm btn-success"
+                                                        onclick="return confirm('{{ result_user.get_full_name|default:result_user.username }}-г {{ school.name }}-ийн менежер болгох уу?')">
+                                                    Менежер болгох
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        Хайлтын үр дүн олдсонгүй.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    #id_query {
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Сургуулийн бүртгэл</h2>
+        <a href="{% url 'my_managed_schools' %}" class="btn btn-outline-secondary">&larr; Миний сургуулиуд</a>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'all_schools_registry' %}">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label for="search-query" class="form-label">Сургуулийн нэрээр хайх:</label>
+                        <input type="text"
+                               class="form-control"
+                               id="search-query"
+                               name="q"
+                               value="{{ search_query }}"
+                               placeholder="Сургуулийн нэр эсвэл товчлол">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">🔍 Хайх</button>
+                        <a href="{% url 'all_schools_registry' %}" class="btn btn-secondary">Цэвэрлэх</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Шүүлт цэс (аймаг/бүс) -->
+    {% include 'selection_menu.html' %}
+
+    <!-- Schools List -->
+    {% if schools %}
+        <p class="text-muted">Нийт {{ schools|length }} сургууль олдлоо.</p>
+
+        <div class="list-group">
+            {% for school in schools %}
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">
+                            <a href="{% url 'school_dashboard' school.id %}" class="text-decoration-none">
+                                {{ school.name }}
+                            </a>
+                        </h5>
+                        <small class="text-muted">{{ school.province.name }}</small>
+                    </div>
+
+                    {% if school.alias %}
+                        <p class="mb-1 text-muted small">{{ school.alias }}</p>
+                    {% endif %}
+
+                    <div class="mt-2">
+                        {% if school.manager %}
+                            <small><strong>Менежер:</strong> {{ school.manager.get_full_name|default:school.manager.username }} ({{ school.manager.username }})</small>
+                        {% endif %}
+                        {% if school.user %}
+                            <small class="ms-3"><strong>Бүртгэгч багш:</strong> {{ school.user.get_full_name|default:school.user.username }} ({{ school.user.username }})</small>
+                        {% else %}
+                            <small class="text-muted ms-3"><strong>Бүртгэгч багш:</strong> (Тодорхойгүй)</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-2">
+                        {% if school.group %}
+                            <small class="text-muted">Сурагчдын тоо: {{ school.group.user_set.count }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-secondary">
+            <h5>Сургууль олдсонгүй</h5>
+            <p class="mb-0">Хайлтын үр дүн байхгүй байна. Өөр нэр эсвэл шүүлтүүр ашиглаж үзнэ үү.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
