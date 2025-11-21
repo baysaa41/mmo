@@ -36,7 +36,7 @@ class Command(BaseCommand):
                         continue # Хэрэв группт хэрэглэгч байхгүй бол алгасах
 
                     # UserMeta-г олон тоогоор, нэг дор шинэчлэх (маш хурдан)
-                    num_updated = UserMeta.objects.filter(user_id__in=user_ids_in_group).update(school=school)
+                    num_updated = UserMeta.objects.filter(user_id__in=user_ids_in_group).update(school=school,province=school.province)
 
                     if num_updated > 0:
                         self.stdout.write(f'- {school.name}: {num_updated} хэрэглэгчийг шинэчиллээ.')

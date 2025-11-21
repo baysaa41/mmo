@@ -35,7 +35,7 @@ def update_rankings_a_p(olympiad_id,province_id):
 
     updates = []
     for olympiad in olympiads:
-        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province_id=province_id).order_by("-total"))
+        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province_id=province_id,is_official=True).order_by("-total"))
 
         # Compute Lowest Possible Rank (Best Case)
         lowest_rank = 1  # Start ranking from 1
@@ -63,7 +63,7 @@ def update_rankings_a_z(olympiad_id,zone_id):
 
     updates = []
     for olympiad in olympiads:
-        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order_by("-total"))
+        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id,is_official=True).order_by("-total"))
 
         # Compute Lowest Possible Rank (Best Case)
         lowest_rank = 1  # Start ranking from 1
@@ -120,7 +120,7 @@ def update_rankings_b_p(olympiad_id,province_id):
 
     updates = []
     for olympiad in olympiads:
-        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province_id=province_id).order_by("total"))
+        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province_id=province_id,is_official=True).order_by("total"))
         count = len(scores)
         # print(count)
 
@@ -149,7 +149,7 @@ def update_rankings_b_z(olympiad_id,zone_id):
 
     updates = []
     for olympiad in olympiads:
-        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id).order_by("total"))
+        scores = list(ScoreSheet.objects.filter(olympiad=olympiad,user__data__province__zone_id=zone_id,is_official=True).order_by("total"))
         count = len(scores)
         # print(count)
 
