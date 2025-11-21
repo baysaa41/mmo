@@ -452,12 +452,6 @@ class ScoreSheet(models.Model):
         if not self.pk and not self.school:
             self.school = self.user.data.school
 
-        # is_official-г сургуулийн is_official_participation-аас авах
-        if self.school:
-            self.is_official = self.school.is_official_participation
-        else:
-            self.is_official = False
-
         # нийт оноо тооцох
         self.total = sum(getattr(self, f"s{i+1}") or 0 for i in range(20))
         super().save(*args, **kwargs)
