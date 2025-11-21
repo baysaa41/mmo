@@ -1,7 +1,9 @@
 from django import template
-import re, hashlib
+import re, hashlib, requests
 
 register = template.Library()
+
+PSTRICKS_SERVER_BASE_URL = 'https://pst.mathminds.club'
 
 @register.filter(name='latex')
 def latex(value):
@@ -39,23 +41,64 @@ def center2div(text):
     )
 
 # --------------------------------------------------------
-# NEW FUNCTION: no TeX, no dvips, no convert → placeholder only
+# PSTricks рендер хийх функц
+# --------------------------------------------------------
+def render_pstricks(code):
+    """
+    PSTricks кодыг сервер рүү илгээж, зургийн URL авах
+    """
+    try:
+        response = requests.post(
+            f'{PSTRICKS_SERVER_BASE_URL}/render-pstricks',
+            json={'code': code},
+            timeout=30
+        )
+        if response.ok:
+            result = response.json()
+            if result.get('image_url'):
+                return f'{PSTRICKS_SERVER_BASE_URL}{result["image_url"]}'
+    except Exception as e:
+        print(f'PSTricks render error: {e}')
+    return None
+
+def pst_replacer(match):
+    """
+    [pst] блокийг <img> болгох callback
+    """
+    code = match.group(1).strip()
+    image_url = render_pstricks(code)
+    if image_url:
+        return f'<div class="text-center my-2"><img src="{image_url}" style="max-width: 100%; height: auto;" alt="PSTricks"></div>'
+    return '<div class="text-danger">[PSTricks рендер алдаа]</div>'
+
+def psti_replacer(match):
+    """
+    [psti] inline блокийг <img> болгох callback
+    """
+    code = match.group(1).strip()
+    image_url = render_pstricks(code)
+    if image_url:
+        return f'<img src="{image_url}" style="max-height: 1.5em; vertical-align: middle;" alt="PSTricks inline">'
+    return '<span class="text-danger">[PST алдаа]</span>'
+
+# --------------------------------------------------------
+# LaTeX placeholder функц
 # --------------------------------------------------------
 def latex_placeholder(text):
     """
     Converts [pst]...[/pst], [xlat]...[/xlat], [psti]...[/psti]
-    into a lightweight placeholder <div> (NO image generation).
+    into rendered images or placeholders.
     """
 
-    # PST block placeholder
+    # PST block - render to image
     text = re.sub(
         r'\[pst\](.*?)\[/pst\]',
-        r"<div class='latex-placeholder'>図 зураг: PST блок</div>",
+        pst_replacer,
         text,
         flags=re.DOTALL
     )
 
-    # XLAT block placeholder
+    # XLAT block placeholder (хэрэв хэрэгтэй бол дараа нэмнэ)
     text = re.sub(
         r'\[xlat\](.*?)\[/xlat\]',
         r"<div class='latex-placeholder'>図 зураг: XLAT блок</div>",
@@ -63,10 +106,10 @@ def latex_placeholder(text):
         flags=re.DOTALL
     )
 
-    # PST inline placeholder
+    # PST inline - render to image
     text = re.sub(
         r'\[psti\](.*?)\[/psti\]',
-        r"<span class='latex-placeholder-inline'>図 inline</span>",
+        psti_replacer,
         text,
         flags=re.DOTALL
     )
