@@ -332,17 +332,29 @@ def answers_view(request, olympiad_id):
         results = Result.objects.filter(olympiad_id=olympiad_id, contestant__data__school_id=sid)
 
         if results.exists():
-            rows = list(results.values_list('contestant_id', 'problem_id', 'answer'))
-            data = pd.DataFrame(rows, columns=['contestant_id', 'problem_id', 'answer'])
+            # Хариулт болон оноог хамт авах
+            rows = list(results.values_list('contestant_id', 'problem_id', 'answer', 'score'))
+            data = pd.DataFrame(rows, columns=['contestant_id', 'problem_id', 'answer', 'score'])
 
-            # --- ӨӨРЧЛӨЛТ 1: fill_value=0 болон .astype(int)-г устгах ---
-            # Ингэснээр NULL утгууд нь DataFrame дотор NaN (Not a Number) болж хадгалагдана.
+            # Хариултын хүснэгт
             results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='answer', aggfunc='sum')
+
+            # Онооны хүснэгт (нийлбэр тооцоход)
+            score_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='score', aggfunc='sum', fill_value=0)
 
             problem_ids = results_df.columns.values
             problem_orders = {p.id: f'№{p.order:02d}' for p in Problem.objects.filter(id__in=problem_ids)}
-            results_df.columns = [problem_orders.get(col, 'Unknown') for col in results_df.columns]
+
+            # Баганын нэрийг солих (results_df болон score_df хоёуланд)
+            col_mapping = {col: problem_orders.get(col, 'Unknown') for col in results_df.columns}
+            results_df.columns = [col_mapping[col] for col in results_df.columns]
+            score_df.columns = [col_mapping.get(col, col) for col in score_df.columns]
+
             results_df = results_df[sorted(results_df.columns)]
+            score_df = score_df[[col for col in sorted(results_df.columns) if col in score_df.columns]]
+
+            # Нийт оноо нэмэх
+            results_df['Нийт'] = score_df.sum(axis=1)
 
             contestant_ids = list(results_df.index)
             contestants_data = User.objects.filter(pk__in=contestant_ids).values('id', 'last_name', 'first_name')
@@ -350,24 +362,51 @@ def answers_view(request, olympiad_id):
             user_df.columns = ['ID', 'Овог', 'Нэр']
 
             user_results_df = pd.merge(user_df, results_df, left_on='ID', right_index=True, how='left')
-            sorted_df = user_results_df.sort_values(by=['Овог', 'Нэр']).drop(columns=['ID'])
-            sorted_df.index = np.arange(1, len(sorted_df) + 1)
 
-            # --- ШИНЭЧИЛСЭН ХЭСЭГ ---
-            # 1. Тоон утгатай багануудын жагсаалтыг үүсгэх (нэр нь '№'-ээр эхэлсэн)
+            # Оноог мөн merge хийх (өнгө тодорхойлоход хэрэглэнэ)
+            score_df_merged = pd.merge(user_df[['ID']], score_df, left_on='ID', right_index=True, how='left')
+
+            # Нийт оноогоор буурахаар эрэмбэлэх
+            sorted_df = user_results_df.sort_values(
+                by=['Нийт', 'Овог', 'Нэр'],
+                ascending=[False, True, True]
+            )
+            score_df_merged = score_df_merged.loc[sorted_df.index]
+
+            sorted_df = sorted_df.drop(columns=['ID'])
+            score_df_merged = score_df_merged.drop(columns=['ID'])
+
+            sorted_df.index = np.arange(1, len(sorted_df) + 1)
+            score_df_merged.index = sorted_df.index
+
+            # Тоон багануудын жагсаалт
             numeric_columns = [col for col in sorted_df.columns if str(col).startswith('№')]
 
-            # 2. Форматчилах функцээ тодорхойлох
+            # Форматчилах функц
             formatter = lambda val: '{:.0f}'.format(val) if val > 0 else '---'
 
-            # 3. Зөвхөн тоон багануудад ('subset') форматчилах үйлдлийг хийх
+            # Зөв хариултыг ногоон суурь өнгөөр тодруулах
+            def highlight_correct(val, score_val):
+                if pd.isna(score_val) or score_val == 0:
+                    return ''
+                return 'background-color: #d4edda'  # Ногоон
+
+            def apply_highlights(row):
+                styles = [''] * len(row)
+                for i, col in enumerate(row.index):
+                    if col in numeric_columns and col in score_df_merged.columns:
+                        score_val = score_df_merged.loc[row.name, col]
+                        if not pd.isna(score_val) and score_val > 0:
+                            styles[i] = 'background-color: #d4edda'
+                return styles
+
+            # HTML руу хөрвүүлэх
             styled_df = (sorted_df.style
+                                  .apply(apply_highlights, axis=1)
                                   .format(formatter, subset=numeric_columns, na_rep="-")
+                                  .format('{:.1f}'.format, subset=['Нийт'])
                                   .set_table_attributes('class="table table-bordered table-hover"'))
             context_data = styled_df.to_html()
-
-             # --- ОНОШЛОГОО 1: pivot_table-ийн дараах үр дүнг шалгах ---
-            results_df = pd.pivot_table(data, index='contestant_id', columns='problem_id', values='answer', aggfunc='sum')
 
     # Гарчиг болон бусад мэдээллийг бэлтгэх
     name = f"{olympiad.name}, {olympiad.level.name} ангилал"

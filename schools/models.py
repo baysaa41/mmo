@@ -17,6 +17,7 @@ class School(models.Model):
     )
     is_sent_confirmation = models.BooleanField(default=False)
     is_received_confirmation = models.BooleanField(default=False)
+    is_official_participation = models.BooleanField(default=False)
 
     class Meta:
         # unique_together-ийн оронд constraints ашиглах

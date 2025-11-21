@@ -62,6 +62,10 @@ def to_scoresheet(olympiad_id):
 
         school_obj = contestant.data.school
 
+        # Зөвхөн албан ёсоор оролцсон сургуулийн сурагчдыг оруулах
+        if not school_obj or not getattr(school_obj, 'is_official_participation', False):
+            continue
+
         score_fields = {'school': school_obj}
         # Онооны талбаруудыг тэглэх (21 гэж хатуу бичихийн оронд)
         for i in range(1, 21):
