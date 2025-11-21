@@ -70,11 +70,15 @@ def olympiad_results(request, olympiad_id):
     zone_id = request.GET.get("z", "0").strip()
     page_number = request.GET.get("page", "1")
 
+    # Шинэ шүүлтүүрүүд
+    official_filter = request.GET.get("official", "all")  # all, official, unofficial
+    show_zero = request.GET.get("show_zero", "0") == "1"  # 0 оноог харуулах эсэх
+
     # --- 1. 'update=1' флагийг шалгах ---
     force_update = request.GET.get('clean', '0') == '1'
 
     # --- cache key үүсгэх ---
-    cache_key = f"scores_{olympiad_id}_{province_id}_{zone_id}_{page_number}_{show_all}"
+    cache_key = f"scores_{olympiad_id}_{province_id}_{zone_id}_{page_number}_{show_all}_{official_filter}_{show_zero}"
 
     cached_data = None
 
@@ -96,7 +100,17 @@ def olympiad_results(request, olympiad_id):
         problem_count = olympiad.problem_set.count()
         problem_range = problem_count + 1
 
-        # --- шүүлтүүр ---
+        # --- 0 оноог шүүх (default: харуулахгүй) ---
+        if not show_zero:
+            scoresheets = scoresheets.exclude(total=0)
+
+        # --- Албан ёсны шүүлтүүр ---
+        if official_filter == "official":
+            scoresheets = scoresheets.filter(is_official=True)
+        elif official_filter == "unofficial":
+            scoresheets = scoresheets.filter(is_official=False)
+
+        # --- Аймаг/Бүс шүүлтүүр ---
         if province_id != "0":
             scoresheets = scoresheets.filter(user__data__province_id=province_id)
             rank_field_a = "ranking_a_p"
@@ -143,6 +157,7 @@ def olympiad_results(request, olympiad_id):
                     "ranking_a": getattr(sheet, rank_field_a),
                     "ranking_b": getattr(sheet, rank_field_b),
                     "prizes": sheet.prizes,
+                    "is_official": sheet.is_official,
                 })
             except Exception as e:
                 print("Алдаа:", e, sheet, sheet.user.id)
@@ -182,6 +197,8 @@ def olympiad_results(request, olympiad_id):
         "problem_range": range(1, cached_data['problem_range']),
         "selected_province": province_id,
         "selected_zone": zone_id,
+        "official_filter": official_filter,
+        "show_zero": show_zero,
     }
     return render(request, "olympiad/results/olympiad_id.html", context)
 

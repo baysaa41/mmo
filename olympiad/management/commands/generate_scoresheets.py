@@ -1,7 +1,7 @@
 # olympiad/management/commands/generate_scoresheets.py
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Case, When, Value, IntegerField
+from django.db.models import Case, When, Value, IntegerField, OuterRef, Subquery, BooleanField
 from olympiad.models import ScoreSheet, Award
 from olympiad.utils.data import to_scoresheet
 from olympiad.utils.ranking import (
@@ -9,6 +9,7 @@ from olympiad.utils.ranking import (
     update_rankings_a_p, update_rankings_b_p,
     update_rankings_a_z, update_rankings_b_z
 )
+from schools.models import School
 
 class Command(BaseCommand):
     help = 'Онооны хуудсыг үүсгэж, бүх эрэмбийг тооцоолно.'
@@ -37,7 +38,21 @@ class Command(BaseCommand):
         except Exception as e:
             raise CommandError(f'Онооны хуудас үүсгэхэд алдаа гарлаа: {e}')
 
-        # 2. Эрэмбийг тооцоолох
+        # 2. is_official талбарыг сургуулийн is_official_participation-аас тогтоох
+        self.stdout.write('is_official талбарыг тогтоож байна...')
+        updated_count = ScoreSheet.objects.filter(
+            olympiad_id=olympiad_id,
+            school__is_official_participation=True
+        ).update(is_official=True)
+        # Сургуульгүй эсвэл is_official_participation=False бол False болгох
+        ScoreSheet.objects.filter(
+            olympiad_id=olympiad_id
+        ).exclude(
+            school__is_official_participation=True
+        ).update(is_official=False)
+        self.stdout.write(self.style.SUCCESS(f'... {updated_count} онооны хуудсанд is_official=True тогтоогдлоо.'))
+
+        # 3. Эрэмбийг тооцоолох
         self.stdout.write('Эрэмбэ тооцоолж байна...')
 
         # Нийт эрэмбэ
@@ -61,35 +76,40 @@ class Command(BaseCommand):
             update_rankings_b_z(olympiad_id, zone_id)
         self.stdout.write(self.style.SUCCESS(f'... {len(active_zones)} бүсийн эрэмбэ шинэчлэгдлээ.'))
 
-        # --- ШАГНАЛ ОЛГОХ ШИНЭ ХЭСЭГ ---
+        # --- ШАГНАЛ ОЛГОХ ШИНЭ ХЭСЭГ (ОНОВЧЛОГДСОН) ---
         self.stdout.write('Шагналын мэдээллийг онооны хуудсанд нэмж байна...')
 
         # Эхлээд тухайн олимпиадын бүх онооны хуудасны шагналыг цэвэрлэх
         ScoreSheet.objects.filter(olympiad_id=olympiad_id).update(prizes=None)
 
+        # Бүх шагналыг нэг query-ээр татах
+        all_awards = Award.objects.filter(olympiad_id=olympiad_id).annotate(
+            award_order=Case(
+                When(place__icontains='алт', then=Value(1)),
+                When(place__icontains='мөнгө', then=Value(2)),
+                When(place__icontains='хүрэл', then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            )
+        ).order_by('contestant_id', 'award_order', 'place')
+
+        # Оролцогчоор бүлэглэх
+        from collections import defaultdict
+        awards_by_user = defaultdict(list)
+        for award in all_awards:
+            awards_by_user[award.contestant_id].append(award.place)
+
+        # ScoreSheet-үүдийг шинэчлэх
         score_sheets = ScoreSheet.objects.filter(olympiad_id=olympiad_id)
-
+        updates = []
         for sheet in score_sheets:
-            # Тухайн сурагчийн, тухайн олимпиадаас авсан бүх шагналыг олох
-            awards = Award.objects.filter(
-                contestant=sheet.user,
-                olympiad_id=olympiad_id
-            ).annotate(
-                # Медалийг эхэнд эрэмбэлэхийн тулд түр талбар үүсгэх
-                award_order=Case(
-                    When(place__icontains='алт', then=Value(1)),
-                    When(place__icontains='мөнгө', then=Value(2)),
-                    When(place__icontains='хүрэл', then=Value(3)),
-                    default=Value(4),
-                    output_field=IntegerField(),
-                )
-            ).order_by('award_order', 'place')
+            if sheet.user_id in awards_by_user:
+                sheet.prizes = ", ".join(awards_by_user[sheet.user_id])
+                updates.append(sheet)
 
-            if awards.exists():
-                # Шагналуудын нэрийг жагсаалт болгож, таслалаар нэгтгэх
-                prize_list = [award.place for award in awards]
-                sheet.prizes = ", ".join(prize_list)
-                sheet.save()
+        # Bulk update
+        if updates:
+            ScoreSheet.objects.bulk_update(updates, ['prizes'], batch_size=1000)
 
         self.stdout.write(self.style.SUCCESS('... Шагналын мэдээлэл амжилттай нэмэгдлээ.'))
         self.stdout.write(self.style.SUCCESS('\nҮйлдэл бүрэн дууслаа!'))

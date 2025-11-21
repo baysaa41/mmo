@@ -8,26 +8,69 @@
         <h3 class="my-3">
             {{ olympiad.name }}, {{ olympiad.level.name }} олимпиадын дүн, {{ page_title }}
         </h3>
-        <p class="text-muted">Олимпиадын дүнгийн хуудас. Аймаг, дүүрэг, бүсээр дүнг харж болно. Нийлбэр оноо 0 тохиолдолд жагсаалтад ороогүй.</p>
+        <p class="text-muted">Олимпиадын дүнгийн хуудас. Аймаг, дүүрэг, бүсээр дүнг харж болно.</p>
         <a href="{% url 'olympiad_top_stats' olympiad.id %}" class="btn btn-primary my-2">
             Статистик харах
         </a>
         {% include 'selection_menu.html' %}
+
+        {# --- ШҮҮЛТҮҮР --- #}
+        <div class="card p-3 my-3 bg-light">
+            <form method="get" class="row g-2 align-items-center">
+                <input type="hidden" name="p" value="{{ selected_province }}">
+                <input type="hidden" name="z" value="{{ selected_zone }}">
+
+                <div class="col-auto">
+                    <label class="form-label mb-0 me-2"><strong>Оролцогч:</strong></label>
+                </div>
+                <div class="col-auto">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="official" id="all" value="all" {% if official_filter == 'all' %}checked{% endif %}>
+                        <label class="form-check-label" for="all">Бүгд</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="official" id="official" value="official" {% if official_filter == 'official' %}checked{% endif %}>
+                        <label class="form-check-label" for="official">Жагсаалтад орох</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="official" id="unofficial" value="unofficial" {% if official_filter == 'unofficial' %}checked{% endif %}>
+                        <label class="form-check-label" for="unofficial">Жагсаалтад орохгүй</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="show_zero" id="show_zero" value="1" {% if show_zero %}checked{% endif %}>
+                        <label class="form-check-label" for="show_zero">0 оноог харуулах</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-primary">Шүүх</button>
+                </div>
+            </form>
+        </div>
 
         {# --- PAGINATION (дээд хэсэг) --- #}
         <div class="pagination d-flex justify-content-center my-3">
     <span class="align-self-center me-3">
       Хуудас: {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
     </span>
+            <form class="d-flex align-items-center me-3" method="get">
+                <input type="hidden" name="p" value="{{ selected_province }}">
+                <input type="hidden" name="z" value="{{ selected_zone }}">
+                <input type="hidden" name="official" value="{{ official_filter }}">
+                <input type="hidden" name="show_zero" value="{% if show_zero %}1{% else %}0{% endif %}">
+                <input type="number" name="page" class="form-control form-control-sm" style="width: 70px;" min="1" max="{{ page_obj.paginator.num_pages }}" value="{{ page_obj.number }}">
+                <button type="submit" class="btn btn-sm btn-outline-primary ms-1">Очих</button>
+            </form>
             <ul class="pagination mb-0">
                 {% if page_obj.has_previous %}
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page=1&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&laquo;</a>
+                           href="?page=1&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">&laquo;</a>
                     </li>
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page={{ page_obj.previous_page_number }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&lsaquo;</a>
+                           href="?page={{ page_obj.previous_page_number }}&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">&lsaquo;</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
@@ -39,7 +82,7 @@
                     {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
                         <li class="page-item">
                             <a class="page-link"
-                               href="?page={{ page_num }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">{{ page_num }}</a>
+                               href="?page={{ page_num }}&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">{{ page_num }}</a>
                         </li>
                     {% endif %}
                 {% endfor %}
@@ -47,11 +90,11 @@
                 {% if page_obj.has_next %}
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page={{ page_obj.next_page_number }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&rsaquo;</a>
+                           href="?page={{ page_obj.next_page_number }}&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">&rsaquo;</a>
                     </li>
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page={{ page_obj.paginator.num_pages }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&raquo;</a>
+                           href="?page={{ page_obj.paginator.num_pages }}&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">&raquo;</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><a class="page-link" href="#">&raquo;</a></li>
@@ -92,7 +135,7 @@
                 </thead>
                 <tbody>
                 {% for data in score_data %}
-                    <tr>
+                    <tr{% if not data.is_official %} class="text-secondary"{% endif %}>
                         <td>{{ data.list_rank }}</td>
                         <td>{{ data.last_name }}</td>
                         <td>{{ data.first_name }}</td>
@@ -100,10 +143,10 @@
                         <td>{{ data.province }}</td>
                         <td>{{ data.school.name }}</td>
                         {% for score in data.scores %}
-                            <td class="text-center">{{ score }}</td>
+                            <td class="text-center{% if score == 0 %} text-secondary{% endif %}">{{ score }}</td>
                         {% endfor %}
-                        <td class="text-center"><strong>{{ data.total }}</strong></td>
-                        <td class="text-center">
+                        <td class="text-center{% if data.total == 0 %} text-secondary{% endif %}"><strong>{{ data.total }}</strong></td>
+                        <td class="text-center" style="white-space: nowrap;">
                             {% if data.ranking_a == data.ranking_b %}
                                 {{ data.ranking_a }}
                             {% else %}
@@ -111,6 +154,7 @@
                             {% endif %}
                         </td>
                         <td>
+                            {% if data.is_official %}<i class="fas fa-check-circle text-success me-1" title="Жагсаалтад орно"></i>{% endif %}
                             {% if data.prizes %}{{ data.prizes }}{% endif %}
                             {% if request.user.is_superuser %}
                                 <a href="{% url 'scoresheet_change_school' data.scoresheet_id %}"
@@ -143,11 +187,11 @@
                 {% if page_obj.has_previous %}
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page=1&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&laquo;</a>
+                           href="?page=1&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">&laquo;</a>
                     </li>
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page={{ page_obj.previous_page_number }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&lsaquo;</a>
+                           href="?page={{ page_obj.previous_page_number }}&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">&lsaquo;</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><a class="page-link" href="#">&laquo;</a></li>
@@ -159,7 +203,7 @@
                     {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
                         <li class="page-item">
                             <a class="page-link"
-                               href="?page={{ page_num }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">{{ page_num }}</a>
+                               href="?page={{ page_num }}&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">{{ page_num }}</a>
                         </li>
                     {% endif %}
                 {% endfor %}
@@ -167,11 +211,11 @@
                 {% if page_obj.has_next %}
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page={{ page_obj.next_page_number }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&rsaquo;</a>
+                           href="?page={{ page_obj.next_page_number }}&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">&rsaquo;</a>
                     </li>
                     <li class="page-item">
                         <a class="page-link"
-                           href="?page={{ page_obj.paginator.num_pages }}&p={{ request.GET.p|default:0 }}&z={{ request.GET.z|default:0 }}">&raquo;</a>
+                           href="?page={{ page_obj.paginator.num_pages }}&p={{ selected_province }}&z={{ selected_zone }}&official={{ official_filter }}&show_zero={% if show_zero %}1{% else %}0{% endif %}">&raquo;</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><a class="page-link" href="#">&raquo;</a></li>

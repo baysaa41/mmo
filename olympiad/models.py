@@ -442,6 +442,7 @@ class ScoreSheet(models.Model):
     ranking_a_z = models.IntegerField(default=0)
     ranking_b_z = models.IntegerField(default=0)
     prizes = models.CharField(max_length=512, blank=True, null=True)
+    is_official = models.BooleanField(default=False)
     total = models.FloatField(default=0, blank=True, null=True)
 
     def __str__(self):

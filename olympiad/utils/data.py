@@ -49,12 +49,20 @@ def to_scoresheet(olympiad_id):
         'contestant__data', 'problem'
     ).order_by('contestant_id')
 
-    # 2. Оролцогч тус бүрээр нь үр дүнг бүлэглэх
+    # 2. Одоо байгаа ScoreSheet-үүдийг олох
+    existing_sheets = {
+        sheet.user_id: sheet
+        for sheet in ScoreSheet.objects.filter(olympiad_id=olympiad_id)
+    }
+
+    to_create = []
+    to_update = []
+
+    # 3. Оролцогч тус бүрээр нь үр дүнг бүлэглэх
     for contestant_id, results_group in groupby(all_results, key=lambda r: r.contestant_id):
         results_list = list(results_group)
         contestant = results_list[0].contestant
 
-        # --- ADDED CHECK ---
         # Skip user if they don't have a UserMeta (data) profile
         if not hasattr(contestant, 'data') or contestant.data is None:
             print(f"{contestant.id} хэрэглэгчийн бүртгэлийн мэдээлэл дутуу тул алгаслаа.")
@@ -62,21 +70,38 @@ def to_scoresheet(olympiad_id):
 
         school_obj = contestant.data.school
 
-        # Зөвхөн албан ёсоор оролцсон сургуулийн сурагчдыг оруулах
-        if not school_obj or not getattr(school_obj, 'is_official_participation', False):
-            continue
-
-        score_fields = {'school': school_obj}
-        # Онооны талбаруудыг тэглэх (21 гэж хатуу бичихийн оронд)
-        for i in range(1, 21):
-            score_fields[f's{i}'] = 0
+        # Онооны талбаруудыг тэглэх
+        score_data = {f's{i}': 0 for i in range(1, 21)}
 
         for result in results_list:
             if result.score is not None and result.problem:
-                score_fields[f's{result.problem.order}'] = result.score
+                score_data[f's{result.problem.order}'] = result.score
 
-        ScoreSheet.objects.update_or_create(
-            user_id=contestant_id,
-            olympiad_id=olympiad_id,
-            defaults=score_fields
-        )
+        # Нийт оноог тооцоолох
+        total = sum(score_data.values())
+
+        if contestant_id in existing_sheets:
+            # Update existing
+            sheet = existing_sheets[contestant_id]
+            sheet.school = school_obj
+            sheet.total = total
+            for key, value in score_data.items():
+                setattr(sheet, key, value)
+            to_update.append(sheet)
+        else:
+            # Create new
+            to_create.append(ScoreSheet(
+                user_id=contestant_id,
+                olympiad_id=olympiad_id,
+                school=school_obj,
+                total=total,
+                **score_data
+            ))
+
+    # 4. Bulk operations
+    if to_create:
+        ScoreSheet.objects.bulk_create(to_create, batch_size=1000)
+
+    if to_update:
+        update_fields = ['school', 'total'] + [f's{i}' for i in range(1, 21)]
+        ScoreSheet.objects.bulk_update(to_update, update_fields, batch_size=1000)
