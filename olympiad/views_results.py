@@ -76,27 +76,25 @@ def olympiad_results(request, olympiad_id):
     # --- cache key үүсгэх ---
     cache_key = f"scores_{olympiad_id}_{province_id}_{zone_id}_{page_number}_{show_all}"
 
-    score_data = None # Анхны утгыг None болгох
+    cached_data = None
 
     # --- 2. 'force_update' ХИЙГЭЭГҮЙ үед л cache-с унших ---
     if not force_update:
-        score_data = cache.get(cache_key)
+        cached_data = cache.get(cache_key)
 
     # --- 3. Cache-д байхгүй ЭСВЭЛ 'force_update=1' үед ---
-    if not score_data:
+    if not cached_data:
 
         # Хэрэв force_update хийсэн бол мэдээлэх (заавал биш)
         if force_update:
             print(f"CACHE FORCED REFRESH: {cache_key}")
 
         # Queryset бэлтгэх
-        if show_all:
-            scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
-        else:
-            # 0 оноотойг харуулахаар зассан хувилбар (өмнөх асуултын дагуу)
-            scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
+        scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
 
-        problem_range = len(olympiad.problem_set.all()) + 1
+        # Problem тоог нэг удаа авах
+        problem_count = olympiad.problem_set.count()
+        problem_range = problem_count + 1
 
         # --- шүүлтүүр ---
         if province_id != "0":
@@ -114,11 +112,19 @@ def olympiad_results(request, olympiad_id):
             rank_field_b = "ranking_b"
             list_rank_field = "list_rank"
 
-        scoresheets = scoresheets.select_related("user__data__school__province", "school").order_by(list_rank_field)
+        scoresheets = scoresheets.select_related(
+            "user__data__school__province",
+            "user__data__province",
+            "school__province"
+        ).order_by(list_rank_field)
 
-        # --- dict болгон хувиргах ---
-        score_data_list = [] # Нэрийг нь 'score_data' -аас 'score_data_list' болгов
-        for sheet in scoresheets:
+        # --- Database түвшинд pagination хийх ---
+        paginator = Paginator(scoresheets, 50)
+        page_obj = paginator.get_page(page_number)
+
+        # --- Зөвхөн тухайн хуудасны өгөгдлийг dict болгох ---
+        score_data_list = []
+        for sheet in page_obj:
             try:
                 province = (
                     (sheet.school.province.name if sheet.school and sheet.school.province else "")
@@ -141,21 +147,23 @@ def olympiad_results(request, olympiad_id):
             except Exception as e:
                 print("Алдаа:", e, sheet, sheet.user.id)
 
-        # --- pagination ---
-        paginator = Paginator(score_data_list, 50) # 'score_data' биш 'score_data_list'-г ашиглана
-        page_obj = paginator.get_page(page_number)
-
-        # зөвхөн page_obj хадгалах
-        score_data = page_obj
+        # Cache-д хадгалах өгөгдөл (template-д page_obj шиг ашиглахын тулд)
+        cached_data = {
+            'score_data_list': score_data_list,
+            'number': page_obj.number,
+            'has_previous': page_obj.has_previous(),
+            'has_next': page_obj.has_next(),
+            'previous_page_number': page_obj.previous_page_number() if page_obj.has_previous() else None,
+            'next_page_number': page_obj.next_page_number() if page_obj.has_next() else None,
+            'problem_range': problem_range,
+            'paginator': {
+                'num_pages': paginator.num_pages,
+                'page_range': list(paginator.page_range),
+            }
+        }
 
         # --- 4. Cache-д шинээр дарж бичих ---
-        # 'None' гэвэл cache хэзээ ч expire болохгүй.
-        # 3600 (1 цаг) гэх мэт хугацаа тавих нь илүү зохимжтой.
-        cache.set(cache_key, score_data, 3600) # 1 цаг (эсвэл None)
-
-    else:
-        # Cache-с олдсон (учир нь force_update=False байсан)
-        page_obj = score_data
+        cache.set(cache_key, cached_data, 3600)
 
     # --- хэрэглэгчийн оноо (динамикаар DB-с авах) ---
     user_score_data = None
@@ -168,10 +176,10 @@ def olympiad_results(request, olympiad_id):
     context = {
         "olympiad": olympiad,
         "page_title": "Нэгдсэн дүн",
-        "score_data": page_obj,
-        "page_obj": page_obj,
+        "score_data": cached_data['score_data_list'],
+        "page_obj": cached_data,
         "user_score_data": user_score_data,
-        "problem_range": range(1, len(olympiad.problem_set.all()) + 1),
+        "problem_range": range(1, cached_data['problem_range']),
         "selected_province": province_id,
         "selected_zone": zone_id,
     }
