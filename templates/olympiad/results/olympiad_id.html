@@ -154,7 +154,6 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if data.is_official %}<i class="fas fa-check-circle text-success me-1" title="Жагсаалтад орно"></i>{% endif %}
                             {% if data.prizes %}{{ data.prizes }}{% endif %}
                             {% if request.user.is_superuser %}
                                 <a href="{% url 'scoresheet_change_school' data.scoresheet_id %}"
