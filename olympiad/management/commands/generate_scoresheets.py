@@ -2,6 +2,7 @@
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Case, When, Value, IntegerField
+from django.db.models.functions import Coalesce
 from olympiad.models import ScoreSheet, Award
 from olympiad.utils.data import to_scoresheet
 from olympiad.utils.ranking import (
@@ -46,8 +47,22 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('... Улсын нийт эрэмбэ шинэчлэгдлээ.'))
 
         # Зөвхөн оролцогчид байгаа аймаг, бүсүүдийг олж авах
-        active_provinces = ScoreSheet.objects.filter(olympiad_id=olympiad_id, user__data__province__isnull=False).values_list('user__data__province_id', flat=True).distinct()
-        active_zones = ScoreSheet.objects.filter(olympiad_id=olympiad_id, user__data__province__zone__isnull=False).values_list('user__data__province__zone_id', flat=True).distinct()
+        # Эхлээд сургуулийн province-ийг авна, олдохгүй бол data.province-ийг авна
+        active_provinces = ScoreSheet.objects.filter(
+            olympiad_id=olympiad_id
+        ).annotate(
+            effective_province_id=Coalesce('user__school__province_id', 'user__data__province_id')
+        ).filter(
+            effective_province_id__isnull=False
+        ).values_list('effective_province_id', flat=True).distinct()
+
+        active_zones = ScoreSheet.objects.filter(
+            olympiad_id=olympiad_id
+        ).annotate(
+            effective_zone_id=Coalesce('user__school__province__zone_id', 'user__data__province__zone_id')
+        ).filter(
+            effective_zone_id__isnull=False
+        ).values_list('effective_zone_id', flat=True).distinct()
 
         # Аймгийн эрэмбэ (зөвхөн оролцогчтой аймгуудаар)
         for province_id in active_provinces:

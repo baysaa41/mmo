@@ -294,6 +294,9 @@ def manage_school_by_level(request, school_id, level_id):
 
                 # Шинэ сургуульд оноох
                 user_meta.school = school
+                # Сургуулийн дүүргийн мэдээллийг хэрэглэгчийн дүүрэг болгож оноох
+                if school.province:
+                    user_meta.province = school.province
                 if level_id != 0:
                     user_meta.level = selected_level if isinstance(selected_level, Level) else None
                 user_meta.save()

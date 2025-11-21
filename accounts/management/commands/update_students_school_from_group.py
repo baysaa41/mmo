@@ -48,9 +48,13 @@ class Command(BaseCommand):
                 meta = UserMeta.objects.get(user_id=user_id)
                 if not meta.school:
                     meta.school = school
-                    meta.save(update_fields=['school'])
+                    # Сургуулийн дүүргийн мэдээллийг хэрэглэгчийн дүүрэг болгож оноох
+                    if school.province:
+                        meta.province = school.province
+                    meta.save(update_fields=['school', 'province'])
                     updated_count += 1
-                    self.stdout.write(f"Шинэчилсэн: {meta.user.username} → {school.name}")
+                    province_name = school.province.name if school.province else 'N/A'
+                    self.stdout.write(f"Шинэчилсэн: {meta.user.username} → {school.name} ({province_name})")
             except UserMeta.DoesNotExist:
                 continue
 
