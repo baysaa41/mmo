@@ -693,59 +693,42 @@ def first_round_stats(request):
 @staff_member_required
 def cheating_analysis_view(request, olympiad_id):
     """
-    Сургуулиудын хуулалтын шинжилгээний хуудас
+    Сургуулиудын хуулалтын шинжилгээний хуудас (Memory-friendly version)
     """
-    from .cheating_analysis import analyze_olympiad_cheating
+    from .cheating_analysis import analyze_olympiad_cheating_cached
+    from collections import defaultdict
 
     try:
         olympiad = Olympiad.objects.get(pk=olympiad_id)
     except Olympiad.DoesNotExist:
         return render(request, 'olympiad/results/no_olympiad.html')
 
-    # Get selected province
-    selected_province_id = request.GET.get('p', '')
+    # Check if refresh requested
+    refresh = request.GET.get('refresh', False)
 
-    # Run analysis
-    results_df = analyze_olympiad_cheating(olympiad_id)
+    # Run analysis with caching
+    results_data = analyze_olympiad_cheating_cached(olympiad_id, refresh=refresh)
 
-    # Convert to list of dicts for template
-    if not results_df.empty:
-        results_data = results_df.to_dict('records')
-    else:
-        results_data = []
-
-    # Get unique provinces for dropdown
-    provinces_in_data = {}
+    # Group by province
+    provinces_dict = defaultdict(list)
     for item in results_data:
-        pid = item.get('province_id', 0)
-        pname = item.get('province_name', 'Тодорхойгүй')
-        if pid not in provinces_in_data:
-            provinces_in_data[pid] = pname
+        province_name = item.get('province_name', 'Тодорхойгүй')
+        provinces_dict[province_name].append(item)
 
-    province_list = [{'id': k, 'name': v} for k, v in sorted(provinces_in_data.items(), key=lambda x: x[1])]
-
-    # Filter by selected province
-    if selected_province_id:
-        try:
-            selected_province_id = int(selected_province_id)
-            results_data = [item for item in results_data if item.get('province_id') == selected_province_id]
-            selected_province_name = provinces_in_data.get(selected_province_id, '')
-        except ValueError:
-            selected_province_id = ''
-            selected_province_name = ''
-    else:
-        selected_province_name = ''
-
-    # Sort by CPS descending
-    results_data = sorted(results_data, key=lambda x: -x['CPS'])
+    # Sort provinces and schools within each province
+    provinces_data = []
+    for province_name in sorted(provinces_dict.keys()):
+        schools = sorted(provinces_dict[province_name], key=lambda x: -x['CPS'])
+        provinces_data.append({
+            'name': province_name,
+            'schools': schools,
+            'school_count': len(schools)
+        })
 
     context = {
         'olympiad': olympiad,
-        'results': results_data,
+        'provinces': provinces_data,
         'total_schools': len(results_data),
-        'provinces': province_list,
-        'selected_province_id': selected_province_id,
-        'selected_province_name': selected_province_name,
     }
 
     return render(request, 'olympiad/results/cheating_analysis.html', context)

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from itertools import combinations
 from sklearn.cluster import AgglomerativeClustering
+from django.core.cache import cache
 
 # ------------------------------
 # CHEATING INDEX FUNCTIONS
@@ -186,6 +187,137 @@ def analyze_olympiad_cheating(olympiad_id):
                 'student_count': len(group),
                 **analysis
             })
+
+    if not results_list:
+        return pd.DataFrame()
+
+    results_df = pd.DataFrame(results_list)
+    results_df = results_df.sort_values('CPS', ascending=False)
+
+    return results_df
+
+
+def analyze_olympiad_cheating_cached(olympiad_id, refresh=False, cache_timeout=3600):
+    """
+    Memory-friendly, cached version of cheating analysis.
+
+    Args:
+        olympiad_id: Olympiad ID
+        refresh: Force refresh cache
+        cache_timeout: Cache timeout in seconds (default: 1 hour)
+
+    Returns:
+        List of dicts with school cheating analysis results
+    """
+    cache_key = f'cheating_analysis_{olympiad_id}'
+
+    # Check cache first
+    if not refresh:
+        cached_results = cache.get(cache_key)
+        if cached_results is not None:
+            return cached_results
+
+    # Run analysis
+    results_df = analyze_olympiad_cheating_memory_efficient(olympiad_id)
+
+    # Convert to list and cache
+    if not results_df.empty:
+        results_data = results_df.to_dict('records')
+    else:
+        results_data = []
+
+    cache.set(cache_key, results_data, cache_timeout)
+
+    return results_data
+
+
+def analyze_olympiad_cheating_memory_efficient(olympiad_id):
+    """
+    Memory-efficient version - processes schools one province at a time.
+    """
+    from olympiad.models import Result
+    from schools.models import School
+
+    # Get unique schools with province info
+    schools_data = Result.objects.filter(
+        olympiad_id=olympiad_id,
+        contestant__data__school__isnull=False
+    ).values(
+        'contestant__data__school_id',
+        'contestant__data__school__name',
+        'contestant__data__school__province_id',
+        'contestant__data__school__province__name'
+    ).distinct()
+
+    if not schools_data:
+        return pd.DataFrame()
+
+    # Group schools by province for batch processing
+    schools_by_province = {}
+    for s in schools_data:
+        province_id = s['contestant__data__school__province_id'] or 0
+        if province_id not in schools_by_province:
+            schools_by_province[province_id] = []
+        schools_by_province[province_id].append({
+            'school_id': s['contestant__data__school_id'],
+            'school_name': s['contestant__data__school__name'],
+            'province_id': province_id,
+            'province_name': s['contestant__data__school__province__name'] or 'Тодорхойгүй'
+        })
+
+    results_list = []
+
+    # Process one province at a time to reduce memory
+    for province_id, schools in schools_by_province.items():
+        for school_info in schools:
+            school_id = school_info['school_id']
+
+            # Get results for this school only
+            school_results = Result.objects.filter(
+                olympiad_id=olympiad_id,
+                contestant__data__school_id=school_id
+            ).values(
+                'contestant_id',
+                'problem__order',
+                'answer'
+            )
+
+            if not school_results:
+                continue
+
+            # Convert to DataFrame
+            df = pd.DataFrame(list(school_results))
+
+            if df.empty or len(df['contestant_id'].unique()) < 5:
+                continue
+
+            # Pivot
+            pivot_df = df.pivot_table(
+                index='contestant_id',
+                columns='problem__order',
+                values='answer',
+                aggfunc='first'
+            )
+
+            # Get questions
+            questions = [f'Q{int(c):02d}' for c in pivot_df.columns]
+            pivot_df.columns = questions
+
+            # Analyze
+            analysis = analyze_school(pivot_df, questions)
+
+            if analysis:
+                results_list.append({
+                    'school_id': school_id,
+                    'school_name': school_info['school_name'],
+                    'province_id': school_info['province_id'],
+                    'province_name': school_info['province_name'],
+                    'student_count': len(pivot_df),
+                    **analysis
+                })
+
+            # Clear memory
+            del df, pivot_df
 
     if not results_list:
         return pd.DataFrame()
