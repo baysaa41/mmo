@@ -130,7 +130,7 @@ def olympiad_results(request, olympiad_id):
             "user__data__school__province",
             "user__data__province",
             "school__province"
-        ).order_by("-is_official", list_rank_field)
+        ).order_by("-is_official", list_rank_field, "-total")
 
         # --- Database түвшинд pagination хийх ---
         paginator = Paginator(scoresheets, 50)
