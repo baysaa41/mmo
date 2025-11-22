@@ -31,6 +31,7 @@ urlpatterns = [
     path('send-to-schools/', email.send_email_to_schools, name='send_email_to_schools'),
 
     # dashboard
+    path('dashboard/', admin.dashboard_view, name='admin_dashboard'),
     path('commands-guide/', admin.command_guide_view, name='commands_guide'),
 
     path(

@@ -1,5 +1,73 @@
 from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import get_user_model
+from django.db.models import Count
+from django.utils import timezone
+from datetime import timedelta
+import os
+import platform
+
+@staff_member_required
+def dashboard_view(request):
+    """
+    cPanel маягийн системийн мэдээлэл харуулах dashboard хуудас
+    """
+    User = get_user_model()
+
+    # Import models
+    from schools.models import School
+    from olympiad.models import Olympiad, Result
+
+    now = timezone.now()
+    thirty_days_ago = now - timedelta(days=30)
+    seven_days_ago = now - timedelta(days=7)
+
+    # User statistics
+    total_users = User.objects.count()
+    active_users_30d = User.objects.filter(last_login__gte=thirty_days_ago).count()
+    active_users_7d = User.objects.filter(last_login__gte=seven_days_ago).count()
+    staff_users = User.objects.filter(is_staff=True).count()
+    superusers = User.objects.filter(is_superuser=True).count()
+    new_users_30d = User.objects.filter(date_joined__gte=thirty_days_ago).count()
+    new_users_7d = User.objects.filter(date_joined__gte=seven_days_ago).count()
+
+    # Users by province
+    users_by_province = User.objects.values('province').annotate(count=Count('id')).order_by('-count')[:10]
+
+    # School statistics
+    total_schools = School.objects.count()
+
+    # Olympiad statistics
+    total_olympiads = Olympiad.objects.count()
+    total_results = Result.objects.count()
+
+    # Recent users
+    recent_users = User.objects.order_by('-date_joined')[:10]
+
+    # System info
+    system_info = {
+        'platform': platform.system(),
+        'python_version': platform.python_version(),
+        'hostname': platform.node(),
+    }
+
+    context = {
+        'total_users': total_users,
+        'active_users_30d': active_users_30d,
+        'active_users_7d': active_users_7d,
+        'staff_users': staff_users,
+        'superusers': superusers,
+        'new_users_30d': new_users_30d,
+        'new_users_7d': new_users_7d,
+        'users_by_province': users_by_province,
+        'total_schools': total_schools,
+        'total_olympiads': total_olympiads,
+        'total_results': total_results,
+        'recent_users': recent_users,
+        'system_info': system_info,
+    }
+
+    return render(request, 'accounts/dashboard.html', context)
 
 @staff_member_required
 def command_guide_view(request):
