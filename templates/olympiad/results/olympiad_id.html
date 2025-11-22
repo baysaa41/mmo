@@ -141,7 +141,13 @@
                         <td>{{ data.first_name }}</td>
                         <td>{{ data.id }}</td>
                         <td>{{ data.province }}</td>
-                        <td>{{ data.school.name }}</td>
+                        <td>
+                            {% if data.school %}
+                                <a href="{% url 'olympiad_answer_view' olympiad.id %}?s={{ data.school.id }}">
+                                    {{ data.school.name }}
+                                </a>
+                            {% endif %}
+                        </td>
                         {% for score in data.scores %}
                             <td class="text-center{% if score == 0 %} text-secondary{% endif %}">{{ score }}</td>
                         {% endfor %}
