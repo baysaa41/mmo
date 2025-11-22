@@ -696,12 +696,14 @@ def cheating_analysis_view(request, olympiad_id):
     Сургуулиудын хуулалтын шинжилгээний хуудас
     """
     from .cheating_analysis import analyze_olympiad_cheating
-    from collections import defaultdict
 
     try:
         olympiad = Olympiad.objects.get(pk=olympiad_id)
     except Olympiad.DoesNotExist:
         return render(request, 'olympiad/results/no_olympiad.html')
+
+    # Get selected province
+    selected_province_id = request.GET.get('p', '')
 
     # Run analysis
     results_df = analyze_olympiad_cheating(olympiad_id)
@@ -712,26 +714,38 @@ def cheating_analysis_view(request, olympiad_id):
     else:
         results_data = []
 
-    # Group by province
-    provinces_dict = defaultdict(list)
+    # Get unique provinces for dropdown
+    provinces_in_data = {}
     for item in results_data:
-        province_name = item.get('province_name', 'Тодорхойгүй')
-        provinces_dict[province_name].append(item)
+        pid = item.get('province_id', 0)
+        pname = item.get('province_name', 'Тодорхойгүй')
+        if pid not in provinces_in_data:
+            provinces_in_data[pid] = pname
 
-    # Sort provinces and schools within each province
-    provinces_data = []
-    for province_name in sorted(provinces_dict.keys()):
-        schools = sorted(provinces_dict[province_name], key=lambda x: -x['CPS'])
-        provinces_data.append({
-            'name': province_name,
-            'schools': schools,
-            'school_count': len(schools)
-        })
+    province_list = [{'id': k, 'name': v} for k, v in sorted(provinces_in_data.items(), key=lambda x: x[1])]
+
+    # Filter by selected province
+    if selected_province_id:
+        try:
+            selected_province_id = int(selected_province_id)
+            results_data = [item for item in results_data if item.get('province_id') == selected_province_id]
+            selected_province_name = provinces_in_data.get(selected_province_id, '')
+        except ValueError:
+            selected_province_id = ''
+            selected_province_name = ''
+    else:
+        selected_province_name = ''
+
+    # Sort by CPS descending
+    results_data = sorted(results_data, key=lambda x: -x['CPS'])
 
     context = {
         'olympiad': olympiad,
-        'provinces': provinces_data,
+        'results': results_data,
         'total_schools': len(results_data),
+        'provinces': province_list,
+        'selected_province_id': selected_province_id,
+        'selected_province_name': selected_province_name,
     }
 
     return render(request, 'olympiad/results/cheating_analysis.html', context)
