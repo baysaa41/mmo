@@ -38,9 +38,10 @@ class ProblemAdmin(admin.ModelAdmin):
 admin.site.register(Problem,ProblemAdmin)
 
 class SolutionAdmin(admin.ModelAdmin):
-    list_display = ("problem","content")
+    list_display = ("problem", "author", "content")
     list_filter = ("problem__olympiad__school_year",)
     search_fields = ["problem__olympiad", "content"]
+    autocomplete_fields = ['author']
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
