@@ -688,3 +688,50 @@ def first_round_stats(request):
     }
 
     return render(request, 'olympiad/results/first_round_stats.html', context)
+
+
+@staff_member_required
+def cheating_analysis_view(request, olympiad_id):
+    """
+    Сургуулиудын хуулалтын шинжилгээний хуудас
+    """
+    from .cheating_analysis import analyze_olympiad_cheating
+    from collections import defaultdict
+
+    try:
+        olympiad = Olympiad.objects.get(pk=olympiad_id)
+    except Olympiad.DoesNotExist:
+        return render(request, 'olympiad/results/no_olympiad.html')
+
+    # Run analysis
+    results_df = analyze_olympiad_cheating(olympiad_id)
+
+    # Convert to list of dicts for template
+    if not results_df.empty:
+        results_data = results_df.to_dict('records')
+    else:
+        results_data = []
+
+    # Group by province
+    provinces_dict = defaultdict(list)
+    for item in results_data:
+        province_name = item.get('province_name', 'Тодорхойгүй')
+        provinces_dict[province_name].append(item)
+
+    # Sort provinces and schools within each province
+    provinces_data = []
+    for province_name in sorted(provinces_dict.keys()):
+        schools = sorted(provinces_dict[province_name], key=lambda x: -x['CPS'])
+        provinces_data.append({
+            'name': province_name,
+            'schools': schools,
+            'school_count': len(schools)
+        })
+
+    context = {
+        'olympiad': olympiad,
+        'provinces': provinces_data,
+        'total_schools': len(results_data),
+    }
+
+    return render(request, 'olympiad/results/cheating_analysis.html', context)
