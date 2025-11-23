@@ -271,10 +271,11 @@ def analyze_olympiad_cheating_memory_efficient(olympiad_id, top_n=10):
         q_name = f'Q{int(p["order"]):02d}'
         correct_answers[q_name] = p['numerical_answer']
 
-    # Get unique schools with province info
+    # Get unique schools with province info (only official participation)
     schools_data = Result.objects.filter(
         olympiad_id=olympiad_id,
-        contestant__data__school__isnull=False
+        contestant__data__school__isnull=False,
+        contestant__data__school__is_official_participation=True
     ).values(
         'contestant__data__school_id',
         'contestant__data__school__name',
