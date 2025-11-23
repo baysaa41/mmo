@@ -8,54 +8,72 @@ from django.core.cache import cache
 # CHEATING INDEX FUNCTIONS
 # ------------------------------
 
-def wrong_answer_match(a, b, questions):
-    """Буруу хариултын таарал"""
-    count = 0
-    total_wrong = 0
-    for q in questions:
-        ca, cb = a.get(q), b.get(q)
-        if pd.isna(ca) or pd.isna(cb):
-            continue
-        # Хоёулаа буруу эсвэл аль нэг нь буруу
-        total_wrong += 1
-        if ca == cb:
-            count += 1
-    return count / total_wrong if total_wrong else 0
-
-
-def exact_match(a, b, questions):
-    """Яг ижил хариултын хувь"""
+def wrong_answer_match(a, b, questions, correct_answers):
+    """Буруу хариултын таарал - хоёулаа ижил буруу хариулт өгсөн"""
     count = 0
     total = 0
     for q in questions:
         ca, cb = a.get(q), b.get(q)
-        if pd.isna(ca) or pd.isna(cb):
+        correct = correct_answers.get(q)
+        if pd.isna(ca) or pd.isna(cb) or correct is None:
             continue
         total += 1
-        if ca == cb:
+        # Хоёулаа ижил буруу хариулт өгсөн эсэх
+        if ca == cb and ca != correct:
             count += 1
     return count / total if total else 0
 
 
-def cheating_index(a, b, questions):
+def correct_answer_match(a, b, questions, correct_answers):
+    """Зөв хариултын таарал - хоёулаа зөв хариулт өгсөн"""
+    count = 0
+    total = 0
+    for q in questions:
+        ca, cb = a.get(q), b.get(q)
+        correct = correct_answers.get(q)
+        if pd.isna(ca) or pd.isna(cb) or correct is None:
+            continue
+        total += 1
+        # Хоёулаа зөв хариулт өгсөн эсэх
+        if ca == cb and ca == correct:
+            count += 1
+    return count / total if total else 0
+
+
+def cheating_index(a, b, questions, correct_answers):
     """
     Хуулалтын индекс тооцоолох
-    - Буруу хариулт ижил: 0.9
-    - Зөв хариулт ижил: 0.1
+    - Зөв хариулт ижил: 0.2
+    - Буруу хариулт ижил: 0.8
     """
     return (
-        0.9 * wrong_answer_match(a, b, questions) +
-        0.1 * exact_match(a, b, questions)
+        0.65 * correct_answer_match(a, b, questions, correct_answers) +
+        1 * wrong_answer_match(a, b, questions, correct_answers)
     )
 
 
-def analyze_school(students_df, questions, min_students=5):
+def has_matching_wrong_answer(a, b, questions):
+    """
+    Дор хаяж нэг буруу хариулт ижил байгаа эсэхийг шалгах
+    """
+    for q in questions:
+        ca, cb = a.get(q), b.get(q)
+        if pd.isna(ca) or pd.isna(cb):
+            continue
+        # Хоёулаа ижил буруу хариулттай эсэх
+        if ca == cb:
+            return True
+    return False
+
+
+def analyze_school(students_df, questions, correct_answers, min_students=5):
     """
     Нэг сургуулийн сурагчдын хуулалтын шинжилгээ хийх
 
     Args:
         students_df: DataFrame with contestant_id as index, questions as columns
         questions: List of question column names
+        correct_answers: Dict mapping question name to correct answer
         min_students: Хамгийн багадаа хэдэн сурагчтай байх (default: 5)
 
     Returns:
@@ -75,14 +93,14 @@ def analyze_school(students_df, questions, min_students=5):
     # Pairwise CI for the school
     for i, j in combinations(range(n), 2):
         id_i, id_j = student_ids[i], student_ids[j]
-        ci = cheating_index(students[id_i], students[id_j], questions)
+        ci = cheating_index(students[id_i], students[id_j], questions, correct_answers)
         CI_values.append(ci)
 
     CI_values = np.array(CI_values)
 
     # METRICS
     CPS = np.mean(CI_values)  # Cheating Prevalence Score
-    HRP = np.mean(CI_values > 0.75)  # High-risk pair ratio
+    HRP = np.mean(CI_values > 0.7)  # High-risk pair ratio (CI > 0.7)
     Integrity = 1 - CPS
 
     # Copy Clusters
@@ -91,7 +109,7 @@ def analyze_school(students_df, questions, min_students=5):
         for j in range(n):
             if i != j:
                 id_i, id_j = student_ids[i], student_ids[j]
-                CI_matrix[i][j] = cheating_index(students[id_i], students[id_j], questions)
+                CI_matrix[i][j] = cheating_index(students[id_i], students[id_j], questions, correct_answers)
 
     dist = 1 - CI_matrix
     try:
@@ -240,8 +258,18 @@ def analyze_olympiad_cheating_memory_efficient(olympiad_id, top_n=10):
         olympiad_id: Olympiad ID
         top_n: Number of top students to analyze per school (default: 10)
     """
-    from olympiad.models import Result, ScoreSheet
+    from olympiad.models import Result, ScoreSheet, Problem
     from schools.models import School
+
+    # Get correct answers from Problem model
+    problems = Problem.objects.filter(
+        olympiad_id=olympiad_id
+    ).values('order', 'numerical_answer')
+
+    correct_answers = {}
+    for p in problems:
+        q_name = f'Q{int(p["order"]):02d}'
+        correct_answers[q_name] = p['numerical_answer']
 
     # Get unique schools with province info
     schools_data = Result.objects.filter(
@@ -320,7 +348,7 @@ def analyze_olympiad_cheating_memory_efficient(olympiad_id, top_n=10):
             pivot_df.columns = questions
 
             # Analyze
-            analysis = analyze_school(pivot_df, questions)
+            analysis = analyze_school(pivot_df, questions, correct_answers)
 
             if analysis:
                 results_list.append({
@@ -342,3 +370,103 @@ def analyze_olympiad_cheating_memory_efficient(olympiad_id, top_n=10):
     results_df = results_df.sort_values('CPS', ascending=False)
 
     return results_df
+
+
+def print_cheating_matrix(olympiad_id, school_id, top_n=10):
+    """
+    Сургуулийн топ N сурагчдын хуулалтын индексийн матрицыг консолд хэвлэх.
+
+    Ашиглах:
+        from olympiad.cheating_analysis import print_cheating_matrix
+        print_cheating_matrix(olympiad_id=1, school_id=123)
+
+    Args:
+        olympiad_id: Olympiad ID
+        school_id: School ID
+        top_n: Хамгийн өндөр оноотой хэдэн сурагч (default: 10)
+    """
+    from olympiad.models import Result, ScoreSheet
+
+    # Get top N students by score
+    top_students = ScoreSheet.objects.filter(
+        olympiad_id=olympiad_id,
+        school_id=school_id
+    ).order_by('-total').values_list('user_id', flat=True)[:top_n]
+
+    top_student_ids = list(top_students)
+
+    if len(top_student_ids) < 2:
+        print(f"Хангалттай сурагч олдсонгүй. Олдсон: {len(top_student_ids)}")
+        return
+
+    # Get results
+    results = Result.objects.filter(
+        olympiad_id=olympiad_id,
+        contestant_id__in=top_student_ids
+    ).values(
+        'contestant_id',
+        'problem__order',
+        'answer'
+    )
+
+    if not results:
+        print("Үр дүн олдсонгүй.")
+        return
+
+    # Convert to DataFrame and pivot
+    df = pd.DataFrame(list(results))
+    pivot_df = df.pivot_table(
+        index='contestant_id',
+        columns='problem__order',
+        values='answer',
+        aggfunc='first'
+    )
+
+    # Get questions
+    questions = [f'Q{int(c):02d}' for c in pivot_df.columns]
+    pivot_df.columns = questions
+
+    # Convert to dict
+    students = pivot_df.to_dict('index')
+    student_ids = list(students.keys())
+    n = len(student_ids)
+
+    # Calculate CI matrix
+    CI_matrix = np.zeros((n, n))
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                CI_matrix[i][j] = 1.0
+            else:
+                CI_matrix[i][j] = cheating_index(
+                    students[student_ids[i]],
+                    students[student_ids[j]],
+                    questions
+                )
+
+    # Print matrix
+    print(f"\n{'='*60}")
+    print(f"Хуулалтын индекс матриц - Олимпиад: {olympiad_id}, Сургууль: {school_id}")
+    print(f"Сурагчдын тоо: {n}")
+    print(f"{'='*60}\n")
+
+    # Header row with student numbers
+    header = "      " + "".join([f"{i+1:>6}" for i in range(n)])
+    print(header)
+    print("-" * len(header))
+
+    # Matrix rows
+    for i in range(n):
+        row = f"{i+1:>4} |"
+        for j in range(n):
+            if i == j:
+                row += f"{'---':>6}"
+            else:
+                row += f"{CI_matrix[i][j]:>6.2f}"
+        print(row)
+
+    print(f"\n{'='*60}")
+    print("Сурагчдын ID жагсаалт:")
+    for i, sid in enumerate(student_ids):
+        print(f"  {i+1}: {sid}")
+    print(f"{'='*60}\n")

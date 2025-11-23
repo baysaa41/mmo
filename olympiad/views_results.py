@@ -337,6 +337,12 @@ def olympiad_group_result_view(request, group_id):
 def answers_view(request, olympiad_id):
     pid = int(request.GET.get('p', 0))
     sid = int(request.GET.get('s', 0))
+    top_n = request.GET.get('top', None)
+    if top_n:
+        try:
+            top_n = int(top_n)
+        except ValueError:
+            top_n = None
     school = None
     context_data = ''
 
@@ -396,9 +402,13 @@ def answers_view(request, olympiad_id):
                 by=['Нийт', 'Овог', 'Нэр'],
                 ascending=[False, True, True]
             )
+
+            # Top N сурагчаар хязгаарлах
+            if top_n and top_n > 0:
+                sorted_df = sorted_df.head(top_n)
+
             score_df_merged = score_df_merged.loc[sorted_df.index]
 
-            sorted_df = sorted_df.drop(columns=['ID'])
             score_df_merged = score_df_merged.drop(columns=['ID'])
 
             sorted_df.index = np.arange(1, len(sorted_df) + 1)
@@ -455,6 +465,7 @@ def answers_view(request, olympiad_id):
         'selected_pid': pid,
         'selected_sid': sid,
         'olympiad_id': olympiad_id,
+        'top_n': top_n,
     }
 
     return render(request, 'olympiad/results/answers.html', context)

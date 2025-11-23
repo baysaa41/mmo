@@ -10,6 +10,14 @@
         <h2 class="mb-1">Сурагчдын хариулт</h2>
         <p class="lead text-muted">{{ school.province.name }}, {{ school.name }}</p>
         <p class="lead text-muted">{{ school.user.first_name }}{% if request.user.is_staff %}, {{ school.user.data.mobile }}, {{ school.user.email }}{% endif %}</p>
+        {% if top_n %}
+        <div class="alert alert-warning d-flex justify-content-between align-items-center">
+            <span><strong>Топ {{ top_n }} сурагч</strong> харуулж байна</span>
+            <a href="{% url 'olympiad_answer_view' olympiad_id %}?s={{ school.id }}" class="btn btn-sm btn-outline-primary">
+                Бүх сурагчдыг харах
+            </a>
+        </div>
+        {% endif %}
     {% else %}
         <h2>{{ title }}</h2>
     {% endif %}

@@ -12,8 +12,8 @@
     <div class="alert alert-info">
         <strong>Статистикийн тайлбар:</strong>
         <ul class="mb-0">
-            <li><strong>CPS (Cheating Prevalence Score)</strong> - Сурагч хосуудын хуулалтын индексийн дундаж (0-1). Томъёо: <code>0.9 × буруу_хариулт_ижил + 0.1 × зөв_хариулт_ижил</code></li>
-            <li><strong>HRP (High Risk Pairs)</strong> - Хуулалтын индекс > 0.75 байгаа хосуудын эзлэх хувь</li>
+            <li><strong>CPS (Cheating Prevalence Score)</strong> - Сурагч хосуудын хуулалтын индексийн дундаж (0-1). Томъёо: <code>0.65 × зөв_хариулт_ижил + 1 × буруу_хариулт_ижил</code></li>
+            <li><strong>HRP (High Risk Pairs)</strong> - Хуулалтын индекс > 0.7 байгаа хосуудын эзлэх хувь</li>
             <li><strong>Clusters</strong> - Hierarchical clustering ашиглан ижил хариулттай бүлгүүдийн тоо (distance threshold = 0.5)</li>
             <li><strong>Integrity</strong> - Шударга байдлын оноо = 1 - CPS</li>
         </ul>
@@ -31,9 +31,24 @@
         </small>
     </div>
 
-    <!-- Province Selector -->
+    <!-- Olympiad & Province Selector -->
     <div class="card mb-4">
         <div class="card-body">
+            <!-- Ангилал сонголт -->
+            <div class="mb-3">
+                <strong>Ангилал:</strong>
+                <div class="btn-group ms-2" role="group">
+                    <a href="{% url 'cheating_analysis' 191 %}{% if selected_province_id %}?p={{ selected_province_id }}{% endif %}"
+                       class="btn btn-sm {% if olympiad.id == 191 %}btn-primary{% else %}btn-outline-primary{% endif %}">C</a>
+                    <a href="{% url 'cheating_analysis' 192 %}{% if selected_province_id %}?p={{ selected_province_id }}{% endif %}"
+                       class="btn btn-sm {% if olympiad.id == 192 %}btn-primary{% else %}btn-outline-primary{% endif %}">D</a>
+                    <a href="{% url 'cheating_analysis' 193 %}{% if selected_province_id %}?p={{ selected_province_id }}{% endif %}"
+                       class="btn btn-sm {% if olympiad.id == 193 %}btn-primary{% else %}btn-outline-primary{% endif %}">E</a>
+                    <a href="{% url 'cheating_analysis' 194 %}{% if selected_province_id %}?p={{ selected_province_id }}{% endif %}"
+                       class="btn btn-sm {% if olympiad.id == 194 %}btn-primary{% else %}btn-outline-primary{% endif %}">F</a>
+                </div>
+            </div>
+
             <form method="get" class="row g-3 align-items-center">
                 <div class="col-auto">
                     <label class="form-label mb-0"><strong>Аймаг/Дүүрэг:</strong></label>
@@ -91,7 +106,7 @@
                             <tr>
                                 <td>{{ forloop.counter }}</td>
                                 <td>
-                                    <a href="{% url 'olympiad_answer_view' olympiad.id %}?s={{ item.school_id }}">
+                                    <a href="{% url 'olympiad_answer_view' olympiad.id %}?p={{ item.province_id }}&s={{ item.school_id }}&top=10">
                                         {{ item.school_name }}
                                     </a>
                                 </td>
