@@ -12,49 +12,82 @@
     <div class="alert alert-info">
         <strong>Статистикийн тайлбар:</strong>
         <ul class="mb-0">
-            <li><strong>CPS (Cheating Prevalence Score)</strong> - Сурагч хосуудын хуулалтын индексийн дундаж (0-1). Томъёо: <code>0.7 × буруу_хариулт_таарал + 0.3 × бүх_хариулт_таарал</code></li>
+            <li><strong>CPS (Cheating Prevalence Score)</strong> - Сурагч хосуудын хуулалтын индексийн дундаж (0-1). Томъёо: <code>0.9 × буруу_хариулт_ижил + 0.1 × зөв_хариулт_ижил</code></li>
             <li><strong>HRP (High Risk Pairs)</strong> - Хуулалтын индекс > 0.75 байгаа хосуудын эзлэх хувь</li>
             <li><strong>Clusters</strong> - Hierarchical clustering ашиглан ижил хариулттай бүлгүүдийн тоо (distance threshold = 0.5)</li>
             <li><strong>Integrity</strong> - Шударга байдлын оноо = 1 - CPS</li>
         </ul>
         <hr class="my-2">
+        <strong>Үнэлгээ (Integrity Score-оор):</strong>
+        <ul class="mb-0">
+            <li><span class="badge bg-success">Сайн</span> - Integrity ≥ 0.7 (CPS ≤ 0.3)</li>
+            <li><span class="badge bg-warning text-dark">Анхаарах</span> - Integrity ≥ 0.5 (CPS ≤ 0.5)</li>
+            <li><span class="badge bg-danger">Эрсдэлтэй</span> - Integrity < 0.5 (CPS > 0.5)</li>
+        </ul>
+        <hr class="my-2">
         <small class="text-muted">
-            <strong>Алгоритм:</strong> Сургууль бүрийн сурагч хос бүрийг харьцуулж, хариултын ижил байдлыг тооцно.
+            <strong>Алгоритм:</strong> Сургууль бүрийн <strong>хамгийн өндөр оноотой 10 сурагч</strong>-ийн хариултыг харьцуулж, ижил байдлыг тооцно.
             AgglomerativeClustering ашиглан ойролцоо хариулттай сурагчдыг бүлэглэнэ.
         </small>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <p class="text-muted mb-0">Нийт {{ total_schools }} сургууль, {{ provinces|length }} аймаг/дүүрэг</p>
-        <a href="?refresh=1" class="btn btn-sm btn-outline-primary">
-            <i class="fas fa-sync-alt"></i> Шинэчлэх
-        </a>
+    <!-- Province Selector -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label mb-0"><strong>Аймаг/Дүүрэг:</strong></label>
+                </div>
+                <div class="col-auto">
+                    <select name="p" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Сонгоно уу --</option>
+                        {% for province in provinces %}
+                            <option value="{{ province.id }}" {% if province.id == selected_province_id %}selected{% endif %}>
+                                {{ province.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Харах</button>
+                </div>
+                {% if selected_province_id %}
+                <div class="col-auto">
+                    <a href="?" class="btn btn-outline-secondary">Цэвэрлэх</a>
+                </div>
+                {% endif %}
+                <div class="col-auto ms-auto">
+                    <a href="?p={{ selected_province_id }}&refresh=1" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-sync-alt"></i> Шинэчлэх
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 
-    {% if provinces %}
-        {% for province in provinces %}
-        <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
-                <strong>{{ province.name }}</strong>
-                <span class="badge bg-light text-dark ms-2">{{ province.school_count }} сургууль</span>
+    {% if selected_province_id %}
+        {% if results %}
+        <div class="card">
+            <div class="card-header">
+                <strong>{{ selected_province_name }}</strong> - {{ total_schools }} сургууль
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-striped table-hover mb-0">
-                        <thead class="table-light">
+                        <thead class="table-dark">
                             <tr>
-                                <th>#</th>
-                                <th>Сургууль</th>
-                                <th class="text-center">Сурагч</th>
-                                <th class="text-center">CPS</th>
-                                <th class="text-center">HRP</th>
-                                <th class="text-center">Clusters</th>
-                                <th class="text-center">Integrity</th>
-                                <th class="text-center">Үнэлгээ</th>
+                                <th style="width: 5%">#</th>
+                                <th style="width: 35%">Сургууль</th>
+                                <th class="text-center" style="width: 8%">Сурагч</th>
+                                <th class="text-center" style="width: 10%">CPS</th>
+                                <th class="text-center" style="width: 8%">HRP</th>
+                                <th class="text-center" style="width: 10%">Clusters</th>
+                                <th class="text-center" style="width: 10%">Integrity</th>
+                                <th class="text-center" style="width: 14%">Үнэлгээ</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for item in province.schools %}
+                            {% for item in results %}
                             <tr>
                                 <td>{{ forloop.counter }}</td>
                                 <td>
@@ -86,11 +119,9 @@
                                     <strong>{{ item.IntegrityScore }}</strong>
                                 </td>
                                 <td class="text-center">
-                                    {% if item.IntegrityScore >= 0.8 %}
-                                        <span class="badge bg-success">Маш сайн</span>
-                                    {% elif item.IntegrityScore >= 0.6 %}
-                                        <span class="badge bg-primary">Сайн</span>
-                                    {% elif item.IntegrityScore >= 0.4 %}
+                                    {% if item.IntegrityScore >= 0.7 %}
+                                        <span class="badge bg-success">Сайн</span>
+                                    {% elif item.IntegrityScore >= 0.5 %}
                                         <span class="badge bg-warning text-dark">Анхаарах</span>
                                     {% else %}
                                         <span class="badge bg-danger">Эрсдэлтэй</span>
@@ -103,10 +134,14 @@
                 </div>
             </div>
         </div>
-        {% endfor %}
+        {% else %}
+        <div class="alert alert-warning">
+            Сонгосон аймаг/дүүрэгт шинжилгээ хийх өгөгдөл олдсонгүй.
+        </div>
+        {% endif %}
     {% else %}
-    <div class="alert alert-warning">
-        Шинжилгээ хийх өгөгдөл олдсонгүй.
+    <div class="alert alert-light">
+        Аймаг/дүүрэг сонгоно уу.
     </div>
     {% endif %}
 </div>

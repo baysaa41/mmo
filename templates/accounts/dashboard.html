@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard - ММО{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-4"><i class="fas fa-tachometer-alt"></i> Системийн хяналтын самбар</h2>
+
+    <!-- Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">Нийт хэрэглэгч</h6>
+                            <h2 class="mb-0">{{ total_users|default:0 }}</h2>
+                        </div>
+                        <i class="fas fa-users fa-3x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer bg-primary-dark">
+                    <small>Шинэ (7 хоног): +{{ new_users_7d }}</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">Идэвхтэй (30 хоног)</h6>
+                            <h2 class="mb-0">{{ active_users_30d|default:0 }}</h2>
+                        </div>
+                        <i class="fas fa-user-check fa-3x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer bg-success-dark">
+                    <small>7 хоногт: {{ active_users_7d }}</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">Нийт сургууль</h6>
+                            <h2 class="mb-0">{{ total_schools|default:0 }}</h2>
+                        </div>
+                        <i class="fas fa-school fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">Нийт олимпиад</h6>
+                            <h2 class="mb-0">{{ total_olympiads|default:0 }}</h2>
+                        </div>
+                        <i class="fas fa-trophy fa-3x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <small>Нийт дүн: {{ total_results }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Users by Province -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="fas fa-map-marker-alt"></i> Хэрэглэгчид аймаг/хотоор
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Аймаг/Хот</th>
+                                <th class="text-end">Тоо</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in users_by_province %}
+                            <tr>
+                                <td>{% if item.province %}{{ item.province }}{% else %}Тодорхойгүй{% endif %}</td>
+                                <td class="text-end">{{ item.count }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">Мэдээлэл байхгүй</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff Info -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="fas fa-user-shield"></i> Админ мэдээлэл
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><i class="fas fa-user-cog text-primary"></i> Staff хэрэглэгч</td>
+                            <td class="text-end"><strong>{{ staff_users }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td><i class="fas fa-crown text-warning"></i> Superuser</td>
+                            <td class="text-end"><strong>{{ superusers }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td><i class="fas fa-user-plus text-success"></i> Шинэ хэрэглэгч (30 хоног)</td>
+                            <td class="text-end"><strong>{{ new_users_30d }}</strong></td>
+                        </tr>
+                    </table>
+
+                    <hr>
+                    <h6><i class="fas fa-server"></i> Системийн мэдээлэл</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td>Platform</td>
+                            <td class="text-end">{{ system_info.platform }}</td>
+                        </tr>
+                        <tr>
+                            <td>Python</td>
+                            <td class="text-end">{{ system_info.python_version }}</td>
+                        </tr>
+                        <tr>
+                            <td>Hostname</td>
+                            <td class="text-end">{{ system_info.hostname }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Users -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-clock"></i> Сүүлд бүртгүүлсэн хэрэглэгчид
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Нэр</th>
+                                    <th>Email</th>
+                                    <th>Аймаг</th>
+                                    <th>Бүртгүүлсэн</th>
+                                    <th>Сүүлд нэвтэрсэн</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in recent_users %}
+                                <tr>
+                                    <td>{{ user.id }}</td>
+                                    <td>{{ user.last_name }} {{ user.first_name }}</td>
+                                    <td>{{ user.email|default:"-" }}</td>
+                                    <td>{{ user.province|default:"-" }}</td>
+                                    <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
+                                    <td>{% if user.last_login %}{{ user.last_login|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">Хэрэглэгч байхгүй</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_css %}
+<style>
+    .card-footer.bg-primary-dark { background-color: rgba(0,0,0,0.1); }
+    .card-footer.bg-success-dark { background-color: rgba(0,0,0,0.1); }
+    .opacity-50 { opacity: 0.5; }
+</style>
+{% endblock %}
+{% endblock %}

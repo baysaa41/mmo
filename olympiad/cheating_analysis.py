@@ -40,12 +40,12 @@ def exact_match(a, b, questions):
 def cheating_index(a, b, questions):
     """
     Хуулалтын индекс тооцоолох
-    - wrong_answer_match: 70%
-    - exact_match: 30%
+    - Буруу хариулт ижил: 0.9
+    - Зөв хариулт ижил: 0.1
     """
     return (
-        0.7 * wrong_answer_match(a, b, questions) +
-        0.3 * exact_match(a, b, questions)
+        0.9 * wrong_answer_match(a, b, questions) +
+        0.1 * exact_match(a, b, questions)
     )
 
 
@@ -231,11 +231,16 @@ def analyze_olympiad_cheating_cached(olympiad_id, refresh=False, cache_timeout=3
     return results_data
 
 
-def analyze_olympiad_cheating_memory_efficient(olympiad_id):
+def analyze_olympiad_cheating_memory_efficient(olympiad_id, top_n=10):
     """
     Memory-efficient version - processes schools one province at a time.
+    Only analyzes top N students by score from each school.
+
+    Args:
+        olympiad_id: Olympiad ID
+        top_n: Number of top students to analyze per school (default: 10)
     """
-    from olympiad.models import Result
+    from olympiad.models import Result, ScoreSheet
     from schools.models import School
 
     # Get unique schools with province info
@@ -272,10 +277,21 @@ def analyze_olympiad_cheating_memory_efficient(olympiad_id):
         for school_info in schools:
             school_id = school_info['school_id']
 
-            # Get results for this school only
+            # Get top N students by score from ScoreSheet
+            top_students = ScoreSheet.objects.filter(
+                olympiad_id=olympiad_id,
+                school_id=school_id
+            ).order_by('-total').values_list('user_id', flat=True)[:top_n]
+
+            top_student_ids = list(top_students)
+
+            if len(top_student_ids) < 5:
+                continue
+
+            # Get results for top students only
             school_results = Result.objects.filter(
                 olympiad_id=olympiad_id,
-                contestant__data__school_id=school_id
+                contestant_id__in=top_student_ids
             ).values(
                 'contestant_id',
                 'problem__order',
