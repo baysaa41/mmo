@@ -18,6 +18,12 @@ class School(models.Model):
     is_sent_confirmation = models.BooleanField(default=False)
     is_received_confirmation = models.BooleanField(default=False)
     is_official_participation = models.BooleanField(default=False)
+    official_levels = models.ManyToManyField(
+        "accounts.Level",
+        blank=True,
+        related_name='official_schools',
+        verbose_name="Албан ёсны оролцооны түвшингүүд"
+    )
 
     class Meta:
         # unique_together-ийн оронд constraints ашиглах

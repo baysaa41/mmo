@@ -258,8 +258,12 @@ def analyze_olympiad_cheating_memory_efficient(olympiad_id, top_n=10):
         olympiad_id: Olympiad ID
         top_n: Number of top students to analyze per school (default: 10)
     """
-    from olympiad.models import Result, ScoreSheet, Problem
+    from olympiad.models import Result, ScoreSheet, Problem, Olympiad
     from schools.models import School
+
+    # Get olympiad level
+    olympiad = Olympiad.objects.get(id=olympiad_id)
+    olympiad_level_id = olympiad.level_id
 
     # Get correct answers from Problem model
     problems = Problem.objects.filter(
@@ -271,11 +275,15 @@ def analyze_olympiad_cheating_memory_efficient(olympiad_id, top_n=10):
         q_name = f'Q{int(p["order"]):02d}'
         correct_answers[q_name] = p['numerical_answer']
 
-    # Get unique schools with province info (only official participation)
+    # Get unique schools with province info (only official participation for this level)
+    # Fallback: is_official_participation=True if official_levels is empty
+    from django.db.models import Q
     schools_data = Result.objects.filter(
         olympiad_id=olympiad_id,
-        contestant__data__school__isnull=False,
-        contestant__data__school__is_official_participation=True
+        contestant__data__school__isnull=False
+    ).filter(
+        Q(contestant__data__school__official_levels__id=olympiad_level_id) |
+        Q(contestant__data__school__is_official_participation=True)
     ).values(
         'contestant__data__school_id',
         'contestant__data__school__name',

@@ -701,7 +701,7 @@ def first_round_stats(request):
     return render(request, 'olympiad/results/first_round_stats.html', context)
 
 
-@staff_member_required
+@login_required
 def cheating_analysis_view(request, olympiad_id):
     """
     Сургуулиудын хуулалтын шинжилгээний хуудас (Memory-friendly version)

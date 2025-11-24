@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Case, When, Value, IntegerField, OuterRef, Subquery, BooleanField
-from olympiad.models import ScoreSheet, Award
+from olympiad.models import ScoreSheet, Award, Olympiad
 from olympiad.utils.data import to_scoresheet
 from olympiad.utils.ranking import (
     update_rankings_a, update_rankings_b,
@@ -38,17 +38,26 @@ class Command(BaseCommand):
         except Exception as e:
             raise CommandError(f'Онооны хуудас үүсгэхэд алдаа гарлаа: {e}')
 
-        # 2. is_official талбарыг сургуулийн is_official_participation-аас тогтоох
+        # 2. is_official талбарыг сургуулийн official_levels-ээс тогтоох
         self.stdout.write('is_official талбарыг тогтоож байна...')
+
+        # Олимпиадын түвшинг авах
+        olympiad = Olympiad.objects.get(id=olympiad_id)
+        olympiad_level_id = olympiad.level_id
+
+        from django.db.models import Q
         updated_count = ScoreSheet.objects.filter(
-            olympiad_id=olympiad_id,
-            school__is_official_participation=True
+            olympiad_id=olympiad_id
+        ).filter(
+            Q(school__official_levels__id=olympiad_level_id) |
+            Q(school__is_official_participation=True)
         ).update(is_official=True)
-        # Сургуульгүй эсвэл is_official_participation=False бол False болгох
+        # Сургуульгүй эсвэл тухайн түвшинд official биш бол False болгох
         ScoreSheet.objects.filter(
             olympiad_id=olympiad_id
         ).exclude(
-            school__is_official_participation=True
+            Q(school__official_levels__id=olympiad_level_id) |
+            Q(school__is_official_participation=True)
         ).update(is_official=False)
         self.stdout.write(self.style.SUCCESS(f'... {updated_count} онооны хуудсанд is_official=True тогтоогдлоо.'))
 
