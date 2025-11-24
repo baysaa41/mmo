@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Сургуулиудын албан ёсны оролцоо{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2 class="mb-3">
+        <i class="fas fa-school"></i> Сургуулиудын албан ёсны оролцооны түвшингүүд
+    </h2>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label mb-0"><strong>Аймаг/Дүүрэг:</strong></label>
+                </div>
+                <div class="col-auto">
+                    <select name="p" class="form-select">
+                        <option value="">-- Бүгд --</option>
+                        {% for province in provinces %}
+                            <option value="{{ province.id }}" {% if province.id == selected_province_id %}selected{% endif %}>
+                                {{ province.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label mb-0"><strong>Түвшин:</strong></label>
+                </div>
+                <div class="col-auto">
+                    <select name="l" class="form-select">
+                        <option value="">-- Бүгд --</option>
+                        {% for level in levels %}
+                            <option value="{{ level.id }}" {% if level.id == selected_level_id %}selected{% endif %}>
+                                {{ level.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Шүүх</button>
+                </div>
+                {% if selected_province_id or selected_level_id %}
+                <div class="col-auto">
+                    <a href="?" class="btn btn-outline-secondary">Цэвэрлэх</a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card">
+        <div class="card-header">
+            <strong>Нийт {{ total_schools }} сургууль</strong>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 5%">#</th>
+                            <th style="width: 25%">Сургууль</th>
+                            <th style="width: 15%">Аймаг/Дүүрэг</th>
+                            <th>Албан ёсны түвшингүүд</th>
+                            <th style="width: 10%">Үйлдэл</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for school in schools %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ school.name }}</td>
+                            <td>{{ school.province.name }}</td>
+                            <td>
+                                <form method="post" class="d-inline level-form" id="form-{{ school.id }}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="school_id" value="{{ school.id }}">
+                                    <input type="hidden" name="p" value="{{ selected_province_id }}">
+                                    <input type="hidden" name="l" value="{{ selected_level_id }}">
+                                    {% for level in levels %}
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" name="levels"
+                                                   value="{{ level.id }}" id="level-{{ school.id }}-{{ level.id }}"
+                                                   {% if level in school.official_levels.all %}checked{% endif %}>
+                                            <label class="form-check-label" for="level-{{ school.id }}-{{ level.id }}">
+                                                {{ level.name }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </form>
+                            </td>
+                            <td>
+                                <button type="submit" form="form-{{ school.id }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Сургууль олдсонгүй</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
