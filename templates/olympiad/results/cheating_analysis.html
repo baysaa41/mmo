@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Хуулалтын шинжилгээ - {{ olympiad.name }}{% endblock %}
+{% block title %}Шударга өрсөлдөөний шинжилгээ - {{ olympiad.name }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -12,8 +12,8 @@
     <div class="alert alert-info">
         <strong>Статистикийн тайлбар:</strong>
         <ul class="mb-0">
-            <li><strong>CPS (Cheating Prevalence Score)</strong> - Сурагч хосуудын хуулалтын индексийн дундаж (0-1). Томъёо: <code>0.65 × зөв_хариулт_ижил + 1 × буруу_хариулт_ижил</code></li>
-            <li><strong>HRP (High Risk Pairs)</strong> - Хуулалтын индекс > 0.7 байгаа хосуудын эзлэх хувь</li>
+            <li><strong>CPS (Correlation Prevalence Score)</strong> - Сурагч хосуудын хариултын ижил байдлын индексийн дундаж (0-1). Томъёо: <code>0.65 × зөв_хариулт_ижил + 1 × буруу_хариулт_ижил</code></li>
+            <li><strong>HRP (High Risk Pairs)</strong> - Индекс > 0.7 байгаа хосуудын эзлэх хувь</li>
             <li><strong>Clusters</strong> - Hierarchical clustering ашиглан ижил хариулттай бүлгүүдийн тоо (distance threshold = 0.5)</li>
             <li><strong>Integrity</strong> - Шударга байдлын оноо = 1 - CPS</li>
         </ul>

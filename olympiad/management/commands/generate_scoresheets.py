@@ -45,19 +45,15 @@ class Command(BaseCommand):
         olympiad = Olympiad.objects.get(id=olympiad_id)
         olympiad_level_id = olympiad.level_id
 
-        from django.db.models import Q
         updated_count = ScoreSheet.objects.filter(
-            olympiad_id=olympiad_id
-        ).filter(
-            Q(school__official_levels__id=olympiad_level_id) |
-            Q(school__is_official_participation=True)
+            olympiad_id=olympiad_id,
+            school__official_levels__id=olympiad_level_id
         ).update(is_official=True)
         # Сургуульгүй эсвэл тухайн түвшинд official биш бол False болгох
         ScoreSheet.objects.filter(
             olympiad_id=olympiad_id
         ).exclude(
-            Q(school__official_levels__id=olympiad_level_id) |
-            Q(school__is_official_participation=True)
+            school__official_levels__id=olympiad_level_id
         ).update(is_official=False)
         self.stdout.write(self.style.SUCCESS(f'... {updated_count} онооны хуудсанд is_official=True тогтоогдлоо.'))
 

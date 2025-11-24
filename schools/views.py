@@ -1094,3 +1094,64 @@ def change_school_manager_password_view(request, user_id):
         'is_manager': True,
     }
     return render(request, 'schools/change_password.html', context)
+
+
+@staff_member_required
+def school_official_levels_view(request):
+    """
+    Сургуулиудын албан ёсны оролцооны түвшингүүдийг харуулах, засварлах хуудас
+    """
+    from accounts.models import Level, Province
+
+    # Get all levels and provinces
+    levels = Level.objects.all().order_by('id')
+    provinces = Province.objects.all().order_by('name')
+
+    # Handle POST request for updating levels
+    if request.method == 'POST':
+        school_id = request.POST.get('school_id')
+        if school_id:
+            try:
+                school = School.objects.get(id=school_id)
+                # Get selected level IDs
+                selected_levels = request.POST.getlist('levels')
+                school.official_levels.set(selected_levels)
+                messages.success(request, f"'{school.name}' сургуулийн түвшингүүд амжилттай шинэчлэгдлээ.")
+            except School.DoesNotExist:
+                messages.error(request, "Сургууль олдсонгүй.")
+
+        # Redirect back with filters
+        redirect_url = request.path
+        params = []
+        if request.POST.get('p'):
+            params.append(f"p={request.POST.get('p')}")
+        if request.POST.get('l'):
+            params.append(f"l={request.POST.get('l')}")
+        if params:
+            redirect_url += '?' + '&'.join(params)
+        return redirect(redirect_url)
+
+    # Get filter parameters
+    selected_province_id = request.GET.get('p', '')
+    selected_level_id = request.GET.get('l', '')
+
+    # Base queryset
+    schools = School.objects.select_related('province').prefetch_related('official_levels').order_by('province__name', 'name')
+
+    # Apply filters
+    if selected_province_id:
+        schools = schools.filter(province_id=selected_province_id)
+
+    if selected_level_id:
+        schools = schools.filter(official_levels__id=selected_level_id)
+
+    context = {
+        'schools': schools,
+        'levels': levels,
+        'provinces': provinces,
+        'selected_province_id': int(selected_province_id) if selected_province_id else '',
+        'selected_level_id': int(selected_level_id) if selected_level_id else '',
+        'total_schools': schools.count(),
+    }
+
+    return render(request, 'schools/official_levels.html', context)

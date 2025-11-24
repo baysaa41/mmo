@@ -704,7 +704,7 @@ def first_round_stats(request):
 @login_required
 def cheating_analysis_view(request, olympiad_id):
     """
-    Сургуулиудын хуулалтын шинжилгээний хуудас (Memory-friendly version)
+    Сургуулиудын шударга өрсөлдөөний шинжилгээний хуудас (Memory-friendly version)
     """
     from .cheating_analysis import analyze_olympiad_cheating_cached
 
