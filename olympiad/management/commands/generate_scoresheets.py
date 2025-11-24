@@ -7,7 +7,11 @@ from olympiad.utils.data import to_scoresheet
 from olympiad.utils.ranking import (
     update_rankings_a, update_rankings_b,
     update_rankings_a_p, update_rankings_b_p,
-    update_rankings_a_z, update_rankings_b_z
+    update_rankings_a_p_all, update_rankings_b_p_all,
+    update_rankings_a_p_u, update_rankings_b_p_u,
+    update_rankings_a_z, update_rankings_b_z,
+    update_rankings_a_z_all, update_rankings_b_z_all,
+    update_rankings_a_z_u, update_rankings_b_z_u
 )
 from schools.models import School
 
@@ -71,14 +75,28 @@ class Command(BaseCommand):
 
         # Аймгийн эрэмбэ (зөвхөн оролцогчтой аймгуудаар)
         for province_id in active_provinces:
+            # Official only
             update_rankings_a_p(olympiad_id, province_id)
             update_rankings_b_p(olympiad_id, province_id)
+            # All students
+            update_rankings_a_p_all(olympiad_id, province_id)
+            update_rankings_b_p_all(olympiad_id, province_id)
+            # Unofficial only
+            update_rankings_a_p_u(olympiad_id, province_id)
+            update_rankings_b_p_u(olympiad_id, province_id)
         self.stdout.write(self.style.SUCCESS(f'... {len(active_provinces)} аймгийн эрэмбэ шинэчлэгдлээ.'))
 
         # Бүсийн эрэмбэ (зөвхөн оролцогчтой бүсүүдээр)
         for zone_id in active_zones:
+            # Official only
             update_rankings_a_z(olympiad_id, zone_id)
             update_rankings_b_z(olympiad_id, zone_id)
+            # All students
+            update_rankings_a_z_all(olympiad_id, zone_id)
+            update_rankings_b_z_all(olympiad_id, zone_id)
+            # Unofficial only
+            update_rankings_a_z_u(olympiad_id, zone_id)
+            update_rankings_b_z_u(olympiad_id, zone_id)
         self.stdout.write(self.style.SUCCESS(f'... {len(active_zones)} бүсийн эрэмбэ шинэчлэгдлээ.'))
 
         # --- ШАГНАЛ ОЛГОХ ШИНЭ ХЭСЭГ (ОНОВЧЛОГДСОН) ---

@@ -435,12 +435,30 @@ class ScoreSheet(models.Model):
     list_rank = models.IntegerField(default=0)
     ranking_a = models.IntegerField(default=0)
     ranking_b = models.IntegerField(default=0)
+    # Province rankings - official only
     list_rank_p = models.IntegerField(default=0)
     ranking_a_p = models.IntegerField(default=0)
     ranking_b_p = models.IntegerField(default=0)
+    # Province rankings - all students
+    list_rank_p_all = models.IntegerField(default=0)
+    ranking_a_p_all = models.IntegerField(default=0)
+    ranking_b_p_all = models.IntegerField(default=0)
+    # Province rankings - unofficial only
+    list_rank_p_u = models.IntegerField(default=0)
+    ranking_a_p_u = models.IntegerField(default=0)
+    ranking_b_p_u = models.IntegerField(default=0)
+    # Zone rankings - official only
     list_rank_z = models.IntegerField(default=0)
     ranking_a_z = models.IntegerField(default=0)
     ranking_b_z = models.IntegerField(default=0)
+    # Zone rankings - all students
+    list_rank_z_all = models.IntegerField(default=0)
+    ranking_a_z_all = models.IntegerField(default=0)
+    ranking_b_z_all = models.IntegerField(default=0)
+    # Zone rankings - unofficial only
+    list_rank_z_u = models.IntegerField(default=0)
+    ranking_a_z_u = models.IntegerField(default=0)
+    ranking_b_z_u = models.IntegerField(default=0)
     prizes = models.CharField(max_length=512, blank=True, null=True)
     is_official = models.BooleanField(default=False)
     total = models.FloatField(default=0, blank=True, null=True)
