@@ -15,11 +15,14 @@ class Command(BaseCommand):
         self.stdout.write(f'Олимпиадууд: {olympiad_ids}')
 
         with connection.cursor() as cursor:
-            # Зөв хариултын оноог тооцох
+            # Зөв хариултын оноог тооцох (хоёр хариултын аль нэгийг шалгах)
             cursor.execute(f'''
                 UPDATE olympiad_result r
                 SET score = CASE
-                    WHEN r.answer IS NOT NULL AND r.answer = p.numerical_answer
+                    WHEN r.answer IS NOT NULL AND (
+                        r.answer = p.numerical_answer OR
+                        (p.numerical_answer2 IS NOT NULL AND r.answer = p.numerical_answer2)
+                    )
                     THEN p.max_score
                     ELSE 0
                 END

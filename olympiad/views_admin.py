@@ -374,7 +374,8 @@ def update_results(request, olympiad_id):
                             SET score = p.max_score \
                             FROM olympiad_problem p \
                             WHERE r.problem_id = p.id \
-                                AND r.answer = p.numerical_answer \
+                                AND (r.answer = p.numerical_answer OR \
+                                     (p.numerical_answer2 IS NOT NULL AND r.answer = p.numerical_answer2)) \
                                 AND p.olympiad_id = %s", [olympiad_id])
 
         # olympiad.json_results = to_json(olympiad_id)

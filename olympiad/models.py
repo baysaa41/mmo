@@ -174,6 +174,7 @@ class Problem(models.Model):
     )
 
     numerical_answer = models.BigIntegerField(null=True, blank=True)
+    numerical_answer2 = models.BigIntegerField(null=True, blank=True)
     comments = models.TextField(null=True, blank=True)
     topics = models.ManyToManyField("Topic", blank=True)
 
