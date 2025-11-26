@@ -130,7 +130,13 @@ def olympiad_results(request, olympiad_id):
             "user__data__school__province",
             "user__data__province",
             "school__province"
-        ).order_by("-is_official", list_rank_field, "-total")
+        )
+
+        # Эрэмбэлэлт: "Бүгд" үед байрны дарааллаар, бусад үед албан ёсны эрх эхэнд
+        if official_filter == "all":
+            scoresheets = scoresheets.order_by(list_rank_field, "-total")
+        else:
+            scoresheets = scoresheets.order_by("-is_official", list_rank_field, "-total")
 
         # --- Database түвшинд pagination хийх ---
         paginator = Paginator(scoresheets, 50)

@@ -45,6 +45,7 @@
 
                         <h6 class="mt-3"><strong>Тэмдэглэгээ:</strong></h6>
                         <ul>
+                            <li><span class="badge bg-info text-dark">Цэнхэр өнгөтэй тод мөр</span> - Таны авсан дүн</li>
                             <li><span class="text-secondary">Саарал өнгөтэй мөр</span> - Бусад оролцогч</li>
                             <li><strong>Тайлбар</strong> баганад шагналын мэдээлэл харагдана</li>
                         </ul>
@@ -178,7 +179,7 @@
                 </thead>
                 <tbody>
                 {% for data in score_data %}
-                    <tr{% if not data.is_official %} class="text-secondary"{% endif %}>
+                    <tr{% if data.id == request.user.id %} class="table-info fw-bold"{% elif not data.is_official %} class="text-secondary"{% endif %}>
                         <td>{{ data.list_rank }}</td>
                         <td>{{ data.last_name }}</td>
                         <td>{{ data.first_name }}</td>

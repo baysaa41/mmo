@@ -21,7 +21,7 @@ class Command(BaseCommand):
                 SET score = CASE
                     WHEN r.answer IS NOT NULL AND (
                         r.answer = p.numerical_answer OR
-                        (p.numerical_answer2 IS NOT NULL AND r.answer = p.numerical_answer2)
+                        r.answer = p.numerical_answer2
                     )
                     THEN p.max_score
                     ELSE 0
