@@ -111,7 +111,7 @@ def olympiad_top_stats(request, olympiad_id):
     province_id = request.GET.get("p", "0").strip()
     zone_id = request.GET.get("z", "0").strip()
 
-    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad, total__gt=0)
+    scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
 
     # --- аль ranking багана ашиглахыг шийдэх ---
     if province_id != "0":
