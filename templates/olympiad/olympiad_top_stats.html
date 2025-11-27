@@ -93,4 +93,83 @@
             </table>
         </div>
     </div>
+
+    <!-- Нийлбэр онооны гистограмм -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3>Нийлбэр онооны тархалт</h3>
+            <small class="text-muted">Нийлбэр оноо бүрээр хэдэн сурагч авсан байдал</small>
+            <div style="width: 100%; height: 500px; margin-top: 20px;">
+                <canvas id="scoreHistogram"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const ctx = document.getElementById('scoreHistogram').getContext('2d');
+
+            // View-с дамжуулсан өгөгдөл
+            const scoreLabels = {{ score_labels|safe }};
+            const scoreCounts = {{ score_counts|safe }};
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: scoreLabels,
+                    datasets: [{
+                        label: 'Сурагчдын тоо',
+                        data: scoreCounts,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Нийлбэр оноо'
+                            },
+                            ticks: {
+                                autoSkip: true,
+                                maxRotation: 90,
+                                minRotation: 45
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Сурагчдын тоо'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return 'Оноо: ' + context[0].label;
+                                },
+                                label: function(context) {
+                                    return 'Сурагчдын тоо: ' + context.parsed.y;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
 {% endblock %}

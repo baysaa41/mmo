@@ -106,7 +106,6 @@ def problem_list_with_topics(request):
         "query": query, # Хайлтын үгийг темплэйт рүү буцааж дамжуулах
     })
 
-@login_required
 def olympiad_top_stats(request, olympiad_id):
     olympiad = get_object_or_404(Olympiad, id=olympiad_id)
     province_id = request.GET.get("p", "0").strip()
@@ -147,6 +146,13 @@ def olympiad_top_stats(request, olympiad_id):
     top30_by_province = top30.values("user__data__province__name").annotate(count=Count("id")).order_by("-count")
     top30_by_zone = top30.values("user__data__province__zone__name").annotate(count=Count("id")).order_by("-count")
 
+    # Нийлбэр онооны тархалт (гистограмм)
+    score_distribution = scoresheets.values('total').annotate(count=Count('id')).order_by('total')
+
+    # Chart.js-д зориулсан өгөгдөл бэлтгэх
+    score_labels = [str(int(item['total'])) for item in score_distribution]
+    score_counts = [item['count'] for item in score_distribution]
+
     context = {
         "olympiad": olympiad,
         "top50_by_school": top50_by_school,
@@ -159,5 +165,7 @@ def olympiad_top_stats(request, olympiad_id):
         "top30_count": top30_count,
         "top_name_50": top_name_50,
         "top_name_30": top_name_30,
+        "score_labels": score_labels,
+        "score_counts": score_counts,
     }
     return render(request, "olympiad/olympiad_top_stats.html", context)

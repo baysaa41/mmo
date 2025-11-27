@@ -28,7 +28,7 @@
                     <th>№</th>
                     <th>Нэр</th>
                     <th>Ангилал</th>
-                    <th>Хичээлийн жил</th>
+                    <th>Огноо</th>
                     <th>Шат</th>
                     <th class="text-center">Дүн</th>
                 </tr>
@@ -37,7 +37,7 @@
                         <td>{{ forloop.counter }}</td>
                         <td>{{ olympiad.name }}</td>
                         <td>{{ olympiad.level.name }}</td>
-                        <td>{{ olympiad.school_year.name }}</td>
+                        <td>{% if olympiad.start_time %}{{ olympiad.start_time|date:"Y-m-d" }}{% else %}-{% endif %}</td>
                         <td>{{ olympiad.get_round }}</td>
                         <td>
                             {% if olympiad.finished %}

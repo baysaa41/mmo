@@ -50,6 +50,8 @@ urlpatterns = [
     # === III. Дүн ба статистик ===
     path('results/<int:olympiad_id>/', views_results.olympiad_results, name='olympiad_result_view'),
     path('results/<int:olympiad_id>/<int:contestant_id>/', views_results.student_result_view, name='olympiad_student_result'),
+    path('achievements/', views_results.student_achievements, name='student_achievements'),
+    path('achievements/<int:user_id>/', views_results.student_achievements, name='student_achievements_by_id'),
     path('results/g/<int:group_id>/', views_results.olympiad_group_result_view, name='olympiad_group_result_view'),
     path('stats/<int:problem_id>/', views_results.problem_stats_view, name='problem_stats'),
     path('stats/olympiad/<int:olympiad_id>/', views_admin.olympiad_problem_stats, name='olympiad_problem_stats'),

@@ -16,7 +16,6 @@ from django.core.cache import cache
 
 
 
-@login_required
 def results_home(request):
     now = datetime.now(timezone.utc)
     school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
@@ -61,7 +60,6 @@ def results_home(request):
     return render(request, 'olympiad/results/home.html', context=context)
 
 
-@login_required
 def olympiad_results(request, olympiad_id):
     show_all = request.GET.get('all', False)
     olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
@@ -113,15 +111,36 @@ def olympiad_results(request, olympiad_id):
         # --- Аймаг/Бүс шүүлтүүр ---
         if province_id != "0":
             scoresheets = scoresheets.filter(user__data__province_id=province_id)
-            rank_field_a = "ranking_a_p"
-            rank_field_b = "ranking_b_p"
-            list_rank_field = "list_rank_p"
+            # Ranking field сонголт: official/all/unofficial
+            if official_filter == "official":
+                rank_field_a = "ranking_a_p"
+                rank_field_b = "ranking_b_p"
+                list_rank_field = "list_rank_p"
+            elif official_filter == "unofficial":
+                rank_field_a = "ranking_a_p_u"
+                rank_field_b = "ranking_b_p_u"
+                list_rank_field = "list_rank_p_u"
+            else:  # all
+                rank_field_a = "ranking_a_p_all"
+                rank_field_b = "ranking_b_p_all"
+                list_rank_field = "list_rank_p_all"
         elif zone_id != "0":
             scoresheets = scoresheets.filter(user__data__province__zone_id=zone_id)
-            rank_field_a = "ranking_a_z"
-            rank_field_b = "ranking_b_z"
-            list_rank_field = "list_rank_z"
+            # Ranking field сонголт: official/all/unofficial
+            if official_filter == "official":
+                rank_field_a = "ranking_a_z"
+                rank_field_b = "ranking_b_z"
+                list_rank_field = "list_rank_z"
+            elif official_filter == "unofficial":
+                rank_field_a = "ranking_a_z_u"
+                rank_field_b = "ranking_b_z_u"
+                list_rank_field = "list_rank_z_u"
+            else:  # all
+                rank_field_a = "ranking_a_z_all"
+                rank_field_b = "ranking_b_z_all"
+                list_rank_field = "list_rank_z_all"
         else:
+            # Улсын хэмжээ (одоогоор бүх оролцогчдын ranking)
             rank_field_a = "ranking_a"
             rank_field_b = "ranking_b"
             list_rank_field = "list_rank"
@@ -763,3 +782,45 @@ def cheating_analysis_view(request, olympiad_id):
     }
 
     return render(request, 'olympiad/results/cheating_analysis.html', context)
+
+
+@login_required
+def student_achievements(request, user_id=None):
+    """
+    Сурагчийн оролцсон бүх олимпиадын амжилтыг харуулах
+    """
+    # Хэрэв user_id өгөгдөөгүй бол өөрийн дүнг харуулна
+    if user_id is None:
+        student = request.user
+    else:
+        student = get_object_or_404(User, pk=user_id)
+        # Зөвхөн өөрийн болон admin-ууд бусдын дүнг харах эрхтэй
+        if not (request.user.id == user_id or request.user.is_staff):
+            student = request.user
+
+    # Сурагчийн бүх ScoreSheet-үүдийг авах
+    scoresheets = ScoreSheet.objects.filter(
+        user=student,
+        olympiad__is_open=True
+    ).select_related(
+        'olympiad',
+        'olympiad__level',
+        'olympiad__school_year',
+        'school'
+    ).order_by('-olympiad__school_year_id', '-olympiad__round', 'olympiad__name')
+
+    # Статистик
+    total_olympiads = scoresheets.count()
+    total_score = sum(sheet.total or 0 for sheet in scoresheets)
+    prizes_count = scoresheets.exclude(prizes__isnull=True).exclude(prizes='').count()
+
+    context = {
+        'student': student,
+        'scoresheets': scoresheets,
+        'total_olympiads': total_olympiads,
+        'total_score': total_score,
+        'prizes_count': prizes_count,
+        'is_own_profile': request.user.id == student.id,
+    }
+
+    return render(request, 'olympiad/student_achievements.html', context)
