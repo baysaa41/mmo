@@ -3,9 +3,11 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import PasswordResetView
+from django.contrib.auth.views import PasswordResetView, PasswordResetConfirmView
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.views.decorators.csrf import csrf_protect
+from django.utils.decorators import method_decorator
 
 from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, BulkAddUsersToSchoolForm
 from ..models import UserMeta
@@ -139,6 +141,20 @@ class CustomPasswordResetView(PasswordResetView):
     form_class = CustomPasswordResetForm
     email_template_name = 'registration/password_reset_email.html'
     success_url = '/password_reset/done/'
+
+@method_decorator(csrf_protect, name='dispatch')
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    """
+    Нууц үг сэргээх баталгаажуулалтын view - CSRF алдаа засах
+    """
+    template_name = 'accounts/password_reset_confirm.html'
+    success_url = '/accounts/password-reset-complete/'
+
+    def dispatch(self, *args, **kwargs):
+        """
+        CSRF токен алдааг илүү сайн удирдах
+        """
+        return super().dispatch(*args, **kwargs)
 
 @staff_member_required
 def bulk_add_users_to_school_view(request):
