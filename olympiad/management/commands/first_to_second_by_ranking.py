@@ -1,4 +1,4 @@
-# olympiad/management/commands/select_next_stage.py
+# olympiad/management/commands/first_to_second_by_ranking.py
 
 from django.core.management.base import BaseCommand, CommandError
 from olympiad.models import ScoreSheet, Olympiad, Award
