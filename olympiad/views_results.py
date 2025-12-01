@@ -798,7 +798,8 @@ def student_achievements(request, user_id=None):
         if not (request.user.id == user_id or request.user.is_staff):
             student = request.user
 
-    # Сурагчийн бүх ScoreSheet-үүдийг авах
+    # Сурагчийн бүх ScoreSheet-үүдийг авах (давхардсан бичлэгийг хасах)
+    # distinct('olympiad_id') ашиглахад эхний ORDER BY талбар нь olympiad_id байх ёстой
     scoresheets = ScoreSheet.objects.filter(
         user=student,
         olympiad__is_open=True
@@ -807,12 +808,20 @@ def student_achievements(request, user_id=None):
         'olympiad__level',
         'olympiad__school_year',
         'school'
-    ).order_by('-olympiad__school_year_id', '-olympiad__round', 'olympiad__name')
+    ).order_by('olympiad_id', '-id').distinct('olympiad_id')
+
+    # Дараа нь дахин эрэмбэлэх (хүссэн дарааллаар)
+    scoresheets = sorted(
+        scoresheets,
+        key=lambda x: (-x.olympiad.school_year_id if x.olympiad.school_year_id else 0,
+                       -x.olympiad.round,
+                       x.olympiad.name)
+    )
 
     # Статистик
-    total_olympiads = scoresheets.count()
+    total_olympiads = len(scoresheets)
     total_score = sum(sheet.total or 0 for sheet in scoresheets)
-    prizes_count = scoresheets.exclude(prizes__isnull=True).exclude(prizes='').count()
+    prizes_count = sum(1 for sheet in scoresheets if sheet.prizes and sheet.prizes.strip())
 
     context = {
         'student': student,

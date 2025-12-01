@@ -25,10 +25,6 @@
                             <li><a class="dropdown-item" href="{% url 'olympiad_results_home' %}"><i
                                     class="fas fa-poll fa-fw me-2"></i>Олимпиадын дүн</a>
                             </li>
-                            {% if user.is_authenticated %}
-                                <li><a class="dropdown-item" href="{% url 'student_achievements' %}"><i
-                                        class="fas fa-trophy fa-fw me-2"></i>Миний амжилтууд</a></li>
-                            {% endif %}
                             <li><a class="dropdown-item" href="{% url 'olympiad_problems_home' %}"><i
                                     class="fas fa-book fa-fw me-2"></i>Олимпиадын
                                 бодлогууд</a></li>
@@ -83,12 +79,10 @@
                                             class="fas fa-user-edit fa-fw me-2"></i>Миний профайл</a></li>
                                     <li><a class="dropdown-item" href="{% url 'student_achievements' %}"><i
                                             class="fas fa-trophy fa-fw me-2"></i>Миний амжилтууд</a></li>
-                                    {% if user.is_authenticated %}
-                                        <li>
-                                            <a class="dropdown-item" href="{% url 'posts:post_view' %}?id=142"
-                                               title="Танд тусалъя"><i class="fas fa-question-circle me-2"></i> Тусламж</a>
-                                        </li>
-                                    {% endif %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'posts:post_view' %}?id=142"
+                                           title="Танд тусалъя"><i class="fas fa-question-circle me-2"></i> Тусламж</a>
+                                    </li>
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
