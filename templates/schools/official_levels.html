@@ -74,27 +74,28 @@
                             <td>{{ school.name }}</td>
                             <td>{{ school.province.name }}</td>
                             <td>
-                                <form method="post" class="d-inline level-form" id="form-{{ school.id }}">
+                                {% for level in levels %}
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" name="levels"
+                                               value="{{ level.id }}" id="level-{{ school.id }}-{{ level.id }}"
+                                               form="form-{{ school.id }}"
+                                               {% if level in school.official_levels.all %}checked{% endif %}>
+                                        <label class="form-check-label" for="level-{{ school.id }}-{{ level.id }}">
+                                            {{ level.name }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <form method="post" class="d-inline" id="form-{{ school.id }}">
                                     {% csrf_token %}
                                     <input type="hidden" name="school_id" value="{{ school.id }}">
                                     <input type="hidden" name="p" value="{{ selected_province_id }}">
                                     <input type="hidden" name="l" value="{{ selected_level_id }}">
-                                    {% for level in levels %}
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="levels"
-                                                   value="{{ level.id }}" id="level-{{ school.id }}-{{ level.id }}"
-                                                   {% if level in school.official_levels.all %}checked{% endif %}>
-                                            <label class="form-check-label" for="level-{{ school.id }}-{{ level.id }}">
-                                                {{ level.name }}
-                                            </label>
-                                        </div>
-                                    {% endfor %}
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-save"></i>
+                                    </button>
                                 </form>
-                            </td>
-                            <td>
-                                <button type="submit" form="form-{{ school.id }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-save"></i>
-                                </button>
                             </td>
                         </tr>
                         {% empty %}

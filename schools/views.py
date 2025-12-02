@@ -1115,7 +1115,16 @@ def school_official_levels_view(request):
                 school = School.objects.get(id=school_id)
                 # Get selected level IDs
                 selected_levels = request.POST.getlist('levels')
-                school.official_levels.set(selected_levels)
+
+                # Clear and set levels explicitly
+                if selected_levels:
+                    # Convert to integers
+                    level_ids = [int(lid) for lid in selected_levels]
+                    school.official_levels.set(level_ids)
+                else:
+                    # Clear all levels if none selected
+                    school.official_levels.clear()
+
                 messages.success(request, f"'{school.name}' сургуулийн түвшингүүд амжилттай шинэчлэгдлээ.")
             except School.DoesNotExist:
                 messages.error(request, "Сургууль олдсонгүй.")
