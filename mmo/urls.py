@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from accounts.views.auth import CustomPasswordResetView
 import accounts.views as accounts_views
+from olympiad import api_views as olympiad_api
 
 
 urlpatterns = ([
@@ -31,6 +32,8 @@ urlpatterns = ([
 
     # API endpoints
     path('api/', include('accounts.urls')),
+    path('api/olympiads/', olympiad_api.list_olympiads, name='api_olympiads'),
+    path('api/olympiads/<int:olympiad_id>/problems/', olympiad_api.olympiad_problems, name='api_olympiad_problems'),
 ])
 
 if settings.DEBUG:
