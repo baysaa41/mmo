@@ -25,10 +25,10 @@ def list_olympiads(request):
     olympiads = Olympiad.objects.select_related(
         'school_year', 'level', 'host'
     ).annotate(
-        problem_count=models.Count('problems')
+        problem_count=models.Count('problem')
     ).filter(
         problem_count__gt=0
-    ).order_by('-school_year__year', '-round', '-month')
+    ).order_by('-school_year__name', '-round', '-month')
 
     total_count = olympiads.count()
     olympiads = olympiads[offset:offset + limit]
@@ -42,7 +42,7 @@ def list_olympiads(request):
             'round_name': olympiad.get_round_display() if hasattr(olympiad, 'get_round_display') else _get_round_name(olympiad.round),
             'type': olympiad.type,
             'type_name': 'Уламжлалт' if olympiad.type == 0 else 'Тест',
-            'school_year': olympiad.school_year.year if olympiad.school_year else None,
+            'school_year': olympiad.school_year.name if olympiad.school_year else None,
             'level': {
                 'id': olympiad.level.id if olympiad.level else None,
                 'name': olympiad.level.name if olympiad.level else None,
@@ -115,7 +115,7 @@ def olympiad_problems(request, olympiad_id):
             'round': olympiad.round,
             'round_name': _get_round_name(olympiad.round),
             'type': olympiad.type,
-            'school_year': olympiad.school_year.year if olympiad.school_year else None,
+            'school_year': olympiad.school_year.name if olympiad.school_year else None,
             'level': {
                 'id': olympiad.level.id if olympiad.level else None,
                 'name': olympiad.level.name if olympiad.level else None,
