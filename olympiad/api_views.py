@@ -1,12 +1,25 @@
 """
 API endpoints for external systems to access olympiad data
-No authentication required
+Requires API key authentication
 """
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db import models
+from django.conf import settings
 from olympiad.models import Olympiad, Problem, AnswerChoice, Topic
+
+
+def check_api_key(request):
+    """API key шалгах"""
+    api_key = request.headers.get('X-API-Key') or request.GET.get('api_key')
+    expected_key = getattr(settings, 'MMO_API_KEY', None)
+
+    if not expected_key:
+        # API key тохируулаагүй бол нээлттэй үлдээх (хуучин хэлбэр)
+        return True
+
+    return api_key == expected_key
 
 
 @csrf_exempt
@@ -18,7 +31,13 @@ def list_olympiads(request):
     Query params:
     - limit: default 100
     - offset: default 0
+    Headers:
+    - X-API-Key: API key for authentication
     """
+    # API key шалгах
+    if not check_api_key(request):
+        return JsonResponse({'error': 'Invalid or missing API key'}, status=401)
+
     limit = int(request.GET.get('limit', 100))
     offset = int(request.GET.get('offset', 0))
 
@@ -64,7 +83,13 @@ def olympiad_problems(request, olympiad_id):
     """
     Олимпиадын бодлогууд
     GET /api/olympiads/{olympiad_id}/problems/
+    Headers:
+    - X-API-Key: API key for authentication
     """
+    # API key шалгах
+    if not check_api_key(request):
+        return JsonResponse({'error': 'Invalid or missing API key'}, status=401)
+
     try:
         olympiad = Olympiad.objects.select_related(
             'school_year', 'level', 'host'
