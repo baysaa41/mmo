@@ -7,7 +7,8 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db import models
 from django.conf import settings
-from olympiad.models import Olympiad, Problem, AnswerChoice, Topic
+from django.contrib.auth.models import User
+from olympiad.models import Olympiad, Problem, AnswerChoice, Topic, ScoreSheet
 
 
 def check_api_key(request):
@@ -173,3 +174,110 @@ def _get_problem_type_name(ptype):
         2: 'Нөхөх тест',
     }
     return type_names.get(ptype, 'Тодорхойгүй')
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def user_achievements(request, user_id):
+    """
+    Хэрэглэгчийн олимпиадын түүх (MathMinds-аас дуудагдах API)
+    GET /api/users/{user_id}/achievements/
+    Headers:
+    - X-API-Key: API key for authentication
+
+    Response:
+    {
+        "user_id": 12345,
+        "username": "student123",
+        "achievements": [
+            {
+                "olympiad_id": 1,
+                "olympiad_name": "2024 оны сургуулийн олимпиад - 9-р анги",
+                "round": 1,
+                "round_name": "Сургууль",
+                "school_year": "2024-2025",
+                "level_name": "9-р анги",
+                "total_score": 42,
+                "problems_solved": 5,
+                "prizes": "Алтан медаль"
+            },
+            ...
+        ],
+        "statistics": {
+            "total_olympiads": 3,
+            "total_score": 98,
+            "prizes_count": 2,
+            "first_round_count": 1
+        }
+    }
+    """
+    # API key шалгах
+    if not check_api_key(request):
+        return JsonResponse({'error': 'Invalid or missing API key'}, status=401)
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Хэрэглэгч олдсонгүй'}, status=404)
+
+    # Хэрэглэгчийн бүх ScoreSheet-үүдийг авах
+    scoresheets = ScoreSheet.objects.filter(
+        user=user,
+        olympiad__is_open=True
+    ).select_related(
+        'olympiad',
+        'olympiad__level',
+        'olympiad__school_year',
+        'school'
+    ).order_by('olympiad_id', '-id').distinct('olympiad_id')
+
+    achievements = []
+    first_round_count = 0
+    total_score = 0
+    prizes_count = 0
+
+    for sheet in scoresheets:
+        olympiad = sheet.olympiad
+
+        # Бодлого шийдсэн тоо тоолох (0-ээс их оноотой)
+        problems_solved = sum(
+            1 for i in range(1, 21)
+            if getattr(sheet, f's{i}', 0) and getattr(sheet, f's{i}', 0) > 0
+        )
+
+        # 1-р даваа эсэхийг шалгах
+        if olympiad.round == 1:
+            first_round_count += 1
+
+        # Нийт оноо
+        score = sheet.total or 0
+        total_score += score
+
+        # Шагнал
+        has_prize = bool(sheet.prizes and sheet.prizes.strip())
+        if has_prize:
+            prizes_count += 1
+
+        achievements.append({
+            'olympiad_id': olympiad.id,
+            'olympiad_name': str(olympiad),
+            'round': olympiad.round,
+            'round_name': _get_round_name(olympiad.round),
+            'school_year': olympiad.school_year.name if olympiad.school_year else None,
+            'level_name': olympiad.level.name if olympiad.level else None,
+            'total_score': score,
+            'problems_solved': problems_solved,
+            'prizes': sheet.prizes or None
+        })
+
+    return JsonResponse({
+        'user_id': user.id,
+        'username': user.username,
+        'achievements': achievements,
+        'statistics': {
+            'total_olympiads': len(achievements),
+            'total_score': total_score,
+            'prizes_count': prizes_count,
+            'first_round_count': first_round_count
+        }
+    })
