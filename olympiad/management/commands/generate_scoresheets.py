@@ -19,7 +19,7 @@ class Command(BaseCommand):
     help = 'Онооны хуудсыг үүсгэж, бүх эрэмбийг тооцоолно.'
 
     def add_arguments(self, parser):
-        parser.add_argument('--olympiad-id', type=int, required=True, help='Онооны хуудас үүсгэх Олимпиадын ID')
+        parser.add_argument('olympiad_ids', nargs='+', type=int, help='Олимпиадын ID-ууд')
         parser.add_argument(
             '--force-delete',
             action='store_true',
@@ -27,23 +27,66 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        olympiad_id = options['olympiad_id']
+        olympiad_ids = options['olympiad_ids']
+        force_delete = options['force_delete']
 
-        if options['force_delete']:
-            self.stdout.write(self.style.WARNING(f'--force-delete туг ашигласан тул Олимпиад ID={olympiad_id}-д хамаарах хуучин онооны хуудсыг устгаж байна...'))
+        self.stdout.write(f'Олимпиадууд: {olympiad_ids}')
+        self.stdout.write(f'Нийт: {len(olympiad_ids)} олимпиад')
+        self.stdout.write('=' * 80)
+
+        # Статистик хадгалах
+        total_stats = {
+            'processed': 0,
+            'failed': 0,
+            'total_scoresheets': 0,
+            'total_official': 0,
+        }
+
+        # Олимпиад бүрээр боловсруулах
+        for i, olympiad_id in enumerate(olympiad_ids, 1):
+            self.stdout.write(f'\n[{i}/{len(olympiad_ids)}] Олимпиад ID={olympiad_id} боловсруулж байна...')
+            self.stdout.write('-' * 80)
+
+            try:
+                self.process_olympiad(olympiad_id, force_delete, total_stats)
+                total_stats['processed'] += 1
+                self.stdout.write(self.style.SUCCESS(f'✅ Олимпиад ID={olympiad_id} амжилттай боловсруулагдлаа.'))
+            except Exception as e:
+                total_stats['failed'] += 1
+                self.stdout.write(self.style.ERROR(f'❌ Олимпиад ID={olympiad_id} алдаа: {e}'))
+                continue
+
+        # Эцсийн тайлан
+        self.stdout.write('\n' + '=' * 80)
+        self.stdout.write(self.style.SUCCESS('📊 ЭЦСИЙН ТАЙЛАН'))
+        self.stdout.write('=' * 80)
+        self.stdout.write(f'Нийт олимпиад: {len(olympiad_ids)}')
+        self.stdout.write(f'✅ Амжилттай: {total_stats["processed"]}')
+        self.stdout.write(f'❌ Алдаатай: {total_stats["failed"]}')
+        self.stdout.write(f'📄 Нийт ScoreSheet: {total_stats["total_scoresheets"]}')
+        self.stdout.write(f'🏫 Official ScoreSheet: {total_stats["total_official"]}')
+        self.stdout.write('=' * 80)
+
+    def process_olympiad(self, olympiad_id, force_delete, total_stats):
+        """Нэг олимпиадыг боловсруулах"""
+
+        if force_delete:
+            self.stdout.write(self.style.WARNING(f'  --force-delete туг ашигласан тул хуучин онооны хуудсыг устгаж байна...'))
             deleted_count, _ = ScoreSheet.objects.filter(olympiad_id=olympiad_id).delete()
-            self.stdout.write(self.style.SUCCESS(f'{deleted_count} хуучин онооны хуудас устгагдлаа.'))
+            self.stdout.write(self.style.SUCCESS(f'  {deleted_count} хуучин онооны хуудас устгагдлаа.'))
 
         # 1. Сайжруулсан to_scoresheet функцийг дуудах
-        self.stdout.write('Онооны хуудсыг үүсгэж/шинэчилж байна...')
+        self.stdout.write('  Онооны хуудсыг үүсгэж/шинэчилж байна...')
         try:
             to_scoresheet(olympiad_id)
-            self.stdout.write(self.style.SUCCESS('Онооны хуудсууд амжилттай үүслээ.'))
+            scoresheet_count = ScoreSheet.objects.filter(olympiad_id=olympiad_id).count()
+            total_stats['total_scoresheets'] += scoresheet_count
+            self.stdout.write(self.style.SUCCESS(f'  {scoresheet_count} онооны хуудас үүслээ.'))
         except Exception as e:
             raise CommandError(f'Онооны хуудас үүсгэхэд алдаа гарлаа: {e}')
 
         # 2. is_official талбарыг сургуулийн official_levels-ээс тогтоох
-        self.stdout.write('is_official талбарыг тогтоож байна...')
+        self.stdout.write('  is_official талбарыг тогтоож байна...')
 
         # Олимпиадын түвшинг авах
         olympiad = Olympiad.objects.get(id=olympiad_id)
@@ -53,21 +96,23 @@ class Command(BaseCommand):
             olympiad_id=olympiad_id,
             school__official_levels__id=olympiad_level_id
         ).update(is_official=True)
+        total_stats['total_official'] += updated_count
+
         # Сургуульгүй эсвэл тухайн түвшинд official биш бол False болгох
         ScoreSheet.objects.filter(
             olympiad_id=olympiad_id
         ).exclude(
             school__official_levels__id=olympiad_level_id
         ).update(is_official=False)
-        self.stdout.write(self.style.SUCCESS(f'... {updated_count} онооны хуудсанд is_official=True тогтоогдлоо.'))
+        self.stdout.write(self.style.SUCCESS(f'  {updated_count} онооны хуудсанд is_official=True тогтоогдлоо.'))
 
         # 3. Эрэмбийг тооцоолох
-        self.stdout.write('Эрэмбэ тооцоолж байна...')
+        self.stdout.write('  Эрэмбэ тооцоолж байна...')
 
         # Нийт эрэмбэ
         update_rankings_a(olympiad_id)
         update_rankings_b(olympiad_id)
-        self.stdout.write(self.style.SUCCESS('... Улсын нийт эрэмбэ шинэчлэгдлээ.'))
+        self.stdout.write(self.style.SUCCESS('  Улсын нийт эрэмбэ шинэчлэгдлээ.'))
 
         # Зөвхөн оролцогчид байгаа аймаг, бүсүүдийг олж авах
         active_provinces = ScoreSheet.objects.filter(olympiad_id=olympiad_id, user__data__province__isnull=False).values_list('user__data__province_id', flat=True).distinct()
@@ -84,7 +129,7 @@ class Command(BaseCommand):
             # Unofficial only
             update_rankings_a_p_u(olympiad_id, province_id)
             update_rankings_b_p_u(olympiad_id, province_id)
-        self.stdout.write(self.style.SUCCESS(f'... {len(active_provinces)} аймгийн эрэмбэ шинэчлэгдлээ.'))
+        self.stdout.write(self.style.SUCCESS(f'  {len(active_provinces)} аймгийн эрэмбэ шинэчлэгдлээ.'))
 
         # Бүсийн эрэмбэ (зөвхөн оролцогчтой бүсүүдээр)
         for zone_id in active_zones:
@@ -97,10 +142,10 @@ class Command(BaseCommand):
             # Unofficial only
             update_rankings_a_z_u(olympiad_id, zone_id)
             update_rankings_b_z_u(olympiad_id, zone_id)
-        self.stdout.write(self.style.SUCCESS(f'... {len(active_zones)} бүсийн эрэмбэ шинэчлэгдлээ.'))
+        self.stdout.write(self.style.SUCCESS(f'  {len(active_zones)} бүсийн эрэмбэ шинэчлэгдлээ.'))
 
         # --- ШАГНАЛ ОЛГОХ ШИНЭ ХЭСЭГ (ОНОВЧЛОГДСОН) ---
-        self.stdout.write('Шагналын мэдээллийг онооны хуудсанд нэмж байна...')
+        self.stdout.write('  Шагналын мэдээллийг онооны хуудсанд нэмж байна...')
 
         # Эхлээд тухайн олимпиадын бүх онооны хуудасны шагналыг цэвэрлэх
         ScoreSheet.objects.filter(olympiad_id=olympiad_id).update(prizes=None)
@@ -134,5 +179,4 @@ class Command(BaseCommand):
         if updates:
             ScoreSheet.objects.bulk_update(updates, ['prizes'], batch_size=1000)
 
-        self.stdout.write(self.style.SUCCESS('... Шагналын мэдээлэл амжилттай нэмэгдлээ.'))
-        self.stdout.write(self.style.SUCCESS('\nҮйлдэл бүрэн дууслаа!'))
+        self.stdout.write(self.style.SUCCESS(f'  {len(updates)} хүнд шагналын мэдээлэл нэмэгдлээ.'))
