@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from .models import Post
 from olympiad.models import SchoolYear
-from datetime import date, timezone
+from datetime import date
 
 def post_list_view(request):
     """
@@ -45,4 +45,7 @@ def post_view(request):
     mode = int(request.GET.get('mode', 0))
     if id > 0:
         post = Post.objects.filter(pk=id).first()
-        return render(request, 'posts/post_view.html', {'post': post, 'mode': mode})
+        return render(request, 'posts/post_view.html', {
+            'post': post,
+            'mode': mode
+        })

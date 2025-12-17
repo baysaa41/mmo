@@ -24,6 +24,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
+{% csrf_token %}
 
 <header>
     {% include "main_nav_bar.html" %}

@@ -10,6 +10,7 @@ class SchoolYear(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=10, null=True, blank=True)
     start = models.DateField(null=True, blank=True)
+    start = models.DateField(null=True, blank=True)
     end = models.DateField(null=True, blank=True)
     descr = models.CharField(max_length=100, null=True, blank=True)
 

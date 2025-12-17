@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from olympiad.models import SchoolYear
 from ckeditor_uploader.fields import RichTextUploadingField
 from accounts.models import Author
