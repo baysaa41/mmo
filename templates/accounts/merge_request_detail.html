@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Нэгтгэх хүсэлт #{{ merge_request.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-compress-arrows-alt"></i> Нэгтгэх хүсэлт #{{ merge_request.id }}</h2>
+            <p class="text-muted mb-0">
+                {{ merge_request.requesting_user.last_name }} {{ merge_request.requesting_user.first_name }}
+                ({{ merge_request.created_at|date:"Y-m-d H:i" }})
+            </p>
+        </div>
+        <div>
+            {% if merge_request.status == 'pending' %}
+            <span class="badge bg-warning fs-6">{{ merge_request.get_status_display }}</span>
+            {% elif merge_request.status == 'completed' %}
+            <span class="badge bg-success fs-6">{{ merge_request.get_status_display }}</span>
+            {% elif merge_request.status == 'rejected' %}
+            <span class="badge bg-danger fs-6">{{ merge_request.get_status_display }}</span>
+            {% elif merge_request.status == 'failed' %}
+            <span class="badge bg-dark fs-6">{{ merge_request.get_status_display }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Conflict Warning -->
+    {% if merge_request.has_conflicts %}
+    <div class="alert alert-danger" role="alert">
+        <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> АНХААР: Дүнгийн зөрчил илэрлээ!</h5>
+        <p>{{ conflicts|length }} зөрчил байна. Нэгтгэхээс өмнө мэдээллийн сангаас эдгээр зөрчлийг засах шаардлагатай.</p>
+    </div>
+    {% elif users|length < merge_request.user_ids|length %}
+    <div class="alert alert-warning" role="alert">
+        <h5 class="alert-heading"><i class="fas fa-exclamation-circle"></i> АНХААР: Зарим хэрэглэгч олдсонгүй!</h5>
+        <p>Хүссэн {{ merge_request.user_ids|length }} хэрэглэгчээс зөвхөн {{ users|length }} олдлоо. Бусад хэрэглэгчид устсан эсвэл өмнө нь нэгтгэгдсэн байж болзошгүй.</p>
+    </div>
+    {% else %}
+    <div class="alert alert-success" role="alert">
+        <i class="fas fa-check-circle"></i> Зөрчил илрээгүй. Нэгтгэж болно.
+    </div>
+    {% endif %}
+
+    <!-- Request Reason -->
+    {% if merge_request.reason %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Шалтгаан:</strong>
+        </div>
+        <div class="card-body">
+            {{ merge_request.reason }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- User Confirmation Status -->
+    {% if merge_request.requires_user_confirmation %}
+    <h4 class="mt-4">Баталгаажуулалтын статус</h4>
+    <div class="card mb-3">
+        <div class="card-body">
+            {% with stats=merge_request.get_confirmation_stats %}
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h5 class="text-success">{{ stats.confirmed }}</h5>
+                        <small class="text-muted">Зөвшөөрсөн</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h5 class="text-warning">{{ stats.pending }}</h5>
+                        <small class="text-muted">Хүлээгдэж буй</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h5 class="text-danger">{{ stats.rejected }}</h5>
+                        <small class="text-muted">Татгалзсан</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h5 class="text-primary">{{ stats.total }}</h5>
+                        <small class="text-muted">Нийт</small>
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+
+            {% if merge_request.is_all_confirmed %}
+            <div class="alert alert-success mt-3 mb-0">
+                <i class="fas fa-check-circle"></i> Бүх хэрэглэгч баталгаажуулсан!
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <h4>Хэрэглэгч бүрийн баталгаажуулалт</h4>
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Хэрэглэгч</th>
+                    <th>Имэйл</th>
+                    <th>Статус</th>
+                    <th>Огноо</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <strong>{{ user.last_name }} {{ user.first_name }}</strong>
+                        <br><small class="text-muted">ID: {{ user.id }}</small>
+                    </td>
+                    <td>{{ user.email|default:"Имэйл байхгүй" }}</td>
+                    <td>
+                        {% if user.confirmation.status == 'confirmed' %}
+                        <span class="badge bg-success"><i class="fas fa-check"></i> Зөвшөөрсөн</span>
+                        {% elif user.confirmation.status == 'rejected' %}
+                        <span class="badge bg-danger"><i class="fas fa-times"></i> Татгалзсан</span>
+                        {% elif user.confirmation.status == 'pending' %}
+                        <span class="badge bg-warning"><i class="fas fa-clock"></i> Хүлээгдэж байна</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Мэдээлэл алга</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.confirmation.confirmed_at %}
+                        {{ user.confirmation.confirmed_at }}
+                        {% elif user.confirmation.rejected_at %}
+                        {{ user.confirmation.rejected_at }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- User Comparison Table -->
+    <h4 class="mt-4">Хэрэглэгчдийн мэдээлэл</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Талбар</th>
+                    {% for user in users %}
+                    <th>
+                        Хэрэглэгч #{{ user.id }}
+                        {% if merge_request.primary_user and merge_request.primary_user.id == user.id %}
+                        <span class="badge bg-primary">Үндсэн</span>
+                        {% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Овог</strong></td>
+                    {% for user in users %}
+                    <td>{{ user.last_name }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><strong>Нэр</strong></td>
+                    {% for user in users %}
+                    <td>{{ user.first_name }}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><strong>Регистрийн дугаар</strong></td>
+                    {% for user in users %}
+                    <td>{% if user.data %}{{ user.data.reg_num }}{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><strong>Аймаг</strong></td>
+                    {% for user in users %}
+                    <td>{% if user.data and user.data.province %}{{ user.data.province.name }}{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><strong>Сургууль</strong></td>
+                    {% for user in users %}
+                    <td>{% if user.data and user.data.school %}{{ user.data.school.name }}{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><strong>Анги</strong></td>
+                    {% for user in users %}
+                    <td>{% if user.data and user.data.grade %}{{ user.data.grade.name }}{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><strong>Утасны дугаар</strong></td>
+                    {% for user in users %}
+                    <td>{% if user.data %}{{ user.data.mobile }}{% endif %}</td>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    <td><strong>Имэйл</strong></td>
+                    {% for user in users %}
+                    <td>{{ user.email }}</td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Olympiad Participation -->
+    <h4 class="mt-4">Олимпиадад оролцсон түүх</h4>
+    <div class="row">
+        {% for user in users %}
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>Хэрэглэгч #{{ user.id }}</strong> - {{ user.last_name }} {{ user.first_name }}
+                </div>
+                <div class="card-body">
+                    {% for uid, data in user_olympiads.items %}
+                        {% if uid == user.id %}
+                            <p><strong>Нийт олимпиад:</strong> {{ data.olympiad_count }}</p>
+                            {% if data.scoresheets %}
+                            <p class="mb-1"><strong>Онооны хуудас:</strong></p>
+                            <ul class="small">
+                                {% for sheet in data.scoresheets|slice:":5" %}
+                                <li>{{ sheet.olympiad.name }} - Оноо: {{ sheet.total }}</li>
+                                {% endfor %}
+                                {% if data.scoresheets.count > 5 %}
+                                <li><em>...ба бусад {{ data.scoresheets.count|add:"-5" }}</em></li>
+                                {% endif %}
+                            </ul>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Conflict Details -->
+    {% if conflicts %}
+    <h4 class="mt-4 text-danger">Зөрчлийн дэлгэрэнгүй</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered table-danger">
+            <thead>
+                <tr>
+                    <th>Хэрэглэгч</th>
+                    <th>Олимпиад</th>
+                    <th>Бодлого</th>
+                    <th>Үндсэн хариулт/оноо</th>
+                    <th>Давхардсан хариулт/оноо</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for conflict in conflicts %}
+                <tr>
+                    <td>
+                        ID {{ conflict.dup_user_id }}<br>
+                        <small>{{ conflict.dup_user_name }}</small>
+                    </td>
+                    <td>
+                        {{ conflict.olympiad_name }}<br>
+                        <small class="text-muted">ID: {{ conflict.olympiad_id }}</small>
+                    </td>
+                    <td>Бодлого №{{ conflict.problem_order }}</td>
+                    <td>
+                        Хариулт: <strong>{{ conflict.primary_answer }}</strong><br>
+                        Оноо: <strong>{{ conflict.primary_score }}</strong>
+                    </td>
+                    <td class="bg-danger text-white">
+                        Хариулт: <strong>{{ conflict.dup_answer }}</strong><br>
+                        Оноо: <strong>{{ conflict.dup_score }}</strong>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Review Section (Staff Only) -->
+    {% if user.is_staff and merge_request.status == 'pending' %}
+    <h4 class="mt-4">Хянах ба баталгаажуулах</h4>
+
+    {% if users|length < merge_request.user_ids|length %}
+    <div class="alert alert-danger" role="alert">
+        <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Нэгтгэх боломжгүй</h5>
+        <p>Зарим хэрэглэгч олдохгүй байна. Энэ хүсэлтийг зөвхөн татгалзах боломжтой.</p>
+    </div>
+    {% elif not merge_request.has_conflicts %}
+    <div class="card">
+        <div class="card-body">
+            <form method="post" action="{% url 'merge_request_approve' merge_request.id %}">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="primary_user_id" class="form-label">Үндсэн хэрэглэгч сонгох (заавал биш)</label>
+                    <select name="primary_user_id" id="primary_user_id" class="form-select">
+                        <option value="">Автоматаар сонгох (хамгийн сүүлд нэвтэрсэн)</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}"
+                                {% if merge_request.primary_user and merge_request.primary_user.id == user.id %}selected{% endif %}>
+                            ID {{ user.id }} - {{ user.last_name }} {{ user.first_name }}
+                            {% if user.last_login %}(Сүүлд нэвтэрсэн: {{ user.last_login|date:"Y-m-d" }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">Үндсэн хэрэглэгч нь үлдэх бөгөөд бусад хэрэглэгчид устах болно.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label for="review_notes" class="form-label">Тайлбар (заавал биш)</label>
+                    <textarea name="review_notes" id="review_notes" class="form-control" rows="3"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-check"></i> Зөвшөөрч, нэгтгэх
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mt-3">
+        <div class="card-body">
+            <form method="post" action="{% url 'merge_request_reject' merge_request.id %}">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="reject_review_notes" class="form-label">Татгалзах шалтгаан</label>
+                    <textarea name="review_notes" id="reject_review_notes" class="form-control" rows="3" required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-times"></i> Татгалзах
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Review History -->
+    {% if merge_request.reviewed_at %}
+    <div class="card mt-3">
+        <div class="card-header">
+            <strong>Хянасан мэдээлэл</strong>
+        </div>
+        <div class="card-body">
+            <p><strong>Хянасан хэрэглэгч:</strong> {{ merge_request.reviewed_by.last_name }} {{ merge_request.reviewed_by.first_name }}</p>
+            <p><strong>Хянасан огноо:</strong> {{ merge_request.reviewed_at|date:"Y-m-d H:i" }}</p>
+            {% if merge_request.review_notes %}
+            <p><strong>Тайлбар:</strong> {{ merge_request.review_notes }}</p>
+            {% endif %}
+            {% if merge_request.merge_error %}
+            <p class="text-danger"><strong>Алдаа:</strong> {{ merge_request.merge_error }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Back Button -->
+    <div class="mt-4">
+        <a href="{% url 'merge_requests_list' %}" class="btn btn-secondary me-2">
+            <i class="fas fa-list"></i> Хүсэлтүүдийн жагсаалт
+        </a>
+        <a href="{% url 'participant_search' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-search"></i> Оролцогч хайх
+        </a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.table td, .table th {
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

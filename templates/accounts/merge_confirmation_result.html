@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Баталгаажуулалтын үр дүн{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header {% if success %}bg-success text-white{% else %}bg-danger text-white{% endif %}">
+                    <h4 class="mb-0">
+                        {% if success %}
+                        <i class="fas fa-check-circle"></i> Амжилттай
+                        {% else %}
+                        <i class="fas fa-times-circle"></i> Алдаа гарлаа
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <h5>Хүсэлтийн мэдээлэл:</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>Хүсэлт ID:</strong> #{{ merge_request.id }}</li>
+                        <li><strong>Төлөв:</strong>
+                            {% if merge_request.status == 'pending' %}
+                            <span class="badge bg-warning">{{ merge_request.get_status_display }}</span>
+                            {% elif merge_request.status == 'completed' %}
+                            <span class="badge bg-success">{{ merge_request.get_status_display }}</span>
+                            {% elif merge_request.status == 'rejected' %}
+                            <span class="badge bg-danger">{{ merge_request.get_status_display }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ merge_request.get_status_display }}</span>
+                            {% endif %}
+                        </li>
+                        <li><strong>Үүсгэсэн огноо:</strong> {{ merge_request.created_at|date:"Y-m-d H:i" }}</li>
+                    </ul>
+
+                    {% if merge_request.status == 'completed' %}
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-check-circle"></i> Бүх хэрэглэгч баталгаажуулсан тул нэгтгэлт амжилттай дууслаа!
+                    </div>
+                    {% elif merge_request.status == 'rejected' %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="fas fa-times-circle"></i> Нэгтгэх хүсэлт цуцлагдсан.
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <a href="{% url 'home' %}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Нүүр хуудас руу буцах
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Нэгтгэх хүсэлтүүд{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2><i class="fas fa-compress-arrows-alt"></i> Хэрэглэгч нэгтгэх хүсэлтүүд</h2>
+            <p class="text-muted mb-0">Хэрэглэгчдээс илгээсэн нэгтгэх хүсэлтүүдийг хянах, баталгаажуулах</p>
+        </div>
+        <div>
+            <a href="{% url 'participant_search' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-search"></i> Оролцогч хайх
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Filter -->
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == 'all' %}active{% endif %}"
+               href="?status=all">Бүгд</a>
+        </li>
+        {% for value, label in status_choices %}
+        <li class="nav-item">
+            <a class="nav-link {% if status_filter == value %}active{% endif %}"
+               href="?status={{ value }}">{{ label }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Requests Table -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Хүсэлт илгээсэн</th>
+                    <th>Хэрэглэгчдийн тоо</th>
+                    <th>Баталгаажуулалт</th>
+                    <th>Төлөв</th>
+                    <th>Зөрчил</th>
+                    <th>Үүсгэсэн огноо</th>
+                    <th>Хянасан огноо</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for request in merge_requests %}
+                <tr>
+                    <td>#{{ request.id }}</td>
+                    <td>
+                        {{ request.requesting_user.last_name }} {{ request.requesting_user.first_name }}
+                        <small class="text-muted">(ID: {{ request.requesting_user.id }})</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{ request.user_ids|length }} хүн</span>
+                    </td>
+                    <td>
+                        {% if request.requires_user_confirmation %}
+                            {% with stats=request.get_confirmation_stats %}
+                            <span class="badge bg-success">{{ stats.confirmed }}</span> /
+                            <span class="badge bg-warning">{{ stats.pending }}</span>
+                            {% if stats.rejected > 0 %}
+                            / <span class="badge bg-danger">{{ stats.rejected }}</span>
+                            {% endif %}
+                            {% endwith %}
+                        {% else %}
+                        <span class="badge bg-secondary">Хэрэггүй</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if request.status == 'pending' %}
+                        <span class="badge bg-warning">{{ request.get_status_display }}</span>
+                        {% elif request.status == 'completed' %}
+                        <span class="badge bg-success">{{ request.get_status_display }}</span>
+                        {% elif request.status == 'rejected' %}
+                        <span class="badge bg-danger">{{ request.get_status_display }}</span>
+                        {% elif request.status == 'failed' %}
+                        <span class="badge bg-dark">{{ request.get_status_display }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ request.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if request.has_conflicts %}
+                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Тийм</span>
+                        {% else %}
+                        <span class="badge bg-success"><i class="fas fa-check"></i> Үгүй</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ request.created_at|date:"Y-m-d H:i" }}
+                    </td>
+                    <td>
+                        {% if request.reviewed_at %}
+                        {{ request.reviewed_at|date:"Y-m-d H:i" }}
+                        <br><small class="text-muted">{{ request.reviewed_by.last_name }}</small>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'merge_request_detail' request.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> Харах
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">
+                        Хүсэлт байхгүй байна
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if merge_requests.has_other_pages %}
+    <nav>
+        <ul class="pagination">
+            {% if merge_requests.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ merge_requests.previous_page_number }}&status={{ status_filter }}">Өмнөх</a>
+            </li>
+            {% endif %}
+            <li class="page-item active">
+                <span class="page-link">{{ merge_requests.number }} / {{ merge_requests.paginator.num_pages }}</span>
+            </li>
+            {% if merge_requests.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ merge_requests.next_page_number }}&status={{ status_filter }}">Дараах</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

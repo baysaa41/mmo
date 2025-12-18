@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Оролцогч хайх{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2><i class="fas fa-search"></i> Оролцогч хайх</h2>
+            <p class="text-muted mb-0">Давхардсан данс олж, нэгтгэх хүсэлт илгээх</p>
+        </div>
+        {% if user.is_staff %}
+        <div>
+            <a href="{% url 'merge_requests_list' %}" class="btn btn-primary">
+                <i class="fas fa-tasks"></i> Нэгтгэх хүсэлтүүд
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Search Form -->
+    <form method="get" class="mb-4">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control"
+                       placeholder="Овог, нэр, ID, регистр, утас..."
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-2">
+                <select name="p" id="id_province" class="form-select">
+                    <option value="">Аймаг/Дүүрэг</option>
+                    {% for province in provinces %}
+                    <option value="{{ province.id }}"
+                            {% if selected_province == province.id|stringformat:"s" %}selected{% endif %}>
+                        {{ province.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="z" class="form-select">
+                    <option value="">Бүс</option>
+                    {% for zone in zones %}
+                    <option value="{{ zone.id }}"
+                            {% if selected_zone == zone.id|stringformat:"s" %}selected{% endif %}>
+                        {{ zone.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="s" id="id_school" class="form-select">
+                    <option value="">Сургууль</option>
+                    {% for school in schools %}
+                    <option value="{{ school.id }}"
+                            {% if selected_school == school.id|stringformat:"s" %}selected{% endif %}>
+                        {{ school.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Хайх
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Selected Users Info -->
+    <div class="alert alert-info" id="selection-info" style="display: none;">
+        <span id="selected-count">0</span> хэрэглэгч сонгосон байна.
+        <button type="button" class="btn btn-sm btn-success float-end"
+                id="create-merge-btn" disabled>
+            <i class="fas fa-compress-arrows-alt"></i> Нэгтгэх хүсэлт үүсгэх
+        </button>
+    </div>
+
+    <!-- Results Table -->
+    <div class="table-responsive">
+        <table class="table table-hover table-sm">
+            <thead>
+                <tr>
+                    <th style="width: 50px;"><input type="checkbox" id="select-all"></th>
+                    <th>ID</th>
+                    <th>Овог</th>
+                    <th>Нэр</th>
+                    {% if request.user.is_staff %}
+                    <th>Регистр</th>
+                    {% endif %}
+                    <th>Аймаг</th>
+                    <th>Сургууль</th>
+                    <th>Анги</th>
+                    {% if request.user.is_staff %}
+                    <th>Утас</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <input type="checkbox" class="user-checkbox"
+                               value="{{ user.id }}"
+                               data-name="{{ user.last_name }} {{ user.first_name }}">
+                    </td>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.last_name }}</td>
+                    <td>{{ user.first_name }}</td>
+                    {% if request.user.is_staff %}
+                    <td>{% if user.data %}{{ user.data.reg_num }}{% endif %}</td>
+                    {% endif %}
+                    <td>{% if user.data and user.data.province %}{{ user.data.province.name }}{% endif %}</td>
+                    <td>{% if user.data and user.data.school %}{{ user.data.school.name }}{% endif %}</td>
+                    <td>{% if user.data and user.data.grade %}{{ user.data.grade.name }}{% endif %}</td>
+                    {% if request.user.is_staff %}
+                    <td>{% if user.data %}{{ user.data.mobile }}{% endif %}</td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if request.user.is_staff %}9{% else %}7{% endif %}" class="text-center text-muted py-4">
+                        {% if search_query or selected_province or selected_zone or selected_school %}
+                        Хайлт олдсонгүй
+                        {% else %}
+                        Хайлт хийхийн тулд дээрх шүүлтүүрийг ашиглана уу
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if users.has_other_pages %}
+    <nav>
+        <ul class="pagination">
+            {% if users.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ users.previous_page_number }}&q={{ search_query }}&p={{ selected_province }}&z={{ selected_zone }}&s={{ selected_school }}">Өмнөх</a>
+            </li>
+            {% endif %}
+            <li class="page-item active">
+                <span class="page-link">{{ users.number }} / {{ users.paginator.num_pages }}</span>
+            </li>
+            {% if users.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ users.next_page_number }}&q={{ search_query }}&p={{ selected_province }}&z={{ selected_zone }}&s={{ selected_school }}">Дараах</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Merge Request Modal -->
+<div class="modal fade" id="mergeRequestModal" tabindex="-1" aria-labelledby="mergeRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'create_merge_request' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mergeRequestModalLabel">Нэгтгэх хүсэлт үүсгэх</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Та дараах хэрэглэгчдийг нэгтгэх хүсэлт илгээх гэж байна:</p>
+                    <ul id="selected-users-list" class="list-unstyled">
+                    </ul>
+
+                    <input type="hidden" name="user_ids" id="user_ids_input">
+
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Шалтгаан (заавал биш)</label>
+                        <textarea name="reason" id="reason" class="form-control" rows="3"
+                                  placeholder="Яагаад эдгээр хэрэглэгчдийг нэгтгэх шаардлагатай вэ?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Болих</button>
+                    <button type="submit" class="btn btn-primary">Хүсэлт илгээх</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Checkbox management
+let selectedUsers = new Set();
+
+document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelection);
+});
+
+document.getElementById('select-all').addEventListener('change', function() {
+    document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+    updateSelection();
+});
+
+function updateSelection() {
+    selectedUsers.clear();
+    let usersList = [];
+
+    document.querySelectorAll('.user-checkbox:checked').forEach(checkbox => {
+        selectedUsers.add(checkbox.value);
+        usersList.push({
+            id: checkbox.value,
+            name: checkbox.dataset.name
+        });
+    });
+
+    const count = selectedUsers.size;
+    document.getElementById('selected-count').textContent = count;
+    document.getElementById('selection-info').style.display = count > 0 ? 'block' : 'none';
+    document.getElementById('create-merge-btn').disabled = count < 2;
+
+    // Update modal content
+    const userListHtml = usersList.map(u => `<li class="mb-1"><strong>ID ${u.id}:</strong> ${u.name}</li>`).join('');
+    document.getElementById('selected-users-list').innerHTML = userListHtml;
+    document.getElementById('user_ids_input').value = Array.from(selectedUsers).join(',');
+}
+
+// Create merge request button
+document.getElementById('create-merge-btn').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('mergeRequestModal'));
+    modal.show();
+});
+
+// AJAX school loading based on province selection
+document.getElementById('id_province').addEventListener('change', function() {
+    const provinceId = this.value;
+    const schoolSelect = document.getElementById('id_school');
+
+    schoolSelect.innerHTML = '<option value="">Сургууль</option>';
+
+    if (provinceId) {
+        fetch(`/accounts/ajax/load-schools/?province_id=${provinceId}`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(school => {
+                    const option = document.createElement('option');
+                    option.value = school.id;
+                    option.textContent = school.name;
+                    schoolSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading schools:', error));
+    }
+});
+</script>
+{% endblock %}
