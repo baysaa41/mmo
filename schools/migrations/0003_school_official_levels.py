@@ -60,4 +60,15 @@ class Migration(migrations.Migration):
     operations = [
         # Use RunPython to safely create the M2M table only if it doesn't exist
         migrations.RunPython(safe_add_official_levels_field, migrations.RunPython.noop),
+        # Add field to Django state (table already created by RunPython above)
+        migrations.SeparateDatabaseAndState(
+            database_operations=[],  # No database changes needed
+            state_operations=[
+                migrations.AddField(
+                    model_name='school',
+                    name='official_levels',
+                    field=models.ManyToManyField(blank=True, related_name='official_schools', to='accounts.level', verbose_name='Албан ёсны оролцооны түвшингүүд'),
+                ),
+            ],
+        ),
     ]
