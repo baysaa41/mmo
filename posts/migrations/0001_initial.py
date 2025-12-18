@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('accounts', '0002_initial'),
-        ('olympiad', '0005_problem_numerical_answer2'),
+        ('olympiad', '0002_initial'),  # Changed from 0005 - posts only needs SchoolYear model
     ]
 
     operations = [
