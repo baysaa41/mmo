@@ -13,6 +13,17 @@ urlpatterns = [
     path('users/<int:group_id>/', display.group_users, name='group_users'),
     path('staff/', display.staff, name='account_staff'),
 
+    # Participant Search & Merge Requests
+    path('search/', display.participant_search, name='participant_search'),
+    path('merge-request/create/', display.create_merge_request, name='create_merge_request'),
+    path('merge-request/<int:pk>/', admin.merge_request_detail, name='merge_request_detail'),
+    path('merge-requests/', admin.merge_requests_list, name='merge_requests_list'),
+    path('merge-request/<int:pk>/approve/', admin.merge_request_approve, name='merge_request_approve'),
+    path('merge-request/<int:pk>/reject/', admin.merge_request_reject, name='merge_request_reject'),
+    # User confirmation URLs (no login required)
+    path('merge-request/<int:pk>/confirm/<int:user_id>/<str:token>/', display.merge_request_confirm, name='merge_request_user_confirm'),
+    path('merge-request/<int:pk>/decline/<int:user_id>/<str:token>/', display.merge_request_reject, name='merge_request_user_decline'),
+
     # Auth Views
     path('profile/', auth.profile, name='user_profile'),
     path('profile/<int:user_id>/', auth.user_profile_edit, name='user_profile_edit'),
