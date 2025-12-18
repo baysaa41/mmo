@@ -47,32 +47,4 @@ class Migration(migrations.Migration):
                 'ordering': ['-year_id', '-isspec'],
             },
         ),
-        migrations.CreateModel(
-            name='Notification',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('action_type', models.CharField(choices=[('like', 'Таалагдсан')], default='like', max_length=20)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('is_read', models.BooleanField(default=False)),
-                ('actor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='actions', to=settings.AUTH_USER_MODEL)),
-                ('post', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to='posts.post')),
-                ('recipient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to=settings.AUTH_USER_MODEL)),
-            ],
-            options={
-                'ordering': ['-created_at'],
-            },
-        ),
-        migrations.CreateModel(
-            name='Like',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('post', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='likes', to='posts.post')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='post_likes', to=settings.AUTH_USER_MODEL)),
-            ],
-            options={
-                'ordering': ['-created_at'],
-                'unique_together': {('user', 'post')},
-            },
-        ),
     ]
