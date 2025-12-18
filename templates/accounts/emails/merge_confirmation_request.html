@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нэгтгэх хүсэлт баталгаажуулах</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #0d6efd;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border: 1px solid #dee2e6;
+        }
+        .user-info {
+            background-color: white;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #0d6efd;
+        }
+        .buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin: 10px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .btn-success {
+            background-color: #198754;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Нэгтгэх хүсэлт баталгаажуулах</h2>
+    </div>
+
+    <div class="content">
+        <p>Сайн байна уу, <strong>{{ user.last_name }} {{ user.first_name }}</strong>!</p>
+
+        <p>Танд нэгтгэх хүсэлт ирлээ. Таны дансыг дараах данстай нэгтгэхийг хүссэн байна:</p>
+
+        <div class="user-info">
+            <h4>Нэгтгэх данснууд:</h4>
+            <ul>
+                {% for u in users %}
+                <li>
+                    <strong>{{ u.last_name }} {{ u.first_name }}</strong> (ID: {{ u.id }})
+                    {% if u.data %}
+                    <br><small>{{ u.data.school.name|default:"" }} - {{ u.data.grade.name|default:"" }}</small>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% if merge_request.reason %}
+        <div class="user-info">
+            <strong>Шалтгаан:</strong>
+            <p>{{ merge_request.reason }}</p>
+        </div>
+        {% endif %}
+
+        <div class="warning">
+            <strong>⚠️ Анхаар:</strong>
+            <ul style="margin: 10px 0;">
+                <li>Нэгтгэлт амжилттай болсон тохиолдолд нэг данс үлдэж, бусад нь устах болно.</li>
+                <li>Олимпиадын дүн болон бусад мэдээлэл нэг данс руу нэгтгэгдэнэ.</li>
+                <li><strong>БҮГД баталгаажуулсан тохиолдолд л</strong> автоматаар нэгтгэгдэнэ.</li>
+                <li>Хэрэв та эсвэл <strong>аль нэг хүн татгалзвал</strong>, нэгтгэлт цуцлагдана.</li>
+            </ul>
+        </div>
+
+        <div class="buttons">
+            <a href="{{ confirm_url }}" class="btn btn-success">
+                ✓ Зөвшөөрөх
+            </a>
+            <a href="{{ reject_url }}" class="btn btn-danger">
+                ✗ Татгалзах
+            </a>
+        </div>
+
+        <p style="text-align: center; color: #6c757d;">
+            <small>Энэхүү имэйл автоматаар илгээгдсэн тул хариу өгөх шаардлагагүй.</small>
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>© {{ current_year }} MMO (Math Minds Olympiad)</p>
+        <p>Хүсэлт ID: #{{ merge_request.id }}</p>
+    </div>
+</body>
+</html>
