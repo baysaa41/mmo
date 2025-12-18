@@ -3,6 +3,46 @@
 from django.db import migrations, models
 
 
+def add_official_levels_field(apps, schema_editor):
+    """
+    Safely add official_levels ManyToManyField if not exists
+    """
+    from django.db import connection
+    with connection.cursor() as cursor:
+        # Get current schema
+        cursor.execute("SELECT current_schema();")
+        schema = cursor.fetchone()[0]
+
+        # Check if the M2M table already exists
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = %s
+                AND table_name = 'schools_school_official_levels'
+            );
+        """, [schema])
+        table_exists = cursor.fetchone()[0]
+
+        if not table_exists:
+            # Create the M2M table without schema prefix (uses search_path)
+            cursor.execute("""
+                CREATE TABLE schools_school_official_levels (
+                    id SERIAL PRIMARY KEY,
+                    school_id INTEGER NOT NULL REFERENCES schools_school(id) ON DELETE CASCADE,
+                    level_id INTEGER NOT NULL REFERENCES accounts_level(id) ON DELETE CASCADE,
+                    UNIQUE (school_id, level_id)
+                );
+            """)
+            cursor.execute("""
+                CREATE INDEX schools_school_official_levels_school_id_idx
+                ON schools_school_official_levels (school_id);
+            """)
+            cursor.execute("""
+                CREATE INDEX schools_school_official_levels_level_id_idx
+                ON schools_school_official_levels (level_id);
+            """)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,9 +51,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='school',
-            name='official_levels',
-            field=models.ManyToManyField(blank=True, related_name='official_schools', to='accounts.level', verbose_name='Албан ёсны оролцооны түвшингүүд'),
-        ),
+        migrations.RunPython(add_official_levels_field, migrations.RunPython.noop),
     ]
