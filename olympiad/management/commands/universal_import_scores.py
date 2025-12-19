@@ -23,10 +23,10 @@ class Command(BaseCommand):
 
     # Ангиллын pattern - sheet нэрээс ангилал таних
     CATEGORY_PATTERNS = {
-        'C': r'([CС][\s\(\-]|[\s\(\-][CС][\s\)\-]|5-6|^[CС]$|5-р\s+анги|6-р\s+анги)',
-        'D': r'(D[\s\(\-]|[\s\(\-]D[\s\)\-]|7-8|^D$|7-р\s+анги|8-р\s+анги)',
-        'E': r'([EЕ][\s\(\-]|[\s\(\-][EЕ][\s\)\-]|9-10|^[EЕ]$|9-р\s+анги|10-р\s+анги)',
-        'F': r'(F[\s\(\-]|[\s\(\-]F[\s\)\-]|11-12|^F$|11-р\s+анги|12-р\s+анги)',
+        'C': r'([CС][\s\(\-]|[\s\(\-][CС][\s\)\-]|5-6|^[CС]$|5-р\s+анги|6-р\s+анги|-5$|-6$)',
+        'D': r'(D[\s\(\-]|[\s\(\-]D[\s\)\-]|7-8|^D$|7-р\s+анги|8-р\s+анги|-7$|-8$)',
+        'E': r'([EЕ][\s\(\-]|[\s\(\-][EЕ][\s\)\-]|9-10|^[EЕ]$|9-р\s+анги|10-р\s+анги|-9$|-10$)',
+        'F': r'(F[\s\(\-]|[\s\(\-]F[\s\)\-]|11-12|^F$|11-р\s+анги|12-р\s+анги|-11$|-12$)',
         'S': r'(S[\s\(\-]|[\s\(\-][S][\s\)\-]|Бага\s+багш|Бага\s+анги|^S$)',
         'T': r'(T[\s\(\-]|[\s\(\-][T][\s\)\-]|Дунд\s+багш|Дунд\s+анги|^T$)',
     }
@@ -741,6 +741,28 @@ class Command(BaseCommand):
 
     def _is_problem_number_row(self, values):
         """Мөр нь асуултын дугаарууд (1, 2, 3, 4...) эсэхийг шалгах"""
+        # ЭХЛЭЭД: Хэрэв багана 4 ба 5 (Овог, Нэр) текст агуулж байвал энэ нь дата мөр
+        # Энэ нь асуултын дугаарын мөр биш
+        if len(values) > 5:
+            # Овог (index 4) болон Нэр (index 5) шалгах
+            ovog = values[4] if len(values) > 4 else None
+            ner = values[5] if len(values) > 5 else None
+
+            # Хэрэв Овог эсвэл Нэр текст утга агуулж байвал энэ нь дата мөр
+            if pd.notna(ovog) and isinstance(ovog, str) and len(str(ovog).strip()) > 0:
+                # Тоо биш текст байвал дата мөр
+                try:
+                    float(str(ovog))
+                except (ValueError, TypeError):
+                    return False
+
+            if pd.notna(ner) and isinstance(ner, str) and len(str(ner).strip()) > 0:
+                # Тоо биш текст байвал дата мөр
+                try:
+                    float(str(ner))
+                except (ValueError, TypeError):
+                    return False
+
         numbers = []
         for i, v in enumerate(values):
             # Эхний 4 баганыг алгасах (Д.д, Овог, Нэр, ID)
