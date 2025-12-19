@@ -272,6 +272,29 @@ class Command(BaseCommand):
 
             row_count += 1
 
+            # UserMeta шалгах ба шаардлагатай бол үүсгэх
+            if not dry_run:
+                from accounts.models import UserMeta
+                # UserMeta байхгүй бол үүсгэх (province мэдээлэл нөхөх)
+                if not hasattr(user, 'data') or user.data is None:
+                    # Province мэдээлэл байвал нөхөх
+                    meta_province_id = province_id if province_id else None
+                    meta = UserMeta.objects.create(
+                        user=user,
+                        reg_num='',  # default утга
+                        province_id=meta_province_id
+                    )
+                    self.stdout.write(self.style.WARNING(
+                        f"      ⚠️ UserMeta үүсгэв: {user.username} (Province: {meta_province_id})"
+                    ))
+                elif province_id and hasattr(user, 'data') and user.data and not user.data.province_id:
+                    # UserMeta байгаа ч province байхгүй бол нөхөх
+                    user.data.province_id = province_id
+                    user.data.save(update_fields=['province_id'])
+                    self.stdout.write(self.style.WARNING(
+                        f"      ⚠️ Province нөхөв: {user.username} → {province_id}"
+                    ))
+
             # Оноо хадгалах
             if not dry_run:
                 with transaction.atomic():

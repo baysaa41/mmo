@@ -63,10 +63,21 @@ def to_scoresheet(olympiad_id):
         results_list = list(results_group)
         contestant = results_list[0].contestant
 
-        # Skip user if they don't have a UserMeta (data) profile
+        # UserMeta шалгах ба шаардлагатай бол үүсгэх
         if not hasattr(contestant, 'data') or contestant.data is None:
-            print(f"{contestant.id} хэрэглэгчийн бүртгэлийн мэдээлэл дутуу тул алгаслаа.")
-            continue
+            # UserMeta үүсгэх (хамгийн суурь мэдээллээр)
+            from accounts.models import UserMeta
+            try:
+                UserMeta.objects.create(
+                    user=contestant,
+                    reg_num='',  # default утга
+                )
+                # Дахин уншиж авах (relation cache шинэчлэх)
+                contestant.refresh_from_db()
+                print(f"⚠️ {contestant.id} ({contestant.username}): UserMeta үүсгэв")
+            except Exception as e:
+                print(f"❌ {contestant.id} ({contestant.username}): UserMeta үүсгэх алдаа - {e}")
+                continue
 
         school_obj = contestant.data.school
 
