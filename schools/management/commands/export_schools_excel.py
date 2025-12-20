@@ -6,13 +6,23 @@ import os
 
 
 class Command(BaseCommand):
-    help = 'Сургуулиудын нэр, ID бүхий Excel файл үүсгэх. Дүүрэг тус бүр тусдаа sheet дээр.'
+    help = 'Сургуулиудын нэр, ID бүхий Excel файл үүсгэх. Аймаг/Дүүрэг бүрээр тусдаа файл.'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--output-dir',
+            type=str,
+            default='schools_export',
+            help='Файлууд хадгалах хавтас (default: schools_export)'
+        )
 
     def handle(self, *args, **kwargs):
-        # Excel workbook үүсгэх
-        wb = Workbook()
-        # Анхдагч sheet-ийг устгах
-        wb.remove(wb.active)
+        output_dir = kwargs['output_dir']
+
+        # Хавтас үүсгэх
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            self.stdout.write(self.style.SUCCESS(f'📁 Хавтас үүслээ: {output_dir}'))
 
         # Сургуулиудыг дүүргээр нь бүлэглэх
         schools_by_province = {}
@@ -26,11 +36,15 @@ class Command(BaseCommand):
 
             schools_by_province[province_name].append(school)
 
-        # Дүүрэг тус бүрийн хувьд sheet үүсгэх
+        # Province бүрээр тусдаа файл үүсгэх
+        files_created = []
+        total_schools = 0
+
         for province_name in sorted(schools_by_province.keys()):
-            # Sheet нэр нь 31 тэмдэгтээс хэтрэхгүй байх ёстой
-            sheet_name = province_name[:31]
-            ws = wb.create_sheet(title=sheet_name)
+            # Excel workbook үүсгэх
+            wb = Workbook()
+            ws = wb.active
+            ws.title = province_name[:31]  # Sheet нэр - 31 тэмдэгтийн хязгаар
 
             # Толгой мөр
             ws['A1'] = '№'
@@ -72,18 +86,25 @@ class Command(BaseCommand):
             ws.column_dimensions['E'].width = 20
             ws.column_dimensions['F'].width = 30
 
-        # Файлыг хадгалах
-        output_file = 'schools_by_province.xlsx'
-        wb.save(output_file)
+            # Файлын нэр үүсгэх (аймгийн нэртэй, зайгүй)
+            safe_province_name = province_name.replace('/', '_').replace('\\', '_').replace(',', '').replace(' ', '_')
+            output_file = os.path.join(output_dir, f'{safe_province_name}.xlsx')
 
-        self.stdout.write(
-            self.style.SUCCESS(f'Амжилттай! Файл үүсгэгдлээ: {os.path.abspath(output_file)}')
-        )
-        self.stdout.write(
-            self.style.SUCCESS(f'Нийт дүүрэг/аймаг: {len(schools_by_province)}')
-        )
+            # Файл хадгалах
+            wb.save(output_file)
+            files_created.append(output_file)
+            total_schools += len(schools_list)
 
-        total_schools = sum(len(schools) for schools in schools_by_province.values())
-        self.stdout.write(
-            self.style.SUCCESS(f'Нийт сургууль: {total_schools}')
-        )
+            self.stdout.write(
+                self.style.SUCCESS(f'✅ {province_name}: {len(schools_list)} сургууль → {output_file}')
+            )
+
+        # Эцсийн тайлан
+        self.stdout.write('')
+        self.stdout.write('=' * 80)
+        self.stdout.write(self.style.SUCCESS('📊 ЭЦСИЙН ТАЙЛАН'))
+        self.stdout.write('=' * 80)
+        self.stdout.write(f'📁 Хавтас: {os.path.abspath(output_dir)}')
+        self.stdout.write(f'📄 Нийт файл: {len(files_created)}')
+        self.stdout.write(f'🏫 Нийт сургууль: {total_schools}')
+        self.stdout.write('=' * 80)
