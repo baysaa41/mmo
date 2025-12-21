@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ province.name }} - Удирдлага{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_provinces' %}">Миний аймгууд</a></li>
+            <li class="breadcrumb-item active">{{ province.name }}</li>
+        </ol>
+    </nav>
+
+    <h2>{{ province.name }}</h2>
+    {% if current_school_year %}
+        <p class="text-muted">2-р давааны олимпиадууд ({{ current_school_year.name }})</p>
+    {% else %}
+        <p class="text-muted">2-р давааны олимпиадууд</p>
+    {% endif %}
+
+    <!-- Багш нарын олимпиад (S, T) -->
+    {% if teacher_olympiads %}
+        <h4 class="mt-4 mb-3 text-primary">
+            📚 Багш нарын олимпиад
+            {% if teacher_levels %}<small class="text-muted">({{ teacher_levels }})</small>{% endif %}
+        </h4>
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Олимпиад - Ангилал</th>
+                        <th style="width: 25%;">Аймаг, дүүргийн олимпиадад бүртгүүлсэн</th>
+                        <th style="width: 25%;">Аймаг, дүүргийн нийт багш нар</th>
+                        <th style="width: 10%;">Үйлдэл</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for olympiad in teacher_olympiads %}
+                        <tr>
+                            <td>{{ olympiad.name }} - {{ olympiad.level.name }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-success fs-6">{{ olympiad.province_registered }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info fs-6">{{ olympiad.province_total }}</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'province_olympiad_view' province.id olympiad.id %}"
+                                   class="btn btn-sm btn-primary">
+                                    Удирдах
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    <!-- Сурагчдын олимпиад -->
+    {% if student_olympiads %}
+        <h4 class="mt-5 mb-3 text-success">
+            🎓 Сурагчдын олимпиад
+            {% if student_levels %}<small class="text-muted">({{ student_levels }})</small>{% endif %}
+        </h4>
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Олимпиад - Ангилал</th>
+                        <th style="width: 25%;">Аймаг, дүүргийн олимпиадад оролцох</th>
+                        <th style="width: 25%;">Сургуулийн олимпиадад оролцсон</th>
+                        <th style="width: 10%;">Үйлдэл</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for olympiad in student_olympiads %}
+                        <tr>
+                            <td>{{ olympiad.name }} - {{ olympiad.level.name }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-success fs-6">{{ olympiad.province_registered }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info fs-6">{{ olympiad.province_total }}</span>
+                            </td>
+                            <td>
+                                <a href="{% url 'province_olympiad_view' province.id olympiad.id %}"
+                                   class="btn btn-sm btn-primary">
+                                    Удирдах
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    {% if not teacher_olympiads and not student_olympiads %}
+        <div class="alert alert-info">
+            {% if current_school_year %}
+                {{ current_school_year.name }} хичээлийн жилд 2-р давааны олимпиад одоогоор байхгүй байна.
+            {% else %}
+                Одоогийн хичээлийн жилд 2-р давааны олимпиад байхгүй байна.
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

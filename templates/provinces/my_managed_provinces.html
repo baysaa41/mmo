@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Миний аймгууд{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Миний удирддаг аймгууд</h2>
+    <p class="text-muted">Таны удирдлагад байгаа аймаг дүүргүүд</p>
+
+    {% if provinces %}
+        <div class="row">
+            {% for province in provinces %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ province.name }}</h5>
+                            <p class="card-text">
+                                <strong>Бүс:</strong> {{ province.zone.name|default:"Тодорхойгүй" }}
+                            </p>
+                            <a href="{% url 'province_dashboard' province.id %}" class="btn btn-primary btn-sm">
+                                Удирдах
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Та одоогоор ямар ч аймаг дүүргийг удирдаж байхгүй байна.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

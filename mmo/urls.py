@@ -11,6 +11,7 @@ from olympiad import api_views as olympiad_api
 urlpatterns = ([
     path('select2/', include('django_select2.urls')),
     path('schools/', include('schools.urls')),
+    path('provinces/', include('provinces.urls')),
     path('files/', include('file_management.urls')),
     path('', include('posts.urls')),  # Homepage now points to the posts app
     path('emails/', include('emails.urls')),

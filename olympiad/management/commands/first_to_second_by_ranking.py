@@ -178,6 +178,94 @@ def select_next_stage(df, region_type, additional_quota_config=None):
     return pd.concat(result).reset_index(drop=True)
 
 
+def create_round2_groups_and_assign_students(category_to_olympiad, selected_df, stdout):
+    """
+    Round 2 группүүд үүсгэж, сурагчдыг автоматаар нэмнэ.
+
+    Аймаг + олимпиад бүрээр:
+    1. Олимпиадад бүлэг байгаа эсэхийг шалгах
+    2. Байхгүй бол Group үүсгэх: Round2_{province_id}_{olympiad_id}
+    3. Байвал түүнийг ашиглах
+    4. Эрх авсан сурагчдыг группт нэмэх
+
+    Args:
+        category_to_olympiad: dict {category: round1_olympiad_id}
+        selected_df: DataFrame with selected students
+        stdout: Command stdout for logging
+
+    Returns:
+        dict with statistics
+    """
+    from django.contrib.auth.models import User
+    from olympiad.utils.group_management import get_or_create_round2_group
+
+    stats = {
+        'groups_created': 0,
+        'groups_reused': 0,
+        'students_added': 0,
+        'olympiads_linked': 0,
+    }
+
+    # Аймаг + олимпиад бүрээр ажиллах
+    for province_id in selected_df['region_id'].unique():
+        province_students = selected_df[selected_df['region_id'] == province_id]
+
+        for round1_olympiad_id in province_students['olympiad_id'].unique():
+            olympiad_students = province_students[
+                province_students['olympiad_id'] == round1_olympiad_id
+            ]
+
+            try:
+                round1_olympiad = Olympiad.objects.get(id=round1_olympiad_id)
+                round2_olympiad = round1_olympiad.next_round
+
+                if not round2_olympiad:
+                    stdout.write(f'  ⚠ Олимпиад ID={round1_olympiad_id}-д next_round тохируулаагүй')
+                    continue
+
+                # Олимпиадад бүлэг байгаа эсэхийг шалгаад, байхгүй бол үүсгэх
+                group, created = get_or_create_round2_group(round2_olympiad, province_id)
+
+                if created:
+                    stats['groups_created'] += 1
+                    stdout.write(f'  ✓ Групп үүслээ: {group.name}')
+                else:
+                    stats['groups_reused'] += 1
+                    stdout.write(f'  ↻ Групп ашигласан: {group.name}')
+
+                # Олимпиад бүлэгтэй холбогдсоныг баталгаажуулах
+                if not round2_olympiad.group:
+                    round2_olympiad.group = group
+                    round2_olympiad.save(update_fields=['group'])
+                    stats['olympiads_linked'] += 1
+
+                # Сурагчдыг группт нэмэх
+                student_ids = olympiad_students['user_id'].tolist()
+                added_count = 0
+                for user_id in student_ids:
+                    try:
+                        user = User.objects.get(id=user_id)
+                        # Аль хэдийн группт байгаа эсэхийг шалгах
+                        if not group.user_set.filter(id=user_id).exists():
+                            group.user_set.add(user)
+                            added_count += 1
+                            stats['students_added'] += 1
+                    except User.DoesNotExist:
+                        stdout.write(f'  ⚠ Хэрэглэгч ID={user_id} олдсонгүй')
+                        pass
+
+                stdout.write(
+                    f'    → {added_count}/{len(student_ids)} шинээр нэмэгдсэн сурагч | '
+                    f'Олимпиад: {round2_olympiad.name} (ID={round2_olympiad.id})'
+                )
+
+            except Olympiad.DoesNotExist:
+                stdout.write(f'  ✗ Олимпиад ID={round1_olympiad_id} олдсонгүй')
+                continue
+
+    return stats
+
+
 class Command(BaseCommand):
     help = '''2-р давааны 1-р шатны эрх олгох сурагчдыг сонгоно.
 
@@ -412,4 +500,21 @@ class Command(BaseCommand):
                 updated += 1
 
             self.stdout.write(self.style.SUCCESS(f'{updated} ScoreSheet шинэчлэгдлээ.'))
+
+            # === Round 2 группүүд үүсгэх ===
+            self.stdout.write(self.style.HTTP_INFO(f'\n{"="*60}'))
+            self.stdout.write(self.style.HTTP_INFO('ROUND 2 ГРУППҮҮД ҮҮСГЭХ'))
+            self.stdout.write(self.style.HTTP_INFO(f'{"="*60}\n'))
+
+            group_stats = create_round2_groups_and_assign_students(
+                category_to_olympiad,
+                combined_selected,
+                self.stdout
+            )
+
+            self.stdout.write(f'\n✓ Группүүд үүслээ: {group_stats["groups_created"]}')
+            self.stdout.write(f'↻ Группүүд ашигласан: {group_stats["groups_reused"]}')
+            self.stdout.write(f'👥 Сурагч нэмэгдсэн: {group_stats["students_added"]}')
+            self.stdout.write(f'🔗 Олимпиад холбогдсон: {group_stats["olympiads_linked"]}')
+
             self.stdout.write(self.style.SUCCESS('\n✓ Амжилттай дууслаа!'))

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ olympiad.name}} - {{ province.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_provinces' %}">Миний аймгууд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_dashboard' province.id %}">{{ province.name }}</a></li>
+            <li class="breadcrumb-item active">{{ olympiad.name }} - {{ olympiad.level.name }}</li>
+        </ol>
+    </nav>
+
+    <h2>{{ olympiad.name }} - {{ olympiad.level.name }}</h2>
+    <p class="text-muted">{{ province.name }}</p>
+
+    <div class="alert alert-info">
+        {% if is_teacher_olympiad %}
+            {# Багш нарын олимпиад (S, T) #}
+            <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} багш (бүх аймгаас)
+            <br>
+            <strong>{{ province.name }}-ын бүртгэлтэй:</strong>
+            <span class="badge bg-success">{{ province_registered }}</span> /
+            <span class="badge bg-info">{{ total_teachers }}</span>
+            <small class="text-muted">(бүртгүүлсэн / нийт багш)</small>
+            <br>
+            <a href="{% url 'view_province_participants' province.id olympiad.id %}" class="btn btn-sm btn-outline-primary mt-2">
+                {{ province.name }}-ын оролцогчдын жагсаалт харах
+            </a>
+        {% else %}
+            {# Сурагчдын олимпиад #}
+            <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} сурагч (бүх аймгаас)
+            <br>
+            <strong>{{ province.name }}-ын бүртгэлтэй:</strong>
+            <span class="badge bg-success">{{ province_registered }}</span> /
+            <span class="badge bg-info">{{ round1_participants }}</span>
+            <small class="text-muted">(Round 2 шалгарсан / Round 1 оролцсон)</small>
+            <br>
+            <strong>Автомат бүртгэл:</strong> {{ auto_registered_count }} (Round 1-ийн жагсаалтаас)
+            <br>
+            <a href="{% url 'view_province_participants' province.id olympiad.id %}" class="btn btn-sm btn-outline-primary mt-2">
+                {{ province.name }}-ын оролцогчдын жагсаалт харах
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <!-- Card 1: Нэмэлт бүртгэл -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">1. Нэмэлт бүртгэл</h5>
+                </div>
+                <div class="card-body">
+                    {% if is_teacher_olympiad %}
+                        <p>ID-гаар багш нэмнэ.</p>
+                        <a href="{% url 'add_students_by_id' province.id olympiad.id %}"
+                           class="btn btn-primary btn-sm d-block">ID-гаар нэмэх</a>
+                    {% else %}
+                        <p>Онооны босгоор, сургуулиас гараар эсвэл ID-гаар сурагч нэмнэ.</p>
+                        <a href="{% url 'add_students_by_threshold' province.id olympiad.id %}"
+                           class="btn btn-primary btn-sm d-block mb-2">Босгоор нэмэх</a>
+                        <a href="{% url 'select_top_students_by_school' province.id olympiad.id %}"
+                           class="btn btn-secondary btn-sm d-block mb-2">Гараар сонгох (3 хүртэл)</a>
+                        <a href="{% url 'add_students_by_id' province.id olympiad.id %}"
+                           class="btn btn-outline-primary btn-sm d-block">ID-гаар нэмэх</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Дүн оруулах -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">2. Дүн оруулах</h5>
+                </div>
+                <div class="card-body">
+                    <p>Excel загвар татаж, бөглөөд системд оруулна.</p>
+                    <a href="{% url 'generate_province_answer_sheet' province.id olympiad.id %}"
+                       class="btn btn-success btn-sm d-block mb-2">Загвар татах</a>
+                    <button type="button" class="btn btn-outline-success btn-sm d-block"
+                            data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        Файл оруулах
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Үр дүн -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">3. Үр дүн харах</h5>
+                </div>
+                <div class="card-body">
+                    {% if is_teacher_olympiad %}
+                        <p>Оруулсан дүнгийн хүснэгтийг харна.</p>
+                        <a href="{% url 'view_province_olympiad_results' province.id olympiad.id %}"
+                           class="btn btn-info btn-sm d-block">Үр дүн харах</a>
+                    {% else %}
+                        <p>1-р болон 2-р давааны дүнгийн хүснэгтийг харна.</p>
+                        <a href="{% url 'view_province_olympiad_results' province.id olympiad.id %}"
+                           class="btn btn-info btn-sm d-block mb-2">2-р давааны дүн харах</a>
+                        <a href="{% url 'view_round1_province_results' province.id olympiad.id %}"
+                           class="btn btn-outline-info btn-sm d-block">1-р давааны дүн харах</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">Excel файл оруулах</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" enctype="multipart/form-data"
+                  action="{% url 'import_province_answer_sheet' province.id olympiad.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">Excel файл сонгох</label>
+                        <input type="file" name="excel_file" id="excel_file" class="form-control"
+                               accept=".xlsx,.xls" required>
+                    </div>
+                    <div class="alert alert-warning">
+                        <strong>Анхаар:</strong> Зөвхөн "Хариулт" болон "Мэдээлэл" sheet-тэй Excel файлыг оруулна уу.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Болих</button>
+                    <button type="submit" class="btn btn-primary">Оруулах</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

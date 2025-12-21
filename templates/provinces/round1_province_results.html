@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}1-р давааны дүн - {{ round2_olympiad.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_provinces' %}">Миний аймгууд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_dashboard' province.id %}">{{ province.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_olympiad_view' province.id round2_olympiad.id %}">{{ round2_olympiad.name }} - {{ round2_olympiad.level.name }}</a></li>
+            <li class="breadcrumb-item active">1-р давааны дүн</li>
+        </ol>
+    </nav>
+
+    <h2>{{ round2_olympiad.name }} - {{ round2_olympiad.level.name }} | 1-р давааны дүн</h2>
+    <p class="text-muted">{{ province.name }}</p>
+
+    {% if round1_olympiads %}
+        <div class="alert alert-info">
+            <strong>1-р давааны олимпиад:</strong>
+            {% for r1_olympiad in round1_olympiads %}
+                {{ r1_olympiad.name }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if students %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>ID</th>
+                        <th>Овог нэр</th>
+                        <th>Сургууль</th>
+                        <th>1-р давааны нийт оноо</th>
+                        <th>2-р давааны эрх</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ student.user.id }}</td>
+                            <td>{{ student.user.last_name }} {{ student.user.first_name }}</td>
+                            <td>{{ student.school.name|default:"Тодорхойгүй" }}</td>
+                            <td class="fw-bold">{{ student.total|floatformat:1 }}</td>
+                            <td>
+                                {% if student.award_status %}
+                                    {% if "жагсаалтаас" in student.award_status %}
+                                        <span class="badge bg-success">{{ student.award_status }}</span>
+                                    {% elif "босго" in student.award_status %}
+                                        <span class="badge bg-primary">{{ student.award_status }}</span>
+                                    {% elif "гараар" in student.award_status %}
+                                        <span class="badge bg-warning text-dark">{{ student.award_status }}</span>
+                                    {% elif "нэмэлтээр" in student.award_status %}
+                                        <span class="badge bg-secondary">{{ student.award_status }}</span>
+                                    {% elif "ID" in student.award_status %}
+                                        <span class="badge bg-info">{{ student.award_status }}</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">{{ student.award_status }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">Эрх аваагүй</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-success">
+            <strong>Нийт:</strong> {{ students|length }} сурагч
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            {{ province.name }}-аас 1-р даваанд оролцсон сурагч байхгүй байна.
+        </div>
+    {% endif %}
+
+    <div class="mb-4">
+        <a href="{% url 'province_olympiad_view' province.id round2_olympiad.id %}"
+           class="btn btn-secondary">Буцах</a>
+    </div>
+</div>
+{% endblock %}
