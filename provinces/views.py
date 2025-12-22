@@ -38,13 +38,28 @@ def user_can_manage_province(user, province):
 
 @login_required
 def my_managed_provinces(request):
-    """Удирдаж байгаа аймгуудын жагсаалт"""
-    all_provinces = Province.objects.select_related('zone', 'contact_person')
+    """Удирдаж байгаа аймгуудын жагсаалт - зөвхөн өөрийн удирдаж байгаа аймгууд"""
+    from django.db.models import Q
 
-    managed_provinces = []
-    for province in all_provinces:
-        if user_can_manage_province(request.user, province):
-            managed_provinces.append(province)
+    # Зөвхөн өөрийн удирдаж байгаа аймгуудыг авах
+    # 1. Contact person болсон аймгууд
+    # 2. Province_{id}_Managers group-д орсон аймгууд
+
+    # Province_{id}_Managers group-д байгаа аймгуудын ID-г олох
+    province_ids = []
+    user_groups = request.user.groups.filter(name__startswith='Province_', name__endswith='_Managers')
+    for group in user_groups:
+        # Province_123_Managers -> 123 гэж province_id-г ялгах
+        try:
+            province_id = int(group.name.replace('Province_', '').replace('_Managers', ''))
+            province_ids.append(province_id)
+        except (ValueError, AttributeError):
+            continue
+
+    # Contact person эсвэл Province_{id}_Managers group-д байгаа аймгууд
+    managed_provinces = Province.objects.filter(
+        Q(contact_person=request.user) | Q(id__in=province_ids)
+    ).select_related('zone', 'contact_person').distinct().order_by('name')
 
     context = {'provinces': managed_provinces}
     return render(request, 'provinces/my_managed_provinces.html', context)

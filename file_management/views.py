@@ -5,6 +5,7 @@ from django.db.models import Count
 
 from schools.models import School
 from olympiad.models import SchoolYear
+from accounts.models import Province
 from .models import FileUpload, FileAccessLog
 from .forms import FileUploadForm
 from django.contrib.auth.models import User
@@ -86,11 +87,33 @@ def file_list(request):
 
 
 def is_manager(user_id):
+    """
+    Хэрэглэгч файлуудад хандах эрхтэй эсэхийг шалгах.
+    Staff, школын moderator, эсвэл аймгийн manager бол эрхтэй.
+    """
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return False
-    if School.objects.filter(user=user).exists() or user.is_staff:
+
+    # Staff эрх
+    if user.is_staff:
         return True
-    else:
-        return False
+
+    # Школын moderator эрх
+    if School.objects.filter(user=user).exists():
+        return True
+
+    # Школын manager эрх
+    if School.objects.filter(manager=user).exists():
+        return True
+
+    # Аймгийн contact person эрх
+    if Province.objects.filter(contact_person=user).exists():
+        return True
+
+    # Province_{id}_Managers group эрх
+    if user.groups.filter(name__startswith='Province_', name__endswith='_Managers').exists():
+        return True
+
+    return False

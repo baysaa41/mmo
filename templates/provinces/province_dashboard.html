@@ -11,12 +11,34 @@
         </ol>
     </nav>
 
-    <h2>{{ province.name }}</h2>
-    {% if current_school_year %}
-        <p class="text-muted">2-р давааны олимпиадууд ({{ current_school_year.name }})</p>
-    {% else %}
-        <p class="text-muted">2-р давааны олимпиадууд</p>
-    {% endif %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2>{{ province.name }}</h2>
+            {% if current_school_year %}
+                <p class="text-muted mb-0">2-р давааны олимпиадууд ({{ current_school_year.name }})</p>
+            {% else %}
+                <p class="text-muted mb-0">2-р давааны олимпиадууд</p>
+            {% endif %}
+        </div>
+        <div>
+            <a href="{% url 'all_schools_registry' %}?p={{ province.id }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-list me-2"></i>Сургуулын бүртгэл
+            </a>
+            <a href="{% url 'manage_all_schools' %}?p={{ province.id }}" class="btn btn-outline-secondary">
+                <i class="fas fa-school me-2"></i>Сургуулиуд удирдах
+            </a>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="mb-4">
+        <h4>📁 Файлууд</h4>
+        <p>Олимпиад зохион байгуулахад шаардлагатай файлууд, заавар, хуваарь зэрэг баримт бичгүүд.</p>
+        <a href="{% url 'file_list' %}" class="btn btn-primary">Файлууд руу очих</a>
+    </div>
+
+    <hr class="my-4">
 
     <!-- Багш нарын олимпиад (S, T) -->
     {% if teacher_olympiads %}

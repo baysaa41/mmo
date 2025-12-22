@@ -37,7 +37,7 @@ class School(models.Model):
     def user_has_access(self, user):
         """
         Хэрэглэгч энэ сургуулийг удирдах эрхтэй эсэхийг шалгана.
-        Staff, moderator, эсвэл manager бол эрхтэй.
+        Staff, moderator, manager, эсвэл аймгийн manager бол эрхтэй.
         """
         if user.is_staff:
             return True
@@ -45,6 +45,18 @@ class School(models.Model):
             return True
         if self.manager == user:
             return True
+
+        # Аймгийн manager эрх шалгах
+        if self.province:
+            # Province contact person эсэх
+            if self.province.contact_person == user:
+                return True
+
+            # Province_{id}_Managers group-д байгаа эсэх
+            group_name = f"Province_{self.province.id}_Managers"
+            if user.groups.filter(name=group_name).exists():
+                return True
+
         return False
 
 

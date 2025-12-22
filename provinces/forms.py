@@ -1,4 +1,22 @@
 from django import forms
+from accounts.models import Province, Zone
+
+
+class ProvinceEditForm(forms.ModelForm):
+    """Аймаг, дүүргийн мэдээлэл засварлах форм"""
+    class Meta:
+        model = Province
+        fields = ['name', 'zone', 'contact_person']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'zone': forms.Select(attrs={'class': 'form-control'}),
+            'contact_person': forms.Select(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'name': 'Аймаг, дүүргийн нэр',
+            'zone': 'Бүс',
+            'contact_person': 'Холбоо барих хүн',
+        }
 
 
 class ThresholdScoreForm(forms.Form):

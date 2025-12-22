@@ -55,21 +55,49 @@ def my_managed_schools_view(request):
 def all_schools_registry_view(request):
     """
     Сургуулийн бүртгэл - Shows all schools in the system with search/filter
+    Staff болон аймгийн contact/moderator нар хандах эрхтэй.
     """
+    # Эрх шалгах
+    is_staff = request.user.is_staff
     pid = request.GET.get('p')
     zid = request.GET.get('z')
     name_query = request.GET.get('q', '')
 
+    # Аймгийн manager эсэхийг шалгах
+    managed_province = None
+    if pid:
+        try:
+            province = Province.objects.get(id=pid)
+            # Аймгийн contact эсвэл Province_{id}_Managers group-д байгаа эсэхийг шалгах
+            if province.contact_person == request.user or request.user.groups.filter(name=f"Province_{province.id}_Managers").exists():
+                managed_province = province
+            elif not is_staff:
+                messages.error(request, 'Та энэ аймгийн сургуулиудыг удирдах эрхгүй.')
+                return redirect('my_managed_schools')
+        except Province.DoesNotExist:
+            if not is_staff:
+                messages.error(request, 'Аймаг олдсонгүй.')
+                return redirect('my_managed_schools')
+    elif not is_staff:
+        # Province ID байхгүй бөгөөд staff биш бол эрхгүй
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_schools')
+
     schools_qs = School.objects.select_related('user', 'manager', 'group', 'province')
+
+    # Аймгийн manager бол зөвхөн өөрийн аймгийн сургуулиудыг харуулах
+    if managed_province:
+        schools_qs = schools_qs.filter(province=managed_province)
 
     # Apply filters
     if name_query:
         schools_qs = schools_qs.filter(
             Q(name__icontains=name_query) | Q(alias__icontains=name_query)
         )
-    if pid:
+    # Province шүүлтүүр - зөвхөн staff хэрэглэгчдэд
+    if pid and is_staff and not managed_province:
         schools_qs = schools_qs.filter(province_id=pid)
-    elif zid:
+    elif zid and is_staff and not managed_province:
         schools_qs = schools_qs.filter(province__zone_id=zid)
 
     schools = schools_qs.order_by('province__name', 'name')
@@ -77,6 +105,8 @@ def all_schools_registry_view(request):
     context = {
         'schools': schools,
         'search_query': name_query,
+        'managed_province': managed_province,
+        'is_staff': is_staff,
     }
     return render(request, 'schools/all_schools_registry.html', context)
 
@@ -787,15 +817,45 @@ def change_student_password_view(request, user_id):
     return render(request, 'schools/change_password.html', context)
 
 
-#@staff_member_required
+@login_required
 def manage_all_schools_view(request):
     """
     Бүх сургуулийн жагсаалтыг дэлгэрэнгүй мэдээлэлтэй харуулж,
     модератор солих үйлдэл хийдэг хуудас.
+    Staff болон аймгийн contact/moderator нар хандах эрхтэй.
     """
+    # Эрх шалгах
+    is_staff = request.user.is_staff
+    province_id = request.GET.get('p', '')
+
+    # Аймгийн manager эсэхийг шалгах
+    managed_province = None
+    if province_id:
+        try:
+            province = Province.objects.get(id=province_id)
+            # Аймгийн contact эсвэл Province_{id}_Managers group-д байгаа эсэхийг шалгах
+            if province.contact_person == request.user or request.user.groups.filter(name=f"Province_{province.id}_Managers").exists():
+                managed_province = province
+            elif not is_staff:
+                messages.error(request, 'Та энэ аймгийн сургуулиудыг удирдах эрхгүй.')
+                return redirect('my_managed_schools')
+        except Province.DoesNotExist:
+            messages.error(request, 'Аймаг олдсонгүй.')
+            return redirect('my_managed_schools')
+    elif not is_staff:
+        # Province ID байхгүй бөгөөд staff биш бол эрхгүй
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_schools')
+
     if request.method == 'POST':
         school_id = request.POST.get('school_id')
         school_to_change = get_object_or_404(School, id=school_id)
+
+        # Province manager бол зөвхөн өөрийн аймгийн сургуулийг засах эрхтэй
+        if managed_province and school_to_change.province != managed_province:
+            messages.error(request, 'Та энэ сургуулийг засах эрхгүй.')
+            return redirect('manage_all_schools')
+
         form = SchoolModeratorChangeForm(request.POST)
 
         if form.is_valid():
@@ -815,9 +875,12 @@ def manage_all_schools_view(request):
         student_count=Count('group__user')
     ).order_by('province__name', 'name')
 
-        # URL-аас шүүлтүүрийн утгуудыг авах
+    # Аймгийн manager бол зөвхөн өөрийн аймгийн сургуулиудыг харуулах
+    if managed_province:
+        all_schools = all_schools.filter(province=managed_province)
+
+    # URL-аас шүүлтүүрийн утгуудыг авах
     name_query = request.GET.get('q', '')
-    province_id = request.GET.get('p', '')
     zone_id = request.GET.get('z', '')
     inactive_filter = request.GET.get('inactive', '')
     active_filter = request.GET.get('active', '')
@@ -825,9 +888,10 @@ def manage_all_schools_view(request):
     # Шүүлтүүрүүдийг хийх
     if name_query:
         all_schools = all_schools.filter(name__icontains=name_query)
-    if province_id:
+    # Province шүүлтүүр - зөвхөн staff хэрэглэгчдэд (province manager-т аль хэдийн шүүгдсэн)
+    if province_id and is_staff and not managed_province:
         all_schools = all_schools.filter(province_id=province_id)
-    if zone_id:
+    if zone_id and is_staff and not managed_province:
         all_schools = all_schools.filter(province__zone_id=zone_id)
 
     if inactive_filter == '1': # Хэрэв URL-д ?inactive=1 гэж ирвэл
@@ -852,6 +916,8 @@ def manage_all_schools_view(request):
     context = {
         'schools': all_schools,
         'change_form': change_form,
+        'managed_province': managed_province,
+        'is_staff': is_staff,
     }
     return render(request, 'schools/manage_all_schools.html', context)
 
@@ -966,12 +1032,30 @@ def school_list_view(request):
     }
     return render(request, 'schools/school_list.html', context)
 
-@staff_member_required
+@login_required
 def edit_school_info_view(request, school_id):
     """
     Сургуулийн нэр, аймаг/дүүрэг засах болон модератор солих хоёр үйлдлийг нэг хуудсанд.
+    Staff болон аймгийн manager нар хандах эрхтэй.
     """
     school = get_object_or_404(School, id=school_id)
+
+    # Эрх шалгах
+    is_staff = request.user.is_staff
+    can_edit = False
+
+    if is_staff:
+        can_edit = True
+    elif school.province:
+        # Аймгийн manager эсэхийг шалгах
+        if school.province.contact_person == request.user:
+            can_edit = True
+        elif request.user.groups.filter(name=f"Province_{school.province.id}_Managers").exists():
+            can_edit = True
+
+    if not can_edit:
+        messages.error(request, 'Та энэ сургуулийн мэдээлэл засах эрхгүй.')
+        return redirect('my_managed_schools')
 
     if request.method == 'POST':
         # Хэрэв сургуулийн мэдээлэл өөрчлөх form илгээгдсэн бол
@@ -980,6 +1064,9 @@ def edit_school_info_view(request, school_id):
             if info_form.is_valid():
                 info_form.save()
                 messages.success(request, "Сургуулийн мэдээлэл амжилттай шинэчлэгдлээ.")
+                # Province manager бол өөрийн аймгийн хуудас руу буцаах
+                if not is_staff and school.province:
+                    return redirect(f'/schools/manage-all/?p={school.province.id}')
                 return redirect('manage_all_schools')
     else:
         info_form = EditSchoolInfoForm(instance=school)

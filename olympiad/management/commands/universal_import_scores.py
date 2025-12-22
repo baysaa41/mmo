@@ -165,7 +165,7 @@ class Command(BaseCommand):
                 return
 
             # Шинэ ухаалаг бүтэц таних систем ашиглах
-            data_df, column_map = self.detect_data_structure(df)
+            data_df, column_map = self.detect_data_structure(df, category)
             if data_df is not None and column_map is not None:
                 # Province_id олдоогүй бол эхний сурагчдаас олох оролдоно
                 if not province_id:
@@ -497,7 +497,7 @@ class Command(BaseCommand):
 
         return cleaned_df
 
-    def detect_data_structure(self, df):
+    def detect_data_structure(self, df, category=None):
         """
         Ухаалаг DataFrame бүтэц таних систем.
         Returns: (data_df, column_map) эсвэл (None, None)
@@ -507,6 +507,7 @@ class Command(BaseCommand):
             'first_name_col': column_name or index,
             'score_cols': [(col_name_or_index, problem_number), ...]
         }
+        category: Ангиллын үсэг (C, D, E, F, T, S) - category-prefixed column names таних
         """
         # ID, Овог, Нэр, оноо багануудыг хайх түлхүүр үгс
         # Кирилл болон Латин хувилбаруудыг хоёуланг нь дэмжинэ
@@ -540,7 +541,7 @@ class Command(BaseCommand):
                 data_df = df.copy()
 
                 # Оноо багануудыг олох
-                score_cols = self._find_score_columns(column_names, column_names_upper, SCORE_KEYWORDS)
+                score_cols = self._find_score_columns(column_names, column_names_upper, SCORE_KEYWORDS, category)
 
                 column_map = {
                     'id_col': column_names[id_col_idx],
@@ -650,7 +651,7 @@ class Command(BaseCommand):
                 data_df.columns = vals_raw
 
                 # Оноо багануудыг олох
-                score_cols = self._find_score_columns(vals_raw, vals_upper, SCORE_KEYWORDS)
+                score_cols = self._find_score_columns(vals_raw, vals_upper, SCORE_KEYWORDS, category)
 
                 column_map = {
                     'id_col': vals_raw[id_col],
@@ -746,11 +747,32 @@ class Command(BaseCommand):
                         return idx
         return None
 
-    def _find_score_columns(self, vals_raw, vals_upper, score_keywords):
+    def _find_score_columns(self, vals_raw, vals_upper, score_keywords, category=None):
         """Оноо агуулсан багануудыг олох. Returns: [(col_idx, problem_number), ...]"""
         score_cols = []
         for idx, (raw_val, upper_val) in enumerate(zip(vals_raw, vals_upper)):
-            # №1, №2, Б1, Б2, P1, P2 гэх мэт
+            # ЭХЛЭЭД: Category-prefixed pattern шалгах (C1, D2, E3, F4, T5, S6 гэх мэт)
+            if category:
+                # C1, D2, E3 гэх мэт pattern - category үсэг + тоо
+                # Кирилл хувилбар ч дэмжих (Е1, С1 гэх мэт)
+                cyrillic_variants = {
+                    'C': '[CС]',  # Латин C эсвэл Кирилл С
+                    'D': '[D]',
+                    'E': '[EЕ]',  # Латин E эсвэл Кирилл Е
+                    'F': '[F]',
+                    'T': '[T]',
+                    'S': '[S]',
+                }
+                cat_pattern = cyrillic_variants.get(category, f'[{category}]')
+                # Pattern: C1, C2 эсвэл С1, С2 (кирилл)
+                m = re.search(rf'^{cat_pattern}(\d+)$', upper_val.strip())
+                if m:
+                    prob_num = int(m.group(1))
+                    if 1 <= prob_num <= 20:
+                        score_cols.append((idx, prob_num))
+                        continue
+
+            # Хуучин формат: №1, №2, Б1, Б2, P1, P2 гэх мэт
             for keyword in score_keywords:
                 if keyword in upper_val:
                     # Тооноос гаргаж авах
