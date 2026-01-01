@@ -833,3 +833,77 @@ def student_achievements(request, user_id=None):
     }
 
     return render(request, 'olympiad/student_achievements.html', context)
+
+
+@staff_member_required
+def round2_summary_view(request):
+    """
+    Round 2 олимпиадын нэгтгэл
+    Аймаг дүүрэг тус бүрээс C, D, E, F, S, T ангилал бүрээр хэдэн хүүхэд орсон мэдээлэл
+    """
+    # School year авах - query parameter-ээс эсвэл current
+    school_year_id = request.GET.get('school_year')
+
+    if school_year_id:
+        try:
+            school_year = SchoolYear.objects.get(id=school_year_id)
+        except SchoolYear.DoesNotExist:
+            school_year = SchoolYear.get_current()
+    else:
+        school_year = SchoolYear.get_current()
+
+    # Round 2 олимпиадуудыг авах
+    round2_olympiads = Olympiad.objects.filter(
+        round=2,
+        school_year=school_year
+    ).select_related('level')
+
+    # Бүх аймаг дүүргүүдийг авах
+    provinces = Province.objects.all().order_by('name')
+
+    # Мэдээлэл цуглуулах
+    summary_data = []
+
+    for province in provinces:
+        province_data = {
+            'province': province,
+            'levels': {}
+        }
+
+        # Ангилал бүрээр тоолох
+        for olympiad in round2_olympiads:
+            level_name = olympiad.level.name if olympiad.level else 'Бусад'
+
+            # ScoreSheet-ээс тухайн аймаг, олимпиадын оролцогчдын тоог авах
+            participant_count = ScoreSheet.objects.filter(
+                olympiad=olympiad,
+                user__data__province=province
+            ).count()
+
+            if level_name not in province_data['levels']:
+                province_data['levels'][level_name] = 0
+
+            province_data['levels'][level_name] += participant_count
+
+        # Нийт оролцогчийн тоо
+        province_data['total'] = sum(province_data['levels'].values())
+
+        # Хэрэв ядаж 1 оролцогч байвал л нэмэх
+        if province_data['total'] > 0:
+            summary_data.append(province_data)
+
+    # Бүх school year-уудыг dropdown-д харуулах
+    all_school_years = SchoolYear.objects.all().order_by('-name')
+
+    # Ангиллын нэрсийг авах (олимпиадаас)
+    level_names = list(round2_olympiads.values_list('level__name', flat=True).distinct())
+
+    context = {
+        'summary_data': summary_data,
+        'school_year': school_year,
+        'all_school_years': all_school_years,
+        'level_names': level_names,
+        'round2_olympiads': round2_olympiads,
+    }
+
+    return render(request, 'olympiad/results/round2_summary.html', context)

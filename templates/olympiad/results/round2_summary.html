@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load summary_filters %}
+
+{% block title %}
+    Round 2 - Аймаг/Дүүргийн олимпиадын нэгтгэл
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid mt-4">
+    <h2>Round 2 - Аймаг/Дүүргийн олимпиадын нэгтгэл</h2>
+    <p class="lead">{{ school_year.name }} хичээлийн жил</p>
+
+    {# School year сонгох dropdown #}
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="school_year" class="form-label">Хичээлийн жил</label>
+                    <select name="school_year" id="school_year" class="form-select">
+                        {% for year in all_school_years %}
+                            <option value="{{ year.id }}" {% if year.id == school_year.id %}selected{% endif %}>
+                                {{ year.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary">Харуулах</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if round2_olympiads %}
+        {# Олимпиадын жагсаалт #}
+        <div class="alert alert-info mb-4">
+            <h5>Round 2 олимпиадууд:</h5>
+            <ul class="mb-0">
+                {% for olympiad in round2_olympiads %}
+                    <li>{{ olympiad.name }} - {{ olympiad.level.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {# Нэгтгэл хүснэгт #}
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Аймаг дүүрэг тус бүрийн оролцогчдын тоо</h4>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th rowspan="2" class="align-middle text-center">№</th>
+                                <th rowspan="2" class="align-middle">Аймаг/Дүүрэг</th>
+                                {% for level_name in level_names %}
+                                    <th class="text-center">{{ level_name }}</th>
+                                {% endfor %}
+                                <th rowspan="2" class="align-middle text-center bg-warning-subtle">Нийт</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in summary_data %}
+                                <tr>
+                                    <td class="text-center">{{ forloop.counter }}</td>
+                                    <td><strong>{{ data.province.name }}</strong></td>
+                                    {% for level_name in level_names %}
+                                        <td class="text-center">
+                                            {{ data.levels|default_if_none:0|get_item:level_name|default:0 }}
+                                        </td>
+                                    {% endfor %}
+                                    <td class="text-center bg-warning-subtle"><strong>{{ data.total }}</strong></td>
+                                </tr>
+                            {% endfor %}
+
+                            {# Нийт мөр #}
+                            <tr class="table-primary fw-bold">
+                                <td colspan="2" class="text-end">НИЙТ:</td>
+                                {% for level_name in level_names %}
+                                    <td class="text-center">
+                                        {% widthratio summary_data|length 1 1 as temp %}
+                                        {{ summary_data|sum_level:level_name }}
+                                    </td>
+                                {% endfor %}
+                                <td class="text-center bg-warning">
+                                    {{ summary_data|sum_total }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {# Статистик #}
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Оролцсон аймаг/дүүрэг</h6>
+                        <h2 class="display-4 fw-bold">{{ summary_data|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Нийт оролцогчид</h6>
+                        <h2 class="display-4 fw-bold">{{ summary_data|sum_total }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Олимпиадын тоо</h6>
+                        <h2 class="display-4 fw-bold">{{ round2_olympiads|length }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="alert alert-warning">
+            {{ school_year.name }} хичээлийн жилд Round 2 олимпиад олдсонгүй.
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

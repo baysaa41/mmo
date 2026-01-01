@@ -59,6 +59,7 @@ urlpatterns = [
     path('answers/<int:olympiad_id>/', views_results.answers_view, name='olympiad_answer_view'),
     # summary
     path('summary/province/<int:olympiad_id>/', views_results.province_summary_view, name='olympiad_province_summary'),
+    path('summary/round2/', views_results.round2_summary_view, name='round2_summary'),
     path('stats/first-round/', views_results.first_round_stats, name='first_round_stats'),
     path('cheating/<int:olympiad_id>/', views_results.cheating_analysis_view, name='cheating_analysis'),
     # --- ШИНЭ МӨР ДУУСАВ ---
