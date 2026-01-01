@@ -8,12 +8,37 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from olympiad.models import Olympiad, Problem, Result
 from accounts.models import Province
+from schools.models import School
+from rapidfuzz import fuzz
+import unicodedata
 
 User = get_user_model()
 
 
 class Command(BaseCommand):
     help = 'Оноо импортлох универсал тушаал - Excel/CSV файлуудаас оноог автоматаар импортлоно'
+
+    """
+    PROVINCE АВАХ ЛОГИК:
+    ====================
+    1. Эхлээд файлаас province_id-г хайна:
+       - Хавтасны "Мэдээлэл" файлаас
+       - Эсвэл файл бүрийн "Мэдээлэл" sheet-ээс
+
+    2. Хэрэв файлаас олдохгүй бол эхний 3-5 хэрэглэгчийн province-ээс
+       inference хийнэ (хамгийн олон гарсан province-ийг сонгоно)
+
+    3. Province тогтсоны ДАРАА тухайн province дотроо сургууль хайна
+
+    4. Шинэ хэрэглэгч үүсгэхдээ province-ийг зөвхөн файл/хэрэглэгчдээс
+       авна, сургуулийн province-ээс АВАХГҮЙ
+
+    СУРГУУЛЬ ХАЙХ ЛОГИК:
+    ====================
+    - Сургуулийн нэрийг normalize хийж (fuzzy matching ашиглана)
+    - Эхлээд province дотроо хайна (similarity >= 70%)
+    - Олдохгүй бол бүх сургуулиудаас хайна (similarity >= 70%)
+    """
 
     def add_arguments(self, parser):
         parser.add_argument('config', type=str, help='Config (info.csv) файлын зам')
@@ -43,6 +68,7 @@ class Command(BaseCommand):
             'total_sheets': 0,
             'total_rows_processed': 0,
             'total_scores_saved': 0,
+            'users_created': 0,  # Шинээр үүсгэсэн хэрэглэгчдийн тоо
             'users_not_found': [],
             'province_mismatches': [],
             'olympiad_errors': [],
@@ -172,7 +198,7 @@ class Command(BaseCommand):
                     province_id = self.infer_province_from_data(data_df, column_map)
 
                 count = self.process_rows_smart(data_df, column_map, olympiad_id,
-                                               filename, identifier, province_id, dry_run)
+                                               filename, identifier, province_id, dry_run, category)
                 msg = f"   📊 Боловсруулсан: {count} мөр"
                 self.stdout.write(self.style.SUCCESS(msg) if count > 0 else self.style.WARNING(msg))
             else:
@@ -180,9 +206,10 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING(f"   ⚠️ Ангилал танигдсангүй: {identifier}"))
 
-    def process_rows_smart(self, df, column_map, olympiad_id, filename, source, province_id, dry_run):
+    def process_rows_smart(self, df, column_map, olympiad_id, filename, source, province_id, dry_run, category=None):
         """
         Шинэ ухаалаг мөр боловсруулах систем - column_map ашиглах
+        category: Sheet-ийн ангилал (C, D, E, F, S, T) - Grade/Level тодорхойлоход ашиглана
         """
         try:
             olympiad = Olympiad.objects.get(id=olympiad_id)
@@ -199,6 +226,7 @@ class Command(BaseCommand):
         id_col = column_map['id_col']
         last_name_col = column_map['last_name_col']
         first_name_col = column_map['first_name_col']
+        school_col = column_map.get('school_col', None)
         score_cols = column_map['score_cols']  # [(col_name, problem_number), ...]
 
         # Problem objects-ийг problem_number-аар зурагт хийх
@@ -230,17 +258,27 @@ class Command(BaseCommand):
             if total_rows > 100 and (idx + 1) % 50 == 0:
                 self.stdout.write(f"      ⏳ Явц: {idx + 1}/{total_rows} мөр...", ending='\r')
 
-            # ID, Овог, Нэр авах
+            # ID, Овог, Нэр, Сургууль авах
             try:
-                uid = row.get(id_col, row.get('ID', row.get('User ID')))
+                # ID багана optional - None байж болно
+                uid = row.get(id_col) if id_col else None
+                if pd.isna(uid):
+                    # ID байхгүй бол fallback column-үүдээс хайх
+                    uid = row.get('ID', row.get('User ID', row.get('MMO ID')))
                 ovog = str(row.get(last_name_col, '')).strip()
                 ner = str(row.get(first_name_col, '')).strip()
+                school_name = str(row.get(school_col, '')).strip() if school_col else None
             except Exception as e:
                 # Багана олдсонгүй гэх мэт алдаа
                 continue
 
-            # Хэрэглэгч олох
-            user = self.get_user_smart(uid, ovog, ner)
+            # Хэрэглэгч олох/үүсгэх
+            user_before_count = User.objects.count() if not dry_run else 0
+            user = self.get_user_smart(uid, ovog, ner, school_name, province_id, dry_run, category)
+
+            # Шинэ хэрэглэгч үүсгэсэн эсэхийг шалгах
+            if not dry_run and user and User.objects.count() > user_before_count:
+                self.stats['users_created'] += 1
 
             if not user:
                 error_info = {
@@ -330,11 +368,14 @@ class Command(BaseCommand):
 
         return row_count
 
-    def get_user_smart(self, uid, last_name, first_name):
+    def get_user_smart(self, uid, last_name, first_name, school_name=None, province_id=None, dry_run=False, category=None):
         """
         Хэрэглэгч олох - ID, овог нэр, олон янзын форматыг дэмжинэ
+        Хэрэв олдохгүй бол шинэ хэрэглэгч үүсгэнэ (dry_run=False үед)
+        category: Sheet-ийн ангилал (C, D, E, F, S, T) - Grade/Level тодорхойлоход ашиглана
         """
         User = get_user_model()
+        from accounts.models import UserMeta
 
         # 1. ID-аар хайх - янз бүрийн форматыг дэмжинэ
         if pd.notna(uid):
@@ -366,7 +407,7 @@ class Command(BaseCommand):
             try:
                 return User.objects.get(last_name__iexact=last_name, first_name__iexact=first_name)
             except User.DoesNotExist:
-                return None
+                pass  # Шинэ хэрэглэгч үүсгэх рүү шилжинэ
             except User.MultipleObjectsReturned:
                 # Олон хэрэглэгч олдвол эхнийхийг авна
                 users = User.objects.filter(last_name__iexact=last_name, first_name__iexact=first_name)
@@ -375,12 +416,194 @@ class Command(BaseCommand):
                 ))
                 return users.first()
 
+        # 3. Хэрэглэгч олдоогүй - шинэ хэрэглэгч үүсгэх
+        if last_name and first_name and not dry_run:
+            # Түр username-тэй хэрэглэгч үүсгэх (ID авахын тулд)
+            import time
+            temp_username = f"temp_{int(time.time() * 1000000)}"
+
+            user = User.objects.create(
+                username=temp_username,
+                first_name=first_name,
+                last_name=last_name,
+                email='auto-user@mmo.mn',  # Fixed email хаяг
+                is_active=True
+            )
+
+            # ID авсны дараа username-ийг u+ID болгон шинэчлэх
+            user.username = f"u{user.id}"
+            user.save(update_fields=['username'])
+
+            # Сургууль олох (хэрэв school_name байвал)
+            school = None
+            similarity = 0
+            if school_name and pd.notna(school_name) and str(school_name).strip():
+                school, similarity = self.find_school_by_name(str(school_name).strip(), province_id)
+
+            # Grade болон Level тодорхойлох (category-оос)
+            grade_id, level_id = self.get_grade_and_level_from_category(category)
+
+            # UserMeta үүсгэх
+            # Province нь эхлээд файлаас, файлд байхгүй бол эхний хэрэглэгчдээс inference хийгдсэн
+            # Сургуулийн province-ээс АВАХГҮЙ (сургууль province дотор хайгдсан)
+            UserMeta.objects.create(
+                user=user,
+                reg_num='',  # Default утга
+                province_id=province_id,  # Зөвхөн параметрээс авсан province
+                school=school,
+                grade_id=grade_id,
+                level_id=level_id
+            )
+
+            # Сургуулийн group-д хэрэглэгчийг нэмэх
+            if school and school.group:
+                school.group.user_set.add(user)
+                self.stdout.write(self.style.SUCCESS(
+                    f"      ✅ Хэрэглэгчийг сургуулийн группд нэмлээ: {school.group.name}"
+                ))
+
+            # Province мэдээлэл нэмэх
+            province_info = ""
+            if province_id:
+                prov = Province.objects.filter(id=province_id).first()
+                province_info = f", Аймаг: {prov.name if prov else province_id}"
+
+            self.stdout.write(self.style.SUCCESS(
+                f"      ✅ Шинэ хэрэглэгч үүсгэлээ: {user.username} (ID: {user.id})" +
+                (f", Сургууль: {school.name} ({similarity:.0f}%)" if school else "") +
+                province_info
+            ))
+
+            return user
+
         return None
 
+    def get_grade_and_level_from_category(self, category):
+        """
+        Sheet ангилалаас Grade болон Level тодорхойлох
+
+        Ангиллын тайлбар:
+        - B: 3-4 анги (Level 1, Grade 4)
+        - C: 5-6 анги (Level 2, Grade 6)
+        - D: 7-8 анги (Level 3, Grade 8)
+        - E: 9-10 анги (Level 4, Grade 10)
+        - F: 11-12 анги (Level 5, Grade 12)
+        - S: Бага багш (Level 6, Grade 14 "Багш")
+        - T: Дунд багш (Level 7, Grade 14 "Багш")
+
+        Returns: (grade_id, level_id) эсвэл (None, None)
+        """
+        from accounts.models import Grade, Level
+
+        # Category → (grade_search, level_id) mapping
+        # Level ID нь database-тай яг тохирно
+        CATEGORY_MAPPING = {
+            'B': ('4-р анги', 1),   # Бага анги
+            'C': ('6-р анги', 2),   # 5-6 анги
+            'D': ('8-р анги', 3),   # 7-8 анги
+            'E': ('10-р анги', 4),  # 9-10 анги
+            'F': ('12-р анги', 5),  # 11-12 анги
+            'S': ('Багш', 6),       # Бага багш (ББ)
+            'T': ('Багш', 7),       # Дунд багш (ДБ)
+        }
+
+        if not category or category not in CATEGORY_MAPPING:
+            return None, None
+
+        grade_search, level_id = CATEGORY_MAPPING[category]
+
+        # Grade олох - нэрээр хайна
+        grade = Grade.objects.filter(name=grade_search).first()
+
+        # Level олох - ID-аар шууд
+        level = Level.objects.filter(id=level_id).first()
+
+        return grade.id if grade else None, level.id if level else None
+
+    def normalize_school_name(self, name):
+        """
+        Сургуулийн нэрийг нэг хэлбэрт оруулна:
+        - Юникод normalize
+        - Латин үсгийг кирилл рүү хөрвүүлэх
+        - Түгээмэл үгсийг арилгах
+        - Тоог жигд болгох
+        """
+        if not name:
+            return ''
+        n = unicodedata.normalize('NFKD', name).lower()
+
+        # кирилл үсгийн ижилтгэл
+        n = n.replace('ё', 'е').replace('ү', 'у').replace('ө', 'о')
+
+        # латин үсгийг кирилл рүү ойролцоогоор хөрвүүлэх
+        latin_map = {
+            'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е',
+            'j': 'ж', 'z': 'з', 'i': 'и', 'k': 'к', 'l': 'л', 'm': 'м',
+            'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с', 't': 'т',
+            'u': 'у', 'f': 'ф', 'h': 'х', 'c': 'ц', 'y': 'й'
+        }
+        for latin, cyr in latin_map.items():
+            n = re.sub(rf'\b{latin}\b', cyr, n)
+
+        # '1-р', '2-р' гэх мэт илэрхийллийг жигд болгох
+        n = re.sub(r'(\d+)(-р)?', r'\1', n)
+
+        # түгээмэл үгсийг арилгах
+        stop_words = ['ебс', 'ebs', 'school', 'surguuli', 'surguul', 'сургууль',
+                      'дугаар', 'dugaar', '-', 'нийслэл', 'niislel', 'цогцолбор']
+        for w in stop_words:
+            n = n.replace(w, '')
+
+        n = re.sub(r'\s+', ' ', n)
+        return n.strip()
+
+    def find_school_by_name(self, school_name, province_id=None):
+        """
+        Сургуулийн нэрээр хамгийн төстэй сургуулийг олох.
+
+        ЧУХАЛ: Province нь эхлээд тогтоогдсон байх ёстой (файлаас эсвэл
+        эхний хэрэглэгчдээс). Энэ функц зөвхөн тухайн province дотор
+        сургууль хайна. Сургуулийн province-ээс province авахгүй.
+
+        Хайлтын дараалал:
+        1. Эхлээд province_id таарсан сургуулиудаас хайх (similarity >= 70%)
+        2. Хэрэв олдохгүй бол бүх сургуулиудаас хайх (similarity >= 70%)
+
+        Returns: (School, similarity_score) эсвэл (None, 0)
+        """
+        n1 = self.normalize_school_name(school_name)
+
+        # 1-р шат: province_id таарсан сургуулиудаас хайх
+        if province_id:
+            candidates = School.objects.filter(province_id=province_id)
+            best, best_score = self._find_best_school_match(n1, candidates)
+
+            # Хэрэв сайн тохирол олдвол буцаах
+            if best and best_score >= 70:
+                return best, best_score
+
+        # 2-р шат: province үл харгалзан хайх
+        candidates = School.objects.all()
+        best, best_score = self._find_best_school_match(n1, candidates)
+
+        if best and best_score >= 70:
+            return best, best_score
+
+        return None, 0
+
+    def _find_best_school_match(self, normalized_name, queryset):
+        """Тухайн нэртэй хамгийн төстэй сургуулийг буцаана."""
+        best, best_score = None, 0
+        for school in queryset:
+            n2 = self.normalize_school_name(school.name)
+            score = fuzz.token_sort_ratio(normalized_name, n2)
+            if score > best_score:
+                best, best_score = school, score
+        return best, best_score
 
     def infer_province_from_data(self, df, column_map):
         """
-        Province_id олдохгүй бол эхний 3 сурагчийн province-ийг шалгах.
+        Province_id олдохгүй бол эхний 3-5 сурагчийн province-ийг шалгах.
         Хамгийн олон гарсан province_id-г буцаана.
         """
         id_col = column_map['id_col']
@@ -391,15 +614,15 @@ class Command(BaseCommand):
         checked_count = 0
 
         for idx, row in df.iterrows():
-            if checked_count >= 3:
+            if checked_count >= 5:  # Эхний 5 хүртэл хэрэглэгч шалгах
                 break
 
-            # Хэрэглэгч олох
+            # Хэрэглэгч олох (province таних үед хэрэглэгч үүсгэхгүй)
             uid = row.get(id_col)
             ovog = str(row.get(last_name_col, '')).strip()
             ner = str(row.get(first_name_col, '')).strip()
 
-            user = self.get_user_smart(uid, ovog, ner)
+            user = self.get_user_smart(uid, ovog, ner, dry_run=True)
 
             if user:
                 # UserMeta-аас province_id авах
@@ -509,12 +732,13 @@ class Command(BaseCommand):
         }
         category: Ангиллын үсэг (C, D, E, F, T, S) - category-prefixed column names таних
         """
-        # ID, Овог, Нэр, оноо багануудыг хайх түлхүүр үгс
+        # ID, Овог, Нэр, Сургууль, оноо багануудыг хайх түлхүүр үгс
         # Кирилл болон Латин хувилбаруудыг хоёуланг нь дэмжинэ
         ID_KEYWORDS = ['MMO ID', 'ММО ID', 'ID', 'USER ID', 'ММО №', 'БҮРТГЭЛИЙН №',
                        'MMO.MN', 'ДУГААР']
         LAST_NAME_KEYWORDS = ['ОВОГ', 'LAST NAME', 'ОРОЛЦОГЧИЙН ОВОГ']
         FIRST_NAME_KEYWORDS = ['НЭР', 'FIRST NAME', 'ОРОЛЦОГЧИЙН НЭР']
+        SCHOOL_KEYWORDS = ['СУРГУУЛЬ', 'SCHOOL', 'СУРГУУЛИЙН НЭР', 'SCHOOL NAME']
         SCORE_KEYWORDS = ['№', 'Б', 'P', 'PROBLEM', 'БОДЛОГО']
         # Row number column-ийг танихгүй байх (Д.д, №, # гэх мэт)
         ROW_NUMBER_KEYWORDS = ['Д.Д', 'Д.д', '№', '#', 'ROW', 'NO']
@@ -535,8 +759,10 @@ class Command(BaseCommand):
             id_col_idx = self._find_column_by_keywords(column_names_upper, ID_KEYWORDS)
             last_name_col_idx = self._find_column_by_keywords(column_names_upper, LAST_NAME_KEYWORDS)
             first_name_col_idx = self._find_column_by_keywords(column_names_upper, FIRST_NAME_KEYWORDS)
+            school_col_idx = self._find_column_by_keywords(column_names_upper, SCHOOL_KEYWORDS)
 
-            if id_col_idx is not None and last_name_col_idx is not None and first_name_col_idx is not None:
+            # ID optional болгох - зөвхөн Овог, Нэр заавал байх ёстой
+            if last_name_col_idx is not None and first_name_col_idx is not None:
                 # Pandas аль хэдийн header-ийг таньсан!
                 data_df = df.copy()
 
@@ -544,9 +770,10 @@ class Command(BaseCommand):
                 score_cols = self._find_score_columns(column_names, column_names_upper, SCORE_KEYWORDS, category)
 
                 column_map = {
-                    'id_col': column_names[id_col_idx],
+                    'id_col': column_names[id_col_idx] if id_col_idx is not None else None,
                     'last_name_col': column_names[last_name_col_idx],
                     'first_name_col': column_names[first_name_col_idx],
+                    'school_col': column_names[school_col_idx] if school_col_idx is not None else None,
                     'score_cols': [(column_names[col_idx], prob_num)
                                    for col_idx, prob_num in score_cols]
                 }
@@ -576,8 +803,10 @@ class Command(BaseCommand):
             id_col = self._find_column_by_keywords(vals_upper, ID_KEYWORDS)
             last_name_col = self._find_column_by_keywords(vals_upper, LAST_NAME_KEYWORDS)
             first_name_col = self._find_column_by_keywords(vals_upper, FIRST_NAME_KEYWORDS)
+            school_col = self._find_column_by_keywords(vals_upper, SCHOOL_KEYWORDS)
 
-            if id_col is not None and last_name_col is not None and first_name_col is not None:
+            # ID optional болгох - зөвхөн Овог, Нэр заавал байх ёстой
+            if last_name_col is not None and first_name_col is not None:
                 # Header олдлоо! Гэхдээ хоёр мөрт хуваагдсан эсэхийг шалгах
 
                 # Эхлээд header мөр дээр аль хэдийн "№1", "№2" гэх мэт байгаа эсэхийг шалгах
@@ -627,9 +856,10 @@ class Command(BaseCommand):
                                     pass
 
                         column_map = {
-                            'id_col': column_names[id_col],
+                            'id_col': column_names[id_col] if id_col is not None else None,
                             'last_name_col': column_names[last_name_col],
                             'first_name_col': column_names[first_name_col],
+                            'school_col': column_names[school_col] if school_col is not None else None,
                             'score_cols': score_cols
                         }
 
@@ -654,9 +884,10 @@ class Command(BaseCommand):
                 score_cols = self._find_score_columns(vals_raw, vals_upper, SCORE_KEYWORDS, category)
 
                 column_map = {
-                    'id_col': vals_raw[id_col],
+                    'id_col': vals_raw[id_col] if id_col is not None else None,
                     'last_name_col': vals_raw[last_name_col],
                     'first_name_col': vals_raw[first_name_col],
+                    'school_col': vals_raw[school_col] if school_col is not None else None,
                     'score_cols': [(vals_raw[col_idx], prob_num)
                                    for col_idx, prob_num in score_cols]
                 }
@@ -708,6 +939,7 @@ class Command(BaseCommand):
                     'id_col': 'MMO ID',
                     'last_name_col': 'Овог',
                     'first_name_col': 'Нэр',
+                    'school_col': None,  # Headerless format doesn't include school
                     'score_cols': score_cols
                 }
 
@@ -883,6 +1115,8 @@ class Command(BaseCommand):
 
         if not dry_run:
             self.stdout.write(f"✅ Хадгалсан оноо: {self.stats['total_scores_saved']}")
+            if self.stats['users_created'] > 0:
+                self.stdout.write(f"✅ Үүсгэсэн хэрэглэгч: {self.stats['users_created']}")
 
         # Алдаануудыг хэвлэх
         if self.stats['users_not_found']:
