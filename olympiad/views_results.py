@@ -835,11 +835,11 @@ def student_achievements(request, user_id=None):
     return render(request, 'olympiad/student_achievements.html', context)
 
 
-@staff_member_required
 def round2_summary_view(request):
     """
     Round 2 олимпиадын нэгтгэл
     Аймаг дүүрэг тус бүрээс C, D, E, F, S, T ангилал бүрээр хэдэн хүүхэд орсон мэдээлэл
+    Бүх хэрэглэгчид харах боломжтой
     """
     # School year авах - query parameter-ээс эсвэл current
     school_year_id = request.GET.get('school_year')
