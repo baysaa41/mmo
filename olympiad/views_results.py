@@ -888,9 +888,8 @@ def round2_summary_view(request):
         # Нийт оролцогчийн тоо
         province_data['total'] = sum(province_data['levels'].values())
 
-        # Хэрэв ядаж 1 оролцогч байвал л нэмэх
-        if province_data['total'] > 0:
-            summary_data.append(province_data)
+        # Бүх аймгийг нэмэх (оролцогчгүй байсан ч)
+        summary_data.append(province_data)
 
     # Бүх school year-уудыг dropdown-д харуулах
     all_school_years = SchoolYear.objects.all().order_by('-name')
