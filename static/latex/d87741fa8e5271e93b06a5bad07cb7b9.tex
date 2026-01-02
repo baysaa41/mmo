@@ -1,0 +1,14 @@
+\documentclass[border=3pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta} % ← Шинэ сумнууд эндээс ирдэг
+\begin{document}
+\begin{tikzpicture}[line cap=round, line join=round, >=Triangle]
+% Rectangle
+\draw[line width=0.8pt] (1,-3) -- (6,-3) -- (6,2) -- (1,2) -- cycle;
+% Triangle inside
+\draw[line width=0.8pt] (1,-3) -- (3.5,1.3301) -- (6,-3);
+% Other lines
+\draw[line width=0.8pt] (4.5566,-0.5) -- (3.1132,2);
+\draw[line width=0.8pt] (4.5566,-0.5) -- (6,2);
+\end{tikzpicture}
+\end{document}

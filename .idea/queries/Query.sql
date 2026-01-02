@@ -1,0 +1,1 @@
+update schools_school set is_official_participation = TRUE where province_id < 22;

@@ -1,0 +1,13 @@
+\documentclass[border=1pt,dvipsnames]{standalone}
+\usepackage{pstricks-add}
+\begin{document}
+\psset{unit=5mm,linecolor=RoyalBlue}
+\begin{pspicture}[showgrid=false](0,0)(4,2)
+\pspolygon(0,0)(2,0)(2,1)(0,1)
+\rput(2,0){\pspolygon(0,0)(2,0)(2,1)(0,1)}
+\rput(1,1){\pspolygon(0,0)(2,0)(2,1)(0,1)}
+\rput(1,0.5){$a$}
+\rput(3,0.5){$b$}
+\rput(2,1.5){$a+b$}
+\end{pspicture}
+\end{document}

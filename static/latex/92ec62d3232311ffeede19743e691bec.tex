@@ -1,0 +1,16 @@
+\documentclass[border=1pt,dvipsnames]{standalone}
+\usepackage{pstricks-add}
+\begin{document}
+\psset{unit=5mm,linecolor=RoyalBlue}
+\begin{pspicture}[showgrid=false](0,0)(8,4)
+\pspolygon(0,0)(2,0)(2,1)(0,1)
+\rput(2,0){\pspolygon(0,0)(2,0)(2,1)(0,1)}
+\rput(1,1){\pspolygon(0,0)(2,0)(2,1)(0,1)}
+\rput(4,0){\pspolygon(0,0)(2,0)(2,1)(0,1)
+\rput(2,0){\pspolygon(0,0)(2,0)(2,1)(0,1)}
+\rput(1,1){\pspolygon(0,0)(2,0)(2,1)(0,1)}}
+\rput(2,2){\pspolygon(0,0)(2,0)(2,1)(0,1)
+\rput(2,0){\pspolygon(0,0)(2,0)(2,1)(0,1)}
+\rput(1,1){\pspolygon(0,0)(2,0)(2,1)(0,1)}}
+\end{pspicture}
+\end{document}
