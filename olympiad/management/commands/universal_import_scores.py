@@ -45,6 +45,7 @@ class Command(BaseCommand):
         parser.add_argument('data_path', type=str, help='Файлууд байрлах хавтас')
         parser.add_argument('--dry-run', action='store_true', help='Зөвхөн харах горим (өгөгдөл хадгалахгүй)')
         parser.add_argument('--log-file', type=str, default='import_log.txt', help='Log файлын нэр')
+        parser.add_argument('--move-to-processed', action='store_true', help='Амжилттай импортолсон файлуудыг processed фолдерт хуулах')
 
     # Ангиллын pattern - sheet нэрээс ангилал таних
     CATEGORY_PATTERNS = {
@@ -72,6 +73,8 @@ class Command(BaseCommand):
             'users_not_found': [],
             'province_mismatches': [],
             'olympiad_errors': [],
+            'missing_groups': [],  # Устсан группын мэдээлэл
+            'processed_files': [],  # Амжилттай импортолсон файлууд
             'start_time': datetime.now(),
             'current_province_id': None,
             'current_province_name': None,
@@ -120,6 +123,7 @@ class Command(BaseCommand):
 
             # Файл тус бүрээс province_id шалгах
             current_file_province_id = file_province_id  # Default - нийтлэг province_id
+            file_processed_successfully = True  # Файл амжилттай боловсруулагдсан эсэх
 
             try:
                 if filename.endswith('.xlsx'):
@@ -149,16 +153,29 @@ class Command(BaseCommand):
                 else:
                     df = pd.read_csv(filepath)
                     self.process_target(df, filename, filename, config_map, current_file_province_id, dry_run)
+
+                # Файл амжилттай боловсруулагдсан
+                if file_processed_successfully:
+                    self.stats['processed_files'].append(filepath)
+
             except Exception as e:
+                import traceback
                 self.stdout.write(self.style.ERROR(f"❌ Файл боловсруулахад алдаа: {e}"))
+                self.stdout.write(self.style.ERROR(f"   Traceback: {traceback.format_exc()}"))
+                file_processed_successfully = False
                 continue
 
         # 3. Эцсийн тайлан
         self.print_summary(dry_run)
 
         # 4. Log файл бичих
-        if self.stats['users_not_found'] or self.stats['province_mismatches'] or self.stats['olympiad_errors']:
+        if (self.stats['users_not_found'] or self.stats['province_mismatches'] or
+            self.stats['olympiad_errors'] or self.stats['missing_groups']):
             self.write_log_file(log_file, dry_run)
+
+        # 5. Файлуудыг processed фолдерт хуулах
+        if options.get('move_to_processed') and not dry_run and self.stats['processed_files']:
+            self.move_files_to_processed(data_path)
 
     def process_target(self, df, identifier, filename, config_map, province_id, dry_run):
         category = self.identify_category(identifier)
@@ -293,21 +310,6 @@ class Command(BaseCommand):
                 self.stats['users_not_found'].append(error_info)
                 continue
 
-            # Аймгийн тохирол шалгах
-            if province_id:
-                u_prov_id = getattr(user, 'province_id', getattr(getattr(user, 'data', None), 'province_id', None))
-                if u_prov_id and int(u_prov_id) != int(province_id):
-                    mismatch_info = {
-                        'file': filename,
-                        'sheet': source,
-                        'username': user.username,
-                        'user_province': u_prov_id,
-                        'file_province': province_id,
-                        'province_name': self.stats.get('current_province_name', 'Тодорхойгүй')
-                    }
-                    self.stats['province_mismatches'].append(mismatch_info)
-                    continue
-
             row_count += 1
 
             # UserMeta шалгах ба шаардлагатай бол үүсгэх
@@ -405,16 +407,49 @@ class Command(BaseCommand):
         # 2. Овог нэрээр хайх
         if last_name and first_name:
             try:
+                # Province байвал эхлээд province-тэй таарах хэрэглэгчийг хайх
+                if province_id:
+                    user = User.objects.filter(
+                        last_name__iexact=last_name,
+                        first_name__iexact=first_name,
+                        data__province_id=province_id
+                    ).first()
+                    if user:
+                        return user
+
+                # Province-гүй эсвэл province-тэй таарах хэрэглэгч олдоогүй бол
+                # Province үл харгалзан хайх
                 return User.objects.get(last_name__iexact=last_name, first_name__iexact=first_name)
             except User.DoesNotExist:
                 pass  # Шинэ хэрэглэгч үүсгэх рүү шилжинэ
             except User.MultipleObjectsReturned:
-                # Олон хэрэглэгч олдвол эхнийхийг авна
+                # Олон хэрэглэгч олдлоо
                 users = User.objects.filter(last_name__iexact=last_name, first_name__iexact=first_name)
-                self.stdout.write(self.style.WARNING(
-                    f"      ⚠️ Олон хэрэглэгч олдлоо: {last_name} {first_name} ({users.count()} хүн)"
-                ))
-                return users.first()
+
+                # Province байвал province таарах хэрэглэгчийг хайх
+                if province_id:
+                    province_users = users.filter(data__province_id=province_id)
+                    if province_users.exists():
+                        if province_users.count() == 1:
+                            return province_users.first()
+                        else:
+                            self.stdout.write(self.style.WARNING(
+                                f"      ⚠️ Province {province_id}-д олон хэрэглэгч олдлоо: {last_name} {first_name} ({province_users.count()} хүн) - эхнийхийг авна"
+                            ))
+                            return province_users.first()
+                    else:
+                        # Province таарах хэрэглэгч олдсонгүй - шинэ хэрэглэгч үүсгэх
+                        self.stdout.write(self.style.WARNING(
+                            f"      ⚠️ Province {province_id}-д {last_name} {first_name} олдсонгүй ({users.count()} хүн өөр province-д байна) - шинэ хэрэглэгч үүсгэнэ"
+                        ))
+                        # Шинэ хэрэглэгч үүсгэх рүү шилжих (pass)
+                        pass
+                else:
+                    # Province байхгүй - эхнийх хэрэглэгчийг авах
+                    self.stdout.write(self.style.WARNING(
+                        f"      ⚠️ Олон хэрэглэгч олдлоо: {last_name} {first_name} ({users.count()} хүн) - эхнийхийг авна"
+                    ))
+                    return users.first()
 
         # 3. Хэрэглэгч олдоогүй - шинэ хэрэглэгч үүсгэх
         if last_name and first_name and not dry_run:
@@ -456,11 +491,28 @@ class Command(BaseCommand):
             )
 
             # Сургуулийн group-д хэрэглэгчийг нэмэх
-            if school and school.group:
-                school.group.user_set.add(user)
-                self.stdout.write(self.style.SUCCESS(
-                    f"      ✅ Хэрэглэгчийг сургуулийн группд нэмлээ: {school.group.name}"
-                ))
+            if school:
+                try:
+                    if school.group:
+                        school.group.user_set.add(user)
+                        self.stdout.write(self.style.SUCCESS(
+                            f"      ✅ Хэрэглэгчийг сургуулийн группд нэмлээ: {school.group.name}"
+                        ))
+                except Exception as e:
+                    self.stdout.write(self.style.WARNING(
+                        f"      ⚠️ Группд нэмэхэд алдаа ({school.name}): {e}"
+                    ))
+                    # Устсан группын мэдээллийг статистикт нэмэх
+                    missing_group_info = {
+                        'school_id': school.id,
+                        'school_name': school.name,
+                        'province_id': province_id,
+                        'province_name': self.stats.get('current_province_name', 'Тодорхойгүй'),
+                        'error': str(e)
+                    }
+                    # Давхардахгүй байхын тулд school_id-аар шалгах
+                    if not any(g['school_id'] == school.id for g in self.stats['missing_groups']):
+                        self.stats['missing_groups'].append(missing_group_info)
 
             # Province мэдээлэл нэмэх
             province_info = ""
@@ -1132,6 +1184,10 @@ class Command(BaseCommand):
             count = len(self.stats['olympiad_errors'])
             self.stdout.write(self.style.ERROR(f"❌ Олимпиад алдаа: {count} тохиолдол"))
 
+        if self.stats['missing_groups']:
+            count = len(self.stats['missing_groups'])
+            self.stdout.write(self.style.WARNING(f"⚠️ Устсан групп: {count} сургууль"))
+
         self.stdout.write("=" * 80)
 
     def write_log_file(self, log_file, dry_run):
@@ -1147,7 +1203,8 @@ class Command(BaseCommand):
                     province_errors[province_name] = {
                         'users_not_found': [],
                         'province_mismatches': [],
-                        'olympiad_errors': []
+                        'olympiad_errors': [],
+                        'missing_groups': []
                     }
                 province_errors[province_name]['users_not_found'].append(err)
 
@@ -1158,7 +1215,8 @@ class Command(BaseCommand):
                     province_errors[province_name] = {
                         'users_not_found': [],
                         'province_mismatches': [],
-                        'olympiad_errors': []
+                        'olympiad_errors': [],
+                        'missing_groups': []
                     }
                 province_errors[province_name]['province_mismatches'].append(err)
 
@@ -1169,9 +1227,22 @@ class Command(BaseCommand):
                     province_errors[province_name] = {
                         'users_not_found': [],
                         'province_mismatches': [],
-                        'olympiad_errors': []
+                        'olympiad_errors': [],
+                        'missing_groups': []
                     }
                 province_errors[province_name]['olympiad_errors'].append(err)
+
+            # Устсан групп
+            for err in self.stats['missing_groups']:
+                province_name = err.get('province_name', 'Тодорхойгүй')
+                if province_name not in province_errors:
+                    province_errors[province_name] = {
+                        'users_not_found': [],
+                        'province_mismatches': [],
+                        'olympiad_errors': [],
+                        'missing_groups': []
+                    }
+                province_errors[province_name]['missing_groups'].append(err)
 
             # Province бүрээр файл үүсгэх
             log_files_created = []
@@ -1223,6 +1294,17 @@ class Command(BaseCommand):
                             f.write(f"Алдаа: {err['message']}\n")
                             f.write(f"{'-'*40}\n")
 
+                    # Устсан групп
+                    if errors['missing_groups']:
+                        f.write(f"\n{'='*80}\n")
+                        f.write(f"УСТСАН ГРУПП ({len(errors['missing_groups'])} сургууль)\n")
+                        f.write(f"{'='*80}\n")
+                        for err in errors['missing_groups']:
+                            f.write(f"Сургуулийн ID: {err['school_id']}\n")
+                            f.write(f"Сургуулийн нэр: {err['school_name']}\n")
+                            f.write(f"Алдаа: {err['error']}\n")
+                            f.write(f"{'-'*40}\n")
+
                 log_files_created.append(province_log_file)
 
             # Нийт тайлан файл үүсгэх
@@ -1233,18 +1315,21 @@ class Command(BaseCommand):
                 f.write(f"Нийт province: {len(province_errors)}\n")
                 f.write(f"Нийт хэрэглэгч олдоогүй: {len(self.stats['users_not_found'])}\n")
                 f.write(f"Нийт аймаг таарахгүй: {len(self.stats['province_mismatches'])}\n")
-                f.write(f"Нийт олимпиад алдаа: {len(self.stats['olympiad_errors'])}\n\n")
+                f.write(f"Нийт олимпиад алдаа: {len(self.stats['olympiad_errors'])}\n")
+                f.write(f"Нийт устсан групп: {len(self.stats['missing_groups'])}\n\n")
 
                 f.write(f"Province бүрийн алдаануудын тоо:\n")
                 f.write(f"{'='*80}\n")
                 for province_name, errors in sorted(province_errors.items()):
                     total_errors = (len(errors['users_not_found']) +
                                   len(errors['province_mismatches']) +
-                                  len(errors['olympiad_errors']))
+                                  len(errors['olympiad_errors']) +
+                                  len(errors['missing_groups']))
                     f.write(f"{province_name}: {total_errors} тохиолдол\n")
                     f.write(f"  - Хэрэглэгч олдоогүй: {len(errors['users_not_found'])}\n")
                     f.write(f"  - Аймаг таарахгүй: {len(errors['province_mismatches'])}\n")
                     f.write(f"  - Олимпиад алдаа: {len(errors['olympiad_errors'])}\n")
+                    f.write(f"  - Устсан групп: {len(errors['missing_groups'])}\n")
                     f.write(f"\n")
 
             self.stdout.write(self.style.SUCCESS(f"\n💾 Нийт тайлан файл бичигдлээ: {log_file}"))
@@ -1253,3 +1338,34 @@ class Command(BaseCommand):
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"\n❌ Log файл бичихэд алдаа: {e}"))
+
+    def move_files_to_processed(self, data_path):
+        """Амжилттай импортолсон файлуудыг processed фолдерт хуулах"""
+        import shutil
+
+        # Processed фолдер үүсгэх
+        processed_dir = os.path.join(data_path, 'processed')
+        if not os.path.exists(processed_dir):
+            os.makedirs(processed_dir)
+            self.stdout.write(self.style.SUCCESS(f"\n📁 Processed фолдер үүсгэгдлээ: {processed_dir}"))
+
+        moved_count = 0
+        self.stdout.write(f"\n{'='*80}")
+        self.stdout.write(self.style.MIGRATE_HEADING("📦 ФАЙЛ ХУУЛАЛТ"))
+        self.stdout.write(f"{'='*80}")
+
+        for filepath in self.stats['processed_files']:
+            try:
+                filename = os.path.basename(filepath)
+                destination = os.path.join(processed_dir, filename)
+
+                # Файл хуулах (davhar file-ийг overwrite хийх)
+                shutil.move(filepath, destination)
+                moved_count += 1
+                self.stdout.write(self.style.SUCCESS(f"✅ {filename} → processed/"))
+
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"❌ {filename} хуулахад алдаа: {e}"))
+
+        self.stdout.write(f"\n💾 Нийт {moved_count}/{len(self.stats['processed_files'])} файл processed фолдерт хуулагдлаа")
+        self.stdout.write(f"{'='*80}")
