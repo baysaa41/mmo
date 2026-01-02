@@ -620,12 +620,19 @@ class Command(BaseCommand):
                 province_info = f", Аймаг: {prov.name if prov else province_id}"
 
             self.stdout.write(self.style.SUCCESS(
-                f"      ✅ Шинэ хэрэглэгч үүсгэлээ: {user.username} (ID: {user.id})" +
+                f"      ✅ Шинэ хэрэглэгч үүсгэлээ: {last_name} {first_name} ({user.username}, ID: {user.id})" +
                 (f", Сургууль: {school.name} ({similarity:.0f}%)" if school else "") +
                 province_info
             ))
 
+            self.stats['users_created'] += 1
             return user
+
+        # Dry_run горимд эсвэл овог нэр байхгүй үед None буцаах
+        if dry_run and last_name and first_name:
+            self.stdout.write(self.style.WARNING(
+                f"      ⚠️ [DRY RUN] Шинэ хэрэглэгч үүсгэх шаардлагатай: {last_name} {first_name}"
+            ))
 
         return None
 
