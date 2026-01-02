@@ -574,6 +574,24 @@ class Command(BaseCommand):
             if school_name and pd.notna(school_name) and str(school_name).strip():
                 school, similarity = self.find_school_by_name(str(school_name).strip(), province_id)
 
+            # Сургууль олдоогүй бол province-ийн "Бусад" сургуульд бүртгэх
+            if not school and province_id:
+                busad_school = School.objects.filter(
+                    province_id=province_id,
+                    name="Бусад"
+                ).first()
+
+                if busad_school:
+                    school = busad_school
+                    similarity = 100  # "Бусад" сургууль гэдгийг тэмдэглэх
+                    self.stdout.write(self.style.WARNING(
+                        f"      ⚠️ Сургууль тодорхойлогдоогүй, '{busad_school.province.name}' аймгийн 'Бусад' сургуульд бүртгэгдлээ"
+                    ))
+                else:
+                    self.stdout.write(self.style.WARNING(
+                        f"      ⚠️ 'Бусад' сургууль олдсонгүй province_id={province_id}"
+                    ))
+
             # Grade болон Level тодорхойлох (category-оос)
             grade_id, level_id = self.get_grade_and_level_from_category(category)
 
