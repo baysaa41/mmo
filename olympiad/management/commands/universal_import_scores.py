@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from olympiad.models import Olympiad, Problem, Result
-from accounts.models import Province
+from accounts.models import Province, UserMeta
 from schools.models import School
 from rapidfuzz import fuzz
 import unicodedata
@@ -314,7 +314,6 @@ class Command(BaseCommand):
 
             # UserMeta шалгах ба шаардлагатай бол үүсгэх
             if not dry_run:
-                from accounts.models import UserMeta
                 # UserMeta байхгүй бол үүсгэх (province мэдээлэл нөхөх)
                 if not hasattr(user, 'data') or user.data is None:
                     # Province мэдээлэл байвал нөхөх
@@ -377,7 +376,6 @@ class Command(BaseCommand):
         category: Sheet-ийн ангилал (C, D, E, F, S, T) - Grade/Level тодорхойлоход ашиглана
         """
         User = get_user_model()
-        from accounts.models import UserMeta
 
         # 1. ID-аар хайх - янз бүрийн форматыг дэмжинэ
         if pd.notna(uid):
@@ -400,7 +398,69 @@ class Command(BaseCommand):
             if uid and pd.notna(uid):
                 try:
                     uid_int = int(float(uid))
-                    return User.objects.get(id=uid_int)
+                    user = User.objects.get(id=uid_int)
+
+                    # Province зөв эсэхийг шалгах
+                    user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
+
+                    # Province таарч байвал хэрэглэгчийг буцаах
+                    if province_id and user_province and int(user_province) == int(province_id):
+                        return user
+
+                    # Province таарахгүй байвал нэрийг шалгах
+                    if province_id and user_province and int(user_province) != int(province_id):
+                        # Нэр таарч байгаа эсэхийг шалгах
+                        if last_name and first_name:
+                            name_matches = (
+                                user.last_name.strip().lower() == last_name.strip().lower() and
+                                user.first_name.strip().lower() == first_name.strip().lower()
+                            )
+
+                            if name_matches:
+                                # Нэр таарч байна - Province шинэчлэх
+                                if not dry_run:
+                                    old_province = Province.objects.filter(id=user_province).first()
+                                    new_province = Province.objects.filter(id=province_id).first()
+
+                                    user.data.province_id = province_id
+                                    user.data.save(update_fields=['province_id'])
+
+                                    old_prov_name = old_province.name if old_province else str(user_province)
+                                    new_prov_name = new_province.name if new_province else str(province_id)
+
+                                    self.stdout.write(self.style.SUCCESS(
+                                        f"      🔄 [ID: {uid_int}] {last_name} {first_name} аймаг шинэчлэгдлээ: {old_prov_name} → {new_prov_name}"
+                                    ))
+                                    self.stats['province_updated'] += 1
+                                return user
+                            else:
+                                # Нэр таарахгүй байна - шинэ хэрэглэгч үүсгэх
+                                self.stdout.write(self.style.WARNING(
+                                    f"      ⚠️ ID {uid_int}: Province буруу ({user_province} ≠ {province_id}), нэр таарахгүй байна: "
+                                    f"DB: '{user.last_name} {user.first_name}' ≠ Excel: '{last_name} {first_name}' - Шинэ хэрэглэгч үүсгэнэ"
+                                ))
+                                pass  # Шинэ хэрэглэгч үүсгэх рүү шилжинэ
+                        else:
+                            # Нэр өгөгдөөгүй бол province зөрөв гэдэг анхааруулга өгч, хэрэглэгчийг буцаах
+                            self.stdout.write(self.style.WARNING(
+                                f"      ⚠️ [ID: {uid_int}] Province зөрч байна: {user_province} ≠ {province_id}, гэхдээ нэр өгөгдөөгүй"
+                            ))
+                            return user
+
+                    # Province байхгүй бол нөхөх
+                    if province_id and not user_province:
+                        if not dry_run:
+                            user.data.province_id = province_id
+                            user.data.save(update_fields=['province_id'])
+                            self.stdout.write(self.style.SUCCESS(
+                                f"      ✅ [ID: {uid_int}] {user.last_name} {user.first_name} province нөхөгдлөө: {province_id}"
+                            ))
+                            self.stats['province_updated'] += 1
+                        return user
+
+                    # Province шаардлагагүй бол хэрэглэгчийг буцаах
+                    return user
+
                 except (User.DoesNotExist, ValueError, TypeError):
                     pass
 
@@ -429,7 +489,6 @@ class Command(BaseCommand):
                         user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
                         if user_province and int(user_province) != int(province_id):
                             # Province шинэчлэх
-                            from accounts.models import Province
                             old_province = Province.objects.filter(id=user_province).first()
                             new_province = Province.objects.filter(id=province_id).first()
 
