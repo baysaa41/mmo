@@ -70,8 +70,8 @@ class Command(BaseCommand):
             'total_rows_processed': 0,
             'total_scores_saved': 0,
             'users_created': 0,  # Шинээр үүсгэсэн хэрэглэгчдийн тоо
+            'province_updated': 0,  # Province шинэчилсэн хэрэглэгчид
             'users_not_found': [],
-            'province_mismatches': [],
             'olympiad_errors': [],
             'missing_groups': [],  # Устсан группын мэдээлэл
             'processed_files': [],  # Амжилттай импортолсон файлууд
@@ -169,8 +169,8 @@ class Command(BaseCommand):
         self.print_summary(dry_run)
 
         # 4. Log файл бичих
-        if (self.stats['users_not_found'] or self.stats['province_mismatches'] or
-            self.stats['olympiad_errors'] or self.stats['missing_groups']):
+        if (self.stats['users_not_found'] or self.stats['olympiad_errors'] or
+            self.stats['missing_groups']):
             self.write_log_file(log_file, dry_run)
 
         # 5. Файлуудыг processed фолдерт хуулах
@@ -417,9 +417,42 @@ class Command(BaseCommand):
                     if user:
                         return user
 
-                # Province-гүй эсвэл province-тэй таарах хэрэглэгч олдоогүй бол
-                # Province үл харгалзан хайх
-                return User.objects.get(last_name__iexact=last_name, first_name__iexact=first_name)
+                # Province-тэй таарах хэрэглэгч олдоогүй бол province үл харгалзан хайх
+                user = User.objects.filter(
+                    last_name__iexact=last_name,
+                    first_name__iexact=first_name
+                ).first()
+
+                if user:
+                    # Хэрэглэгч олдсон, гэхдээ province зөрч байна
+                    if province_id and not dry_run:
+                        user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
+                        if user_province and int(user_province) != int(province_id):
+                            # Province шинэчлэх
+                            from accounts.models import Province
+                            old_province = Province.objects.filter(id=user_province).first()
+                            new_province = Province.objects.filter(id=province_id).first()
+
+                            user.data.province_id = province_id
+                            user.data.save(update_fields=['province_id'])
+
+                            old_prov_name = old_province.name if old_province else str(user_province)
+                            new_prov_name = new_province.name if new_province else str(province_id)
+
+                            self.stdout.write(self.style.SUCCESS(
+                                f"      🔄 {last_name} {first_name} аймаг шинэчлэгдлээ: {old_prov_name} → {new_prov_name}"
+                            ))
+                            self.stats['province_updated'] += 1
+                        elif not user_province and province_id:
+                            # Province байхгүй байсан бол нөхөх
+                            user.data.province_id = province_id
+                            user.data.save(update_fields=['province_id'])
+                            self.stdout.write(self.style.SUCCESS(
+                                f"      ✅ {last_name} {first_name} province нөхөгдлөө: {province_id}"
+                            ))
+                            self.stats['province_updated'] += 1
+                    return user
+
             except User.DoesNotExist:
                 pass  # Шинэ хэрэглэгч үүсгэх рүү шилжинэ
             except User.MultipleObjectsReturned:
@@ -438,12 +471,19 @@ class Command(BaseCommand):
                             ))
                             return province_users.first()
                     else:
-                        # Province таарах хэрэглэгч олдсонгүй - шинэ хэрэглэгч үүсгэх
-                        self.stdout.write(self.style.WARNING(
-                            f"      ⚠️ Province {province_id}-д {last_name} {first_name} олдсонгүй ({users.count()} хүн өөр province-д байна) - шинэ хэрэглэгч үүсгэнэ"
-                        ))
-                        # Шинэ хэрэглэгч үүсгэх рүү шилжих (pass)
-                        pass
+                        # Province таарах хэрэглэгч олдсонгүй
+                        # Эхний хэрэглэгчийн province-ийг шинэчлэх
+                        user = users.first()
+                        if not dry_run and hasattr(user, 'data') and user.data:
+                            old_province_id = user.data.province_id
+                            user.data.province_id = province_id
+                            user.data.save(update_fields=['province_id'])
+
+                            self.stdout.write(self.style.SUCCESS(
+                                f"      🔄 {last_name} {first_name} аймаг шинэчлэгдлээ: {old_province_id} → {province_id} ({users.count()} хүнээс эхнийх)"
+                            ))
+                            self.stats['province_updated'] += 1
+                        return user
                 else:
                     # Province байхгүй - эхнийх хэрэглэгчийг авах
                     self.stdout.write(self.style.WARNING(
@@ -1176,9 +1216,8 @@ class Command(BaseCommand):
             self.stdout.write("")
             self.stdout.write(self.style.WARNING(f"⚠️ Хэрэглэгч олдоогүй: {count} тохиолдол"))
 
-        if self.stats['province_mismatches']:
-            count = len(self.stats['province_mismatches'])
-            self.stdout.write(self.style.WARNING(f"⚠️ Аймаг таарахгүй: {count} тохиолдол"))
+        if self.stats['province_updated'] > 0:
+            self.stdout.write(self.style.SUCCESS(f"🔄 Province шинэчилсэн: {self.stats['province_updated']} хэрэглэгч"))
 
         if self.stats['olympiad_errors']:
             count = len(self.stats['olympiad_errors'])
@@ -1202,23 +1241,10 @@ class Command(BaseCommand):
                 if province_name not in province_errors:
                     province_errors[province_name] = {
                         'users_not_found': [],
-                        'province_mismatches': [],
                         'olympiad_errors': [],
                         'missing_groups': []
                     }
                 province_errors[province_name]['users_not_found'].append(err)
-
-            # Аймаг таарахгүй
-            for err in self.stats['province_mismatches']:
-                province_name = err.get('province_name', 'Тодорхойгүй')
-                if province_name not in province_errors:
-                    province_errors[province_name] = {
-                        'users_not_found': [],
-                        'province_mismatches': [],
-                        'olympiad_errors': [],
-                        'missing_groups': []
-                    }
-                province_errors[province_name]['province_mismatches'].append(err)
 
             # Олимпиад алдаа
             for err in self.stats['olympiad_errors']:
@@ -1226,7 +1252,6 @@ class Command(BaseCommand):
                 if province_name not in province_errors:
                     province_errors[province_name] = {
                         'users_not_found': [],
-                        'province_mismatches': [],
                         'olympiad_errors': [],
                         'missing_groups': []
                     }
@@ -1238,7 +1263,6 @@ class Command(BaseCommand):
                 if province_name not in province_errors:
                     province_errors[province_name] = {
                         'users_not_found': [],
-                        'province_mismatches': [],
                         'olympiad_errors': [],
                         'missing_groups': []
                     }
@@ -1268,19 +1292,6 @@ class Command(BaseCommand):
                             f.write(f"Мөр: {err['row']}\n")
                             f.write(f"ID: {err['id']}\n")
                             f.write(f"Нэр: {err['name']}\n")
-                            f.write(f"{'-'*40}\n")
-
-                    # Аймаг таарахгүй
-                    if errors['province_mismatches']:
-                        f.write(f"\n{'='*80}\n")
-                        f.write(f"АЙМАГ ТААРАХГҮЙ ({len(errors['province_mismatches'])} тохиолдол)\n")
-                        f.write(f"{'='*80}\n")
-                        for err in errors['province_mismatches']:
-                            f.write(f"Файл: {err['file']}\n")
-                            f.write(f"Sheet: {err['sheet']}\n")
-                            f.write(f"Username: {err['username']}\n")
-                            f.write(f"Хэрэглэгчийн аймаг: {err['user_province']}\n")
-                            f.write(f"Файлын аймаг: {err['file_province']}\n")
                             f.write(f"{'-'*40}\n")
 
                     # Олимпиад алдаа
@@ -1314,20 +1325,18 @@ class Command(BaseCommand):
 
                 f.write(f"Нийт province: {len(province_errors)}\n")
                 f.write(f"Нийт хэрэглэгч олдоогүй: {len(self.stats['users_not_found'])}\n")
-                f.write(f"Нийт аймаг таарахгүй: {len(self.stats['province_mismatches'])}\n")
                 f.write(f"Нийт олимпиад алдаа: {len(self.stats['olympiad_errors'])}\n")
-                f.write(f"Нийт устсан групп: {len(self.stats['missing_groups'])}\n\n")
+                f.write(f"Нийт устсан групп: {len(self.stats['missing_groups'])}\n")
+                f.write(f"Нийт province шинэчилсэн: {self.stats['province_updated']}\n\n")
 
                 f.write(f"Province бүрийн алдаануудын тоо:\n")
                 f.write(f"{'='*80}\n")
                 for province_name, errors in sorted(province_errors.items()):
                     total_errors = (len(errors['users_not_found']) +
-                                  len(errors['province_mismatches']) +
                                   len(errors['olympiad_errors']) +
                                   len(errors['missing_groups']))
                     f.write(f"{province_name}: {total_errors} тохиолдол\n")
                     f.write(f"  - Хэрэглэгч олдоогүй: {len(errors['users_not_found'])}\n")
-                    f.write(f"  - Аймаг таарахгүй: {len(errors['province_mismatches'])}\n")
                     f.write(f"  - Олимпиад алдаа: {len(errors['olympiad_errors'])}\n")
                     f.write(f"  - Устсан групп: {len(errors['missing_groups'])}\n")
                     f.write(f"\n")
