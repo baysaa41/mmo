@@ -417,7 +417,7 @@ class Command(BaseCommand):
                             )
 
                             if name_matches:
-                                # Нэр таарч байна - Province шинэчлэх
+                                # Нэр таарч байна - Province болон сургууль шинэчлэх
                                 if not dry_run:
                                     old_province = Province.objects.filter(id=user_province).first()
                                     new_province = Province.objects.filter(id=province_id).first()
@@ -432,6 +432,10 @@ class Command(BaseCommand):
                                         f"      🔄 [ID: {uid_int}] {last_name} {first_name} аймаг шинэчлэгдлээ: {old_prov_name} → {new_prov_name}"
                                     ))
                                     self.stats['province_updated'] += 1
+
+                                    # Сургуулийг шинэчлэх
+                                    self.update_user_school(user, new_province, school_name)
+
                                 return user
                             else:
                                 # Нэр таарахгүй байна - шинэ хэрэглэгч үүсгэх
@@ -465,90 +469,15 @@ class Command(BaseCommand):
                     pass
 
         # 2. Овог нэрээр хайх
-        if last_name and first_name:
-            try:
-                # Province байвал эхлээд province-тэй таарах хэрэглэгчийг хайх
-                if province_id:
-                    user = User.objects.filter(
-                        last_name__iexact=last_name,
-                        first_name__iexact=first_name,
-                        data__province_id=province_id
-                    ).first()
-                    if user:
-                        return user
-
-                # Province-тэй таарах хэрэглэгч олдоогүй бол province үл харгалзан хайх
+        elif last_name and first_name:
+            if province_id:
                 user = User.objects.filter(
                     last_name__iexact=last_name,
-                    first_name__iexact=first_name
+                    first_name__iexact=first_name,
+                    data__province_id=province_id
                 ).first()
-
                 if user:
-                    # Хэрэглэгч олдсон, гэхдээ province зөрч байна
-                    if province_id and not dry_run:
-                        user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
-                        if user_province and int(user_province) != int(province_id):
-                            # Province шинэчлэх
-                            old_province = Province.objects.filter(id=user_province).first()
-                            new_province = Province.objects.filter(id=province_id).first()
-
-                            user.data.province_id = province_id
-                            user.data.save(update_fields=['province_id'])
-
-                            old_prov_name = old_province.name if old_province else str(user_province)
-                            new_prov_name = new_province.name if new_province else str(province_id)
-
-                            self.stdout.write(self.style.SUCCESS(
-                                f"      🔄 {last_name} {first_name} аймаг шинэчлэгдлээ: {old_prov_name} → {new_prov_name}"
-                            ))
-                            self.stats['province_updated'] += 1
-                        elif not user_province and province_id:
-                            # Province байхгүй байсан бол нөхөх
-                            user.data.province_id = province_id
-                            user.data.save(update_fields=['province_id'])
-                            self.stdout.write(self.style.SUCCESS(
-                                f"      ✅ {last_name} {first_name} province нөхөгдлөө: {province_id}"
-                            ))
-                            self.stats['province_updated'] += 1
                     return user
-
-            except User.DoesNotExist:
-                pass  # Шинэ хэрэглэгч үүсгэх рүү шилжинэ
-            except User.MultipleObjectsReturned:
-                # Олон хэрэглэгч олдлоо
-                users = User.objects.filter(last_name__iexact=last_name, first_name__iexact=first_name)
-
-                # Province байвал province таарах хэрэглэгчийг хайх
-                if province_id:
-                    province_users = users.filter(data__province_id=province_id)
-                    if province_users.exists():
-                        if province_users.count() == 1:
-                            return province_users.first()
-                        else:
-                            self.stdout.write(self.style.WARNING(
-                                f"      ⚠️ Province {province_id}-д олон хэрэглэгч олдлоо: {last_name} {first_name} ({province_users.count()} хүн) - эхнийхийг авна"
-                            ))
-                            return province_users.first()
-                    else:
-                        # Province таарах хэрэглэгч олдсонгүй
-                        # Эхний хэрэглэгчийн province-ийг шинэчлэх
-                        user = users.first()
-                        if not dry_run and hasattr(user, 'data') and user.data:
-                            old_province_id = user.data.province_id
-                            user.data.province_id = province_id
-                            user.data.save(update_fields=['province_id'])
-
-                            self.stdout.write(self.style.SUCCESS(
-                                f"      🔄 {last_name} {first_name} аймаг шинэчлэгдлээ: {old_province_id} → {province_id} ({users.count()} хүнээс эхнийх)"
-                            ))
-                            self.stats['province_updated'] += 1
-                        return user
-                else:
-                    # Province байхгүй - эхнийх хэрэглэгчийг авах
-                    self.stdout.write(self.style.WARNING(
-                        f"      ⚠️ Олон хэрэглэгч олдлоо: {last_name} {first_name} ({users.count()} хүн) - эхнийхийг авна"
-                    ))
-                    return users.first()
 
         # 3. Хэрэглэгч олдоогүй - шинэ хэрэглэгч үүсгэх
         if last_name and first_name and not dry_run:
@@ -695,6 +624,60 @@ class Command(BaseCommand):
         level = Level.objects.filter(id=level_id).first()
 
         return grade.id if grade else None, level.id if level else None
+
+    def get_or_create_busad_school(self, province):
+        """Тухайн дүүргийн 'Бусад' сургууль олох эсвэл үүсгэх"""
+        school, created = School.objects.get_or_create(
+            name=f"{province.name} - Бусад",
+            province=province,
+            defaults={'official_level_1': False, 'official_level_2': False}
+        )
+        if created:
+            self.stdout.write(self.style.WARNING(f"      ⚠️ 'Бусад' сургууль үүслээ: {school.name} (ID: {school.id})"))
+        return school
+
+    def update_user_school(self, user, new_province, school_name=None):
+        """
+        Хэрэглэгчийн сургуулийг шинэчлэх.
+        - Хэрэв school_name өгөгдсөн бол тухайн нэртэй сургууль хайх
+        - Олдохгүй бол new_province-ийн "Бусад" сургуульд бүртгэх
+        - Сургуулийн group-ийг шинэчлэх
+        """
+        old_school = user.data.school if hasattr(user, 'data') and user.data else None
+
+        # Шинэ сургууль хайх
+        new_school = None
+        if school_name and pd.notna(school_name) and str(school_name).strip():
+            new_school, similarity = self.find_school_by_name(str(school_name).strip(), new_province.id)
+            if new_school and similarity >= 70:
+                self.stdout.write(f"      → Сургууль олдлоо: {new_school.name} ({similarity:.0f}%)")
+
+        # Олдоогүй бол "Бусад" сургуульд бүртгэх
+        if not new_school:
+            new_school = self.get_or_create_busad_school(new_province)
+            self.stdout.write(f"      → '{new_province.name} - Бусад' сургуульд бүртгэгдлээ")
+
+        # Хуучин сургуулийн group-ээс хасах
+        if old_school and old_school.group:
+            try:
+                old_school.group.user_set.remove(user)
+                self.stdout.write(f"      → Хуучин группээс хасагдлаа: {old_school.name}")
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"      ⚠️ Хуучин группээс хасахад алдаа: {e}"))
+
+        # Шинэ сургууль болон group шинэчлэх
+        user.data.school = new_school
+        user.data.save(update_fields=['school'])
+
+        # Шинэ сургуулийн group-д нэмэх
+        if new_school and new_school.group:
+            try:
+                new_school.group.user_set.add(user)
+                self.stdout.write(f"      → Шинэ группд нэмэгдлээ: {new_school.name}")
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"      ⚠️ Шинэ группд нэмэхэд алдаа: {e}"))
+
+        return new_school
 
     def normalize_school_name(self, name):
         """
