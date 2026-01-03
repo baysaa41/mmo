@@ -14,6 +14,18 @@ import unicodedata
 
 User = get_user_model()
 
+# Кирилл → Латин romanization map
+CYRILLIC_TO_LATIN = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'j', 'з': 'z',
+    'и': 'i', 'й': 'i', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'ө': 'o', 'п': 'p',
+    'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ү': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch',
+    'ш': 'sh', 'щ': 'sh', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Yo', 'Ж': 'J', 'З': 'Z',
+    'И': 'I', 'Й': 'I', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'Ө': 'O', 'П': 'P',
+    'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ү': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch',
+    'Ш': 'Sh', 'Щ': 'Sh', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya',
+}
+
 
 class Command(BaseCommand):
     help = 'Оноо импортлох универсал тушаал - Excel/CSV файлуудаас оноог автоматаар импортлоно'
@@ -310,6 +322,19 @@ class Command(BaseCommand):
                 self.stats['users_not_found'].append(error_info)
                 continue
 
+            # Бүх оноо хоосон эсэхийг шалгах
+            has_any_score = False
+            for col_name, prob_num, prob in valid_score_cols:
+                if pd.notna(row.get(col_name)):
+                    has_any_score = True
+                    break
+
+            if not has_any_score:
+                self.stdout.write(self.style.WARNING(
+                    f"      ⚠️ Бүх оноо хоосон: {user.username} ({ovog} {ner}) - мөр алгасагдлаа"
+                ))
+                continue
+
             row_count += 1
 
             # UserMeta шалгах ба шаардлагатай бол үүсгэх
@@ -369,6 +394,51 @@ class Command(BaseCommand):
 
         return row_count
 
+    def romanize_name(self, name):
+        """Кирилл үсгийг латинаар romanize хийх"""
+        if not name:
+            return ''
+        result = []
+        for char in name:
+            if char in CYRILLIC_TO_LATIN:
+                result.append(CYRILLIC_TO_LATIN[char])
+            else:
+                result.append(char)
+        return ''.join(result)
+
+    def normalize_name(self, name):
+        """Нэрийг normalize хийх - хоосон зай, том/жижиг үсэг"""
+        if not name:
+            return ''
+        # Хоосон зайг арилгах, жижиг үсэг болгох
+        return ' '.join(name.strip().lower().split())
+
+    def compare_names(self, name1, name2):
+        """
+        Хоёр нэрийг харьцуулж similarity (0-100) буцаана.
+        Кирилл болон romanized хувилбаруудыг шалгана.
+        """
+        if not name1 or not name2:
+            return 0
+
+        # Normalize хийх
+        n1 = self.normalize_name(name1)
+        n2 = self.normalize_name(name2)
+
+        # 1. Шууд харьцуулах
+        direct_score = fuzz.ratio(n1, n2)
+
+        # 2. Romanize хийж харьцуулах
+        r1 = self.romanize_name(n1)
+        r2 = self.romanize_name(n2)
+        romanized_score = fuzz.ratio(r1, r2)
+
+        # 3. Partial ratio (partial string matching)
+        partial_score = fuzz.partial_ratio(n1, n2)
+
+        # Хамгийн өндөр оноог авах
+        return max(direct_score, romanized_score, partial_score)
+
     def get_user_smart(self, uid, last_name, first_name, school_name=None, province_id=None, dry_run=False, category=None):
         """
         Хэрэглэгч олох - ID, овог нэр, олон янзын форматыг дэмжинэ
@@ -400,24 +470,22 @@ class Command(BaseCommand):
                     uid_int = int(float(uid))
                     user = User.objects.get(id=uid_int)
 
-                    # Province зөв эсэхийг шалгах
-                    user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
+                    # Овог нэр харьцуулах
+                    if last_name and first_name:
+                        # Овог нэрийг нэгтгэж харьцуулах
+                        db_full_name = f"{user.last_name} {user.first_name}"
+                        excel_full_name = f"{last_name} {first_name}"
+                        similarity = self.compare_names(db_full_name, excel_full_name)
 
-                    # Province таарч байвал хэрэглэгчийг буцаах
-                    if province_id and user_province and int(user_province) == int(province_id):
-                        return user
+                        if similarity >= 85:
+                            # 85%+ тохирч байна - хэрэглэгчийг ашиглах
+                            self.stdout.write(self.style.SUCCESS(
+                                f"      ✅ ID {uid_int} олдлоо: '{db_full_name}' ≈ '{excel_full_name}' ({similarity:.0f}%)"
+                            ))
 
-                    # Province таарахгүй байвал нэрийг шалгах
-                    if province_id and user_province and int(user_province) != int(province_id):
-                        # Нэр таарч байгаа эсэхийг шалгах
-                        if last_name and first_name:
-                            name_matches = (
-                                user.last_name.strip().lower() == last_name.strip().lower() and
-                                user.first_name.strip().lower() == first_name.strip().lower()
-                            )
-
-                            if name_matches:
-                                # Нэр таарч байна - Province болон сургууль шинэчлэх
+                            # Province мэдээлэл шинэчлэх (байвал)
+                            user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
+                            if province_id and user_province and int(user_province) != int(province_id):
                                 if not dry_run:
                                     old_province = Province.objects.filter(id=user_province).first()
                                     new_province = Province.objects.filter(id=province_id).first()
@@ -429,41 +497,52 @@ class Command(BaseCommand):
                                     new_prov_name = new_province.name if new_province else str(province_id)
 
                                     self.stdout.write(self.style.SUCCESS(
-                                        f"      🔄 [ID: {uid_int}] {last_name} {first_name} аймаг шинэчлэгдлээ: {old_prov_name} → {new_prov_name}"
+                                        f"      🔄 Province шинэчлэгдлээ: {old_prov_name} → {new_prov_name}"
                                     ))
                                     self.stats['province_updated'] += 1
 
                                     # Сургуулийг шинэчлэх
                                     self.update_user_school(user, new_province, school_name)
 
-                                return user
-                            else:
-                                # Нэр таарахгүй байна - шинэ хэрэглэгч үүсгэх
-                                self.stdout.write(self.style.WARNING(
-                                    f"      ⚠️ ID {uid_int}: Province буруу ({user_province} ≠ {province_id}), нэр таарахгүй байна: "
-                                    f"DB: '{user.last_name} {user.first_name}' ≠ Excel: '{last_name} {first_name}' - Шинэ хэрэглэгч үүсгэнэ"
-                                ))
-                                pass  # Шинэ хэрэглэгч үүсгэх рүү шилжинэ
-                        else:
-                            # Нэр өгөгдөөгүй бол province зөрөв гэдэг анхааруулга өгч, хэрэглэгчийг буцаах
-                            self.stdout.write(self.style.WARNING(
-                                f"      ⚠️ [ID: {uid_int}] Province зөрч байна: {user_province} ≠ {province_id}, гэхдээ нэр өгөгдөөгүй"
-                            ))
+                            elif province_id and not user_province:
+                                # Province байхгүй бол нөхөх
+                                if not dry_run:
+                                    user.data.province_id = province_id
+                                    user.data.save(update_fields=['province_id'])
+                                    self.stdout.write(self.style.SUCCESS(
+                                        f"      ✅ Province нөхөгдлөө: {province_id}"
+                                    ))
+                                    self.stats['province_updated'] += 1
+
                             return user
-
-                    # Province байхгүй бол нөхөх
-                    if province_id and not user_province:
-                        if not dry_run:
-                            user.data.province_id = province_id
-                            user.data.save(update_fields=['province_id'])
-                            self.stdout.write(self.style.SUCCESS(
-                                f"      ✅ [ID: {uid_int}] {user.last_name} {user.first_name} province нөхөгдлөө: {province_id}"
+                        else:
+                            # 85%-аас бага - province-д овог нэрээр хайх
+                            self.stdout.write(self.style.WARNING(
+                                f"      ⚠️ ID {uid_int} олдсон ч нэр таарахгүй: '{db_full_name}' ≠ '{excel_full_name}' ({similarity:.0f}%)"
                             ))
-                            self.stats['province_updated'] += 1
-                        return user
 
-                    # Province шаардлагагүй бол хэрэглэгчийг буцаах
-                    return user
+                            # Province-д овог нэрээр хайх
+                            if province_id:
+                                existing_user = User.objects.filter(
+                                    last_name__iexact=last_name,
+                                    first_name__iexact=first_name,
+                                    data__province_id=province_id
+                                ).first()
+
+                                if existing_user:
+                                    self.stdout.write(self.style.SUCCESS(
+                                        f"      ✅ Province-д ижил нэртэй хэрэглэгч олдлоо: {existing_user.username} (ID: {existing_user.id})"
+                                    ))
+                                    return existing_user
+
+                            # Province-д олдсонгүй - шинэ хэрэглэгч үүсгэх рүү шилжих
+                            self.stdout.write(self.style.WARNING(
+                                f"      ⚠️ Тохирох хэрэглэгч олдсонгүй - Шинэ хэрэглэгч үүсгэнэ"
+                            ))
+                            # Шинэ хэрэглэгч үүсгэх рүү шилжих
+                    else:
+                        # Нэр өгөгдөөгүй бол ID-аар олдсон хэрэглэгчийг буцаах
+                        return user
 
                 except (User.DoesNotExist, ValueError, TypeError):
                     pass
@@ -989,6 +1068,7 @@ class Command(BaseCommand):
                             else:
                                 # Хоосон column name - асуултын дугаараар нэрлэх
                                 if i < len(next_vals) and pd.notna(next_vals[i]):
+                                    # Арабын тоо шалгах
                                     try:
                                         prob_num = int(float(next_vals[i]))
                                         if 1 <= prob_num <= 20:
@@ -996,7 +1076,15 @@ class Command(BaseCommand):
                                         else:
                                             column_names.append(f'Col_{i}')
                                     except (ValueError, TypeError):
-                                        column_names.append(f'Col_{i}')
+                                        # Ром үсэг эсэхийг шалгах
+                                        if isinstance(next_vals[i], str) and re.match(r'^[IVX]+$', str(next_vals[i]).strip().upper()):
+                                            prob_num = self._roman_to_int(str(next_vals[i]).strip())
+                                            if prob_num:
+                                                column_names.append(f'№{prob_num}')
+                                            else:
+                                                column_names.append(f'Col_{i}')
+                                        else:
+                                            column_names.append(f'Col_{i}')
                                 else:
                                     column_names.append(f'Col_{i}')
 
@@ -1007,12 +1095,17 @@ class Command(BaseCommand):
                         score_cols = []
                         for col_idx, prob_num in enumerate(next_vals):
                             if pd.notna(prob_num) and col_idx >= max(id_col, last_name_col, first_name_col):
+                                # Арабын тоо шалгах
                                 try:
                                     prob_num_int = int(float(prob_num))
                                     if 1 <= prob_num_int <= 20:  # Асуултын дугаар 1-20 хооронд
                                         score_cols.append((column_names[col_idx], prob_num_int))
                                 except (ValueError, TypeError):
-                                    pass
+                                    # Ром үсэг эсэхийг шалгах
+                                    if isinstance(prob_num, str) and re.match(r'^[IVX]+$', str(prob_num).strip().upper()):
+                                        prob_num_int = self._roman_to_int(str(prob_num).strip())
+                                        if prob_num_int:
+                                            score_cols.append((column_names[col_idx], prob_num_int))
 
                         column_map = {
                             'id_col': column_names[id_col] if id_col is not None else None,
@@ -1138,6 +1231,26 @@ class Command(BaseCommand):
                         return idx
         return None
 
+    def _roman_to_int(self, roman):
+        """Ром үсгийг тоо руу хөрвүүлэх (I→1, II→2, III→3, IV→4, ..., XX→20)"""
+        roman_dict = {
+            'I': 1, 'V': 5, 'X': 10
+        }
+        result = 0
+        prev_value = 0
+
+        for char in reversed(roman.upper()):
+            if char not in roman_dict:
+                return None
+            value = roman_dict[char]
+            if value < prev_value:
+                result -= value
+            else:
+                result += value
+            prev_value = value
+
+        return result if 1 <= result <= 20 else None
+
     def _find_score_columns(self, vals_raw, vals_upper, score_keywords, category=None):
         """Оноо агуулсан багануудыг олох. Returns: [(col_idx, problem_number), ...]"""
         score_cols = []
@@ -1163,6 +1276,29 @@ class Command(BaseCommand):
                         score_cols.append((idx, prob_num))
                         continue
 
+            # Ром үсэг формат шалгах: I, II, III, IV, V гэх мэт
+            # Цэвэр Ром үсэг эсвэл түлхүүр үг + Ром үсэг (№I, №II, БI, БII гэх мэт)
+            stripped_val = upper_val.strip()
+
+            # Цэвэр Ром үсэг шалгах
+            if re.match(r'^[IVX]+$', stripped_val):
+                prob_num = self._roman_to_int(stripped_val)
+                if prob_num:
+                    score_cols.append((idx, prob_num))
+                    continue
+
+            # Түлхүүр үг + Ром үсэг шалгах (№I, №II, БI, P.I гэх мэт)
+            for keyword in score_keywords:
+                if keyword in upper_val:
+                    # Түлхүүр үгийн дараах Ром үсгийг хайх
+                    # №I, №II, Б.I, P I гэх мэт
+                    m = re.search(rf'{re.escape(keyword)}[\s.]*([IVX]+)', upper_val)
+                    if m:
+                        prob_num = self._roman_to_int(m.group(1))
+                        if prob_num:
+                            score_cols.append((idx, prob_num))
+                            break
+
             # Хуучин формат: №1, №2, Б1, Б2, P1, P2 гэх мэт
             for keyword in score_keywords:
                 if keyword in upper_val:
@@ -1176,7 +1312,7 @@ class Command(BaseCommand):
         return score_cols
 
     def _is_problem_number_row(self, values):
-        """Мөр нь асуултын дугаарууд (1, 2, 3, 4...) эсэхийг шалгах"""
+        """Мөр нь асуултын дугаарууд (1, 2, 3, 4... эсвэл I, II, III, IV...) эсэхийг шалгах"""
         # ЭХЛЭЭД: Хэрэв багана 4 ба 5 (Овог, Нэр) текст агуулж байвал энэ нь дата мөр
         # Энэ нь асуултын дугаарын мөр биш
         if len(values) > 5:
@@ -1205,12 +1341,17 @@ class Command(BaseCommand):
             if i < 4:
                 continue
             if pd.notna(v):
+                # Арабын тоо шалгах
                 try:
                     num = int(float(v))
                     if 1 <= num <= 20:
                         numbers.append(num)
                 except (ValueError, TypeError):
-                    pass
+                    # Ром үсэг эсэхийг шалгах
+                    if isinstance(v, str) and re.match(r'^[IVX]+$', str(v).strip().upper()):
+                        roman_num = self._roman_to_int(str(v).strip())
+                        if roman_num:
+                            numbers.append(roman_num)
 
         # Хамгийн багадаа 3 тоо байх ёстой
         if len(numbers) < 3:
