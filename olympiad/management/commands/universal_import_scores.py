@@ -66,7 +66,7 @@ class Command(BaseCommand):
         'E': r'([EЕ][\s\(\-]|[\s\(\-][EЕ][\s\)\-]|9-10|^[EЕ]$|9-р\s+анги|10-р\s+анги|-9$|-10$)',
         'F': r'(F[\s\(\-]|[\s\(\-]F[\s\)\-]|11-12|^F$|11-р\s+анги|12-р\s+анги|-11$|-12$)',
         'S': r'(S[\s\(\-]|[\s\(\-][S][\s\)\-]|Бага\s+багш|Бага\s+анги|^S$)',
-        'T': r'(T[\s\(\-]|[\s\(\-][T][\s\)\-]|Дунд\s+багш|Дунд\s+анги|^T$)',
+        'T': r'([TТ][\s\(\-]|[\s\(\-][TТ][\s\)\-]|Дунд\s+багш|Дунд\s+анги|^[TТ]$)',
     }
 
     def handle(self, *args, **options):
@@ -516,26 +516,58 @@ class Command(BaseCommand):
 
                             return user
                         else:
-                            # 85%-аас бага - province-д овог нэрээр хайх
+                            # 85%-аас бага - province-д овог нэрээр хайж, ангилал шалгах
                             self.stdout.write(self.style.WARNING(
                                 f"      ⚠️ ID {uid_int} олдсон ч нэр таарахгүй: '{db_full_name}' ≠ '{excel_full_name}' ({similarity:.0f}%)"
                             ))
 
                             # Province-д овог нэрээр хайх
-                            if province_id:
-                                existing_user = User.objects.filter(
+                            if province_id and last_name and first_name:
+                                candidates = User.objects.filter(
                                     last_name__iexact=last_name,
                                     first_name__iexact=first_name,
                                     data__province_id=province_id
-                                ).first()
+                                ).select_related('data', 'data__level')
 
-                                if existing_user:
-                                    self.stdout.write(self.style.SUCCESS(
-                                        f"      ✅ Province-д ижил нэртэй хэрэглэгч олдлоо: {existing_user.username} (ID: {existing_user.id})"
-                                    ))
-                                    return existing_user
+                                if candidates.exists():
+                                    # Ангилал (level) шалгах
+                                    if category:
+                                        # Category-аас level олох
+                                        _, expected_level_id = self.get_grade_and_level_from_category(category)
 
-                            # Province-д олдсонгүй - шинэ хэрэглэгч үүсгэх рүү шилжих
+                                        if expected_level_id:
+                                            # Level таарах хэрэглэгчдийг шүүх
+                                            matching_users = [
+                                                u for u in candidates
+                                                if u.data and u.data.level_id == expected_level_id
+                                            ]
+
+                                            if matching_users:
+                                                selected_user = matching_users[0]
+                                                self.stdout.write(self.style.SUCCESS(
+                                                    f"      ✅ Province-д овог нэр БА level таарах хэрэглэгч олдлоо: {selected_user.username} (ID: {selected_user.id}, Level: {selected_user.data.level.name if selected_user.data and selected_user.data.level else 'N/A'})"
+                                                ))
+                                                return selected_user
+                                            else:
+                                                self.stdout.write(self.style.WARNING(
+                                                    f"      ⚠️ Province-д {candidates.count()} хэрэглэгч олдсон ч level таарахгүй (хүсч буй level_id: {expected_level_id})"
+                                                ))
+                                        else:
+                                            # Category-аас level олдсонгүй - анхны хэрэглэгчийг авах
+                                            selected_user = candidates.first()
+                                            self.stdout.write(self.style.SUCCESS(
+                                                f"      ✅ Province-д ижил нэртэй хэрэглэгч олдлоо: {selected_user.username} (ID: {selected_user.id})"
+                                            ))
+                                            return selected_user
+                                    else:
+                                        # Category байхгүй - анхны хэрэглэгчийг авах
+                                        selected_user = candidates.first()
+                                        self.stdout.write(self.style.SUCCESS(
+                                            f"      ✅ Province-д ижил нэртэй хэрэглэгч олдлоо: {selected_user.username} (ID: {selected_user.id})"
+                                        ))
+                                        return selected_user
+
+                            # Province-д олдсонгүй эсвэл level таарахгүй - шинэ хэрэглэгч үүсгэх рүү шилжих
                             self.stdout.write(self.style.WARNING(
                                 f"      ⚠️ Тохирох хэрэглэгч олдсонгүй - Шинэ хэрэглэгч үүсгэнэ"
                             ))
@@ -550,13 +582,30 @@ class Command(BaseCommand):
         # 2. Овог нэрээр хайх
         elif last_name and first_name:
             if province_id:
-                user = User.objects.filter(
+                candidates = User.objects.filter(
                     last_name__iexact=last_name,
                     first_name__iexact=first_name,
                     data__province_id=province_id
-                ).first()
-                if user:
-                    return user
+                ).select_related('data', 'data__level')
+
+                if candidates.exists():
+                    # Ангилал (level) шалгах
+                    if category:
+                        # Category-аас level олох
+                        _, expected_level_id = self.get_grade_and_level_from_category(category)
+
+                        if expected_level_id:
+                            # Level таарах хэрэглэгчдийг шүүх
+                            matching_users = [
+                                u for u in candidates
+                                if u.data and u.data.level_id == expected_level_id
+                            ]
+
+                            if matching_users:
+                                return matching_users[0]
+
+                    # Category байхгүй эсвэл level таарахгүй бол эхний хэрэглэгчийг буцаах
+                    return candidates.first()
 
         # 3. Хэрэглэгч олдоогүй - шинэ хэрэглэгч үүсгэх
         if last_name and first_name and not dry_run:
