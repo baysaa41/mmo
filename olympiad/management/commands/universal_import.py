@@ -104,77 +104,40 @@ class Command(BaseCommand):
         all_files = sorted([f for f in os.listdir(data_path) if f.endswith(('.xlsx', '.csv'))])
         self.stats['total_files'] = len([f for f in all_files if "Мэдээлэл" not in f])
 
-        # 1. Мэдээлэл хайх
-        file_province_id = None
-        info_file = next((f for f in all_files if "Мэдээлэл" in f), None)
-        if info_file:
-            path = os.path.join(data_path, info_file)
-            try:
-                info_df = pd.read_excel(path) if path.endswith('.xlsx') else pd.read_csv(path)
-                file_province_id = self.extract_province_id(info_df)
-                if file_province_id:
-                    province = Province.objects.filter(id=file_province_id).first()
-                    province_name = province.name if province else "Тодорхойгүй"
-                    self.stats['current_province_id'] = file_province_id
-                    self.stats['current_province_name'] = province_name
-                    self.stdout.write(self.style.SUCCESS(f"\n📍 АЙМАГ: {province_name} (ID: {file_province_id})"))
-                else:
-                    self.stdout.write(self.style.WARNING(f"\n⚠️ Аймгийн ID олдсонгүй - аймаг шалгалт хийхгүй"))
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"⚠️ Мэдээлэл файл уншихад алдаа: {e}"))
-
         # 2. Файлуудыг боловсруулах
         for filename in all_files:
+
             filepath = os.path.join(data_path, filename)
             self.stdout.write("\n" + "=" * 80)
             self.stdout.write(self.style.MIGRATE_HEADING(f"📄 ФАЙЛ: {filename}"))
             self.stdout.write("=" * 80)
 
             # Файл тус бүрээс province_id шалгах
-            current_file_province_id = file_province_id  # Default - нийтлэг province_id
+            current_file_province_id = None  # Default - нийтлэг province_id
             file_processed_successfully = True  # Файл амжилттай боловсруулагдсан эсэх
 
             try:
                 if filename.endswith('.xlsx'):
                     excel = pd.ExcelFile(filepath)
 
-                    # Файл дотроос "Мэдээлэл" sheet хайх
-                    info_sheets = [s for s in excel.sheet_names if "Мэдээлэл" in s or "МЭДЭЭЛЭЛ" in s]
-                    if info_sheets:
-                        try:
-                            info_df = pd.read_excel(filepath, sheet_name=info_sheets[0])
-                            file_specific_province = self.extract_province_id(info_df)
-                            if file_specific_province:
-                                current_file_province_id = file_specific_province
-                                province = Province.objects.filter(id=file_specific_province).first()
-                                province_name = province.name if province else "Тодорхойгүй"
-                                self.stats['current_province_id'] = file_specific_province
-                                self.stats['current_province_name'] = province_name
-                                self.stdout.write(self.style.SUCCESS(f"📍 Файл аймаг: {province_name} (ID: {file_specific_province})"))
-                        except Exception as e:
-                            self.stdout.write(self.style.WARNING(f"⚠️ Файлын Мэдээлэл sheet уншихад алдаа: {e}"))
+                    try:
+                        info_df = pd.read_excel(filepath, sheet_name="Мэдээлэл")
+                        file_specific_province = self.extract_province_id(info_df)
+                        if file_specific_province:
+                            current_file_province_id = file_specific_province
+                            province = Province.objects.filter(id=file_specific_province).first()
+                            province_name = province.name if province else "Тодорхойгүй"
+                            self.stats['current_province_id'] = file_specific_province
+                            self.stats['current_province_name'] = province_name
+                            self.stdout.write(self.style.SUCCESS(f"📍 Файл аймаг: {province_name} (ID: {file_specific_province})"))
+                    except Exception as e:
+                        self.stdout.write(self.style.WARNING(f"⚠️ Файлын Мэдээлэл sheet уншихад алдаа: {e}"))
 
                     for sheet_name in excel.sheet_names:
                         if "Мэдээлэл" in sheet_name or "МЭДЭЭЛЭЛ" in sheet_name:
                             continue
-                        try:
-                            df = pd.read_excel(filepath, sheet_name=sheet_name)
-                            self.process_target(df, sheet_name, filename, config_map, current_file_province_id, dry_run)
-                        except ValueError as ve:
-                            if "does not match pattern" in str(ve):
-                                self.stdout.write(self.style.ERROR(
-                                    f"❌ Excel файлын формат буруу байна: {filename} → {sheet_name}\n"
-                                    f"   Шалтгаан: Excel файлд буруу autofilter эсвэл cell range байна.\n"
-                                    f"   Шийдэл: Excel файлыг нээж, Data → Clear эсвэл Format → Clear хийгээд дахин хадгалаарай."
-                                ))
-                                continue
-                            else:
-                                raise
-                        except Exception as e:
-                            self.stdout.write(self.style.ERROR(
-                                f"❌ Sheet уншихад алдаа: {filename} → {sheet_name}: {e}"
-                            ))
-                            continue
+                        df = pd.read_excel(filepath, sheet_name=sheet_name)
+                        self.process_target(df, sheet_name, filename, config_map, current_file_province_id, dry_run)
                 else:
                     df = pd.read_csv(filepath)
                     self.process_target(df, filename, filename, config_map, current_file_province_id, dry_run)
@@ -307,14 +270,8 @@ class Command(BaseCommand):
                 if pd.isna(uid):
                     # ID байхгүй бол fallback column-үүдээс хайх
                     uid = row.get('ID', row.get('User ID', row.get('MMO ID')))
-
-                # Овог/Нэр: NaN утгыг зөв боловсруулах
-                ovog_raw = row.get(last_name_col, '')
-                ovog = str(ovog_raw).strip() if pd.notna(ovog_raw) else ''
-
-                ner_raw = row.get(first_name_col, '')
-                ner = str(ner_raw).strip() if pd.notna(ner_raw) else ''
-
+                ovog = str(row.get(last_name_col, '')).strip()
+                ner = str(row.get(first_name_col, '')).strip()
                 school_name = str(row.get(school_col, '')).strip() if school_col else None
             except Exception as e:
                 # Багана олдсонгүй гэх мэт алдаа
@@ -489,9 +446,6 @@ class Command(BaseCommand):
                     uid_int = int(float(uid))
                     user = User.objects.get(id=uid_int)
 
-                    # Province мэдээлэл шалгах
-                    user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
-
                     # Овог нэр харьцуулах
                     if last_name and first_name:
                         # Овог нэрийг нэгтгэж харьцуулах
@@ -499,14 +453,15 @@ class Command(BaseCommand):
                         excel_full_name = f"{last_name} {first_name}"
                         similarity = self.compare_names(db_full_name, excel_full_name)
 
-                        # CASE 1: Province зөрч байвал
-                        if province_id and user_province and int(user_province) != int(province_id):
-                            if similarity >= 85:
-                                # Нэр таарч байна - province болон сургууль шинэчлэх
-                                self.stdout.write(self.style.SUCCESS(
-                                    f"      ✅ ID {uid_int} олдлоо, нэр таарч байна: '{db_full_name}' ≈ '{excel_full_name}' ({similarity:.0f}%)"
-                                ))
+                        if similarity >= 85:
+                            # 85%+ тохирч байна - хэрэглэгчийг ашиглах
+                            self.stdout.write(self.style.SUCCESS(
+                                f"      ✅ ID {uid_int} олдлоо: '{db_full_name}' ≈ '{excel_full_name}' ({similarity:.0f}%)"
+                            ))
 
+                            # Province мэдээлэл шинэчлэх (байвал)
+                            user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
+                            if province_id and user_province and int(user_province) != int(province_id):
                                 if not dry_run:
                                     old_province = Province.objects.filter(id=user_province).first()
                                     new_province = Province.objects.filter(id=province_id).first()
@@ -523,47 +478,26 @@ class Command(BaseCommand):
                                     self.stats['province_updated'] += 1
 
                                     # Сургуулийг шинэчлэх
-                                    if new_province:
-                                        self.update_user_school(user, new_province, school_name)
+                                    self.update_user_school(user, new_province, school_name)
 
-                                return user
-                            else:
-                                # Нэр зөрч байна - province-д хайх, олдохгүй бол шинэ хэрэглэгч үүсгэнэ
-                                self.stdout.write(self.style.WARNING(
-                                    f"      ⚠️ ID {uid_int} олдсон ч province ({user_province}≠{province_id}) болон нэр ({similarity:.0f}%) зөрч байна"
-                                ))
-                                self.stdout.write(self.style.WARNING(
-                                    f"      ⚠️ '{db_full_name}' ≠ '{excel_full_name}' - Province-д хайна"
-                                ))
-                                # Province-д овог нэрээр хайх logic руу шилжинэ (line 575)
-
-                        # CASE 2: Province тохирч байвал эсвэл province мэдээлэл байхгүй
-                        else:
-                            if similarity >= 85:
-                                # Нэр таарч байна - ашиглах
-                                self.stdout.write(self.style.SUCCESS(
-                                    f"      ✅ ID {uid_int} олдлоо: '{db_full_name}' ≈ '{excel_full_name}' ({similarity:.0f}%)"
-                                ))
-
+                            elif province_id and not user_province:
                                 # Province байхгүй бол нөхөх
-                                if province_id and not user_province:
-                                    if not dry_run:
-                                        user.data.province_id = province_id
-                                        user.data.save(update_fields=['province_id'])
-                                        self.stdout.write(self.style.SUCCESS(
-                                            f"      ✅ Province нөхөгдлөө: {province_id}"
-                                        ))
-                                        self.stats['province_updated'] += 1
+                                if not dry_run:
+                                    user.data.province_id = province_id
+                                    user.data.save(update_fields=['province_id'])
+                                    self.stdout.write(self.style.SUCCESS(
+                                        f"      ✅ Province нөхөгдлөө: {province_id}"
+                                    ))
+                                    self.stats['province_updated'] += 1
 
-                                return user
-                            else:
-                                # Нэр зөрч байна - province-д хайх
-                                self.stdout.write(self.style.WARNING(
-                                    f"      ⚠️ ID {uid_int} олдсон ч нэр таарахгүй: '{db_full_name}' ≠ '{excel_full_name}' ({similarity:.0f}%)"
-                                ))
+                            return user
+                        else:
+                            # 85%-аас бага - province-д овог нэрээр хайж, ангилал шалгах
+                            self.stdout.write(self.style.WARNING(
+                                f"      ⚠️ ID {uid_int} олдсон ч нэр таарахгүй: '{db_full_name}' ≠ '{excel_full_name}' ({similarity:.0f}%)"
+                            ))
 
-                        # Province-д овог нэрээр хайх (case 1 болон case 2-ын <85% тохиолдол)
-                        if similarity < 85:
+                            # Province-д овог нэрээр хайх
                             if province_id and last_name and first_name:
                                 candidates = User.objects.filter(
                                     last_name__iexact=last_name,
@@ -615,11 +549,8 @@ class Command(BaseCommand):
                             ))
                             # Шинэ хэрэглэгч үүсгэх рүү шилжих
                     else:
-                        # Нэр өгөгдөөгүй бол шинэ хэрэглэгч үүсгэх
-                        self.stdout.write(self.style.WARNING(
-                            f"      ⚠️ ID {uid_int} олдсон ч нэр өгөгдөөгүй, province зөрч байна ({user_province}≠{province_id}) - Шинэ хэрэглэгч үүсгэнэ"
-                        ))
-                        # Шинэ хэрэглэгч үүсгэх рүү шилжих (pass)
+                        # Нэр өгөгдөөгүй бол ID-аар олдсон хэрэглэгчийг буцаах
+                        return user
 
                 except (User.DoesNotExist, ValueError, TypeError):
                     pass
@@ -653,8 +584,7 @@ class Command(BaseCommand):
                     return candidates.first()
 
         # 3. Хэрэглэгч олдоогүй - шинэ хэрэглэгч үүсгэх
-        # Овог хоосон байсан ч зөвхөн нэр байвал хэрэглэгч үүсгэх
-        if first_name and not dry_run:
+        if last_name and first_name and not dry_run:
             # Түр username-тэй хэрэглэгч үүсгэх (ID авахын тулд)
             import time
             temp_username = f"temp_{int(time.time() * 1000000)}"
@@ -750,11 +680,9 @@ class Command(BaseCommand):
             return user
 
         # Dry_run горимд эсвэл овог нэр байхгүй үед None буцаах
-        if dry_run and first_name:
-            # Овог хоосон үед "[Овог хоосон]" гэж харуулах
-            display_name = f"{last_name} {first_name}" if last_name else f"[Овог хоосон] {first_name}"
+        if dry_run and last_name and first_name:
             self.stdout.write(self.style.WARNING(
-                f"      ⚠️ [DRY RUN] Шинэ хэрэглэгч үүсгэх шаардлагатай: {display_name}"
+                f"      ⚠️ [DRY RUN] Шинэ хэрэглэгч үүсгэх шаардлагатай: {last_name} {first_name}"
             ))
 
         return None
@@ -954,13 +882,8 @@ class Command(BaseCommand):
 
             # Хэрэглэгч олох (province таних үед хэрэглэгч үүсгэхгүй)
             uid = row.get(id_col)
-
-            # Овог/Нэр: NaN утгыг зөв боловсруулах
-            ovog_raw = row.get(last_name_col, '')
-            ovog = str(ovog_raw).strip() if pd.notna(ovog_raw) else ''
-
-            ner_raw = row.get(first_name_col, '')
-            ner = str(ner_raw).strip() if pd.notna(ner_raw) else ''
+            ovog = str(row.get(last_name_col, '')).strip()
+            ner = str(row.get(first_name_col, '')).strip()
 
             user = self.get_user_smart(uid, ovog, ner, dry_run=True)
 
@@ -995,45 +918,17 @@ class Command(BaseCommand):
     def extract_province_id(self, df):
         """
         Мэдээлэл sheet-ээс аймгийн ID-г авах.
-        Дэмждэг форматууд:
-        1. key/value: "Аймгийн ID" | 27
-        2. Label дараа утга: "Аймгийн ID" | 27 (дараагийн баганад)
         """
-        # 1. key/value column бүтэц шалгах
-        if 'key' in df.columns and 'value' in df.columns:
-            for _, row in df.iterrows():
-                key_str = str(row.get('key', '')).lower().strip()
-                # 'province_id', 'province id', 'аймгийн id' гэх мэт форматууд
-                if 'province' in key_str and 'id' in key_str:
-                    try:
-                        return int(float(row['value']))
-                    except (ValueError, TypeError):
-                        pass
-                if 'аймгийн id' in key_str:
-                    try:
-                        return int(float(row['value']))
-                    except (ValueError, TypeError):
-                        pass
-
-        # 2. Мөр бүрийн нийлбэрт "аймгийн id"-г хайх
         for _, row in df.iterrows():
             row_str = [str(cell).lower().strip() for cell in row.values]
             for i, cell in enumerate(row_str):
-                if "аймгийн id" in cell or "province id" in cell:
+                if "province_id" in cell or "province id" in cell:
                     # Дараагийн баганаас утга авах
                     if i + 1 < len(row.values):
                         try:
                             val = row.values[i + 1]
                             if pd.notna(val):
                                 return int(float(val))
-                        except (ValueError, TypeError):
-                            pass
-                    # Эсвэл мөн баганад ":" дараа утга байж болно
-                    # Жишээ: "Аймгийн ID: 27"
-                    parts = cell.split(':')
-                    if len(parts) > 1:
-                        try:
-                            return int(float(parts[1].strip()))
                         except (ValueError, TypeError):
                             pass
         return None
