@@ -1018,7 +1018,20 @@ class Command(BaseCommand):
         Дэмждэг форматууд:
         1. key/value: "Аймгийн ID" | 27
         2. Label дараа утга: "Аймгийн ID" | 27 (дараагийн баганад)
+        3. Header дээр province_id байвал дараагийн баганыг утга гэж үзнэ
         """
+        # 0. Header-д province_id байвал шалгах (header нь утга болсон тохиолдол)
+        if 'province_id' in df.columns:
+            # province_id гэсэн баганы дараагийн багана нь утга байж болно
+            cols = df.columns.tolist()
+            province_idx = cols.index('province_id')
+            if province_idx + 1 < len(cols):
+                province_val = cols[province_idx + 1]
+                try:
+                    return int(float(province_val))
+                except (ValueError, TypeError):
+                    pass
+
         # 1. key/value column бүтэц шалгах
         if 'key' in df.columns and 'value' in df.columns:
             for _, row in df.iterrows():
