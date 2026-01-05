@@ -134,7 +134,7 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.WARNING(f"⚠️ Файлын Мэдээлэл sheet уншихад алдаа: {e}"))
 
                     for sheet_name in excel.sheet_names:
-                        if "Мэдээлэл" in sheet_name or "МЭДЭЭЛЭЛ" in sheet_name:
+                        if "Мэдээлэл" in sheet_name:
                             continue
                         df = pd.read_excel(filepath, sheet_name=sheet_name)
                         self.process_target(df, sheet_name, filename, config_map, current_file_province_id, dry_run)
@@ -870,8 +870,6 @@ class Command(BaseCommand):
         Хамгийн олон гарсан province_id-г буцаана.
         """
         id_col = column_map['id_col']
-        last_name_col = column_map['last_name_col']
-        first_name_col = column_map['first_name_col']
 
         province_counts = {}
         checked_count = 0
@@ -882,10 +880,8 @@ class Command(BaseCommand):
 
             # Хэрэглэгч олох (province таних үед хэрэглэгч үүсгэхгүй)
             uid = row.get(id_col)
-            ovog = str(row.get(last_name_col, '')).strip()
-            ner = str(row.get(first_name_col, '')).strip()
 
-            user = self.get_user_smart(uid, ovog, ner, dry_run=True)
+            user = User.objects.filter(id=uid).first()
 
             if user:
                 # UserMeta-аас province_id авах

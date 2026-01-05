@@ -492,6 +492,26 @@ class Command(BaseCommand):
                     # Province мэдээлэл шалгах
                     user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
 
+                    # Овог нэр хоёулаа хоосон байвал зөвхөн ID-аараа орсон гэж үзнэ
+                    if not last_name and not first_name:
+                        # ID-аараа олдсон, нэр өгөгдөөгүй - нэрийн шалгалт алгасах
+                        self.stdout.write(self.style.SUCCESS(
+                            f"      ✅ ID {uid_int} олдлоо (нэр өгөгдөөгүй, зөвхөн ID-аараа)"
+                        ))
+
+                        # Province зөрвөл логд бичих, гэхдээ хэрэглэгчийг хүлээн авна
+                        if province_id and user_province and int(user_province) != int(province_id):
+                            old_province = Province.objects.filter(id=user_province).first()
+                            new_province = Province.objects.filter(id=province_id).first()
+                            old_prov_name = old_province.name if old_province else str(user_province)
+                            new_prov_name = new_province.name if new_province else str(province_id)
+
+                            self.stdout.write(self.style.WARNING(
+                                f"      ⚠️ Дүүрэг зөрч байна: {old_prov_name} ≠ {new_prov_name} (ID-аар олдсон учир хүлээн авна)"
+                            ))
+
+                        return user
+
                     # Овог нэр харьцуулах
                     if last_name and first_name:
                         # Овог нэрийг нэгтгэж харьцуулах
