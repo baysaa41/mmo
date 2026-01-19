@@ -171,7 +171,7 @@ def select_for_third_round(df, quota_config):
                     selected = ordered.head(quota).copy()
 
             if len(selected) > 0:
-                selected['selection_type'] = '3-р даваанд шалгарсан'
+                selected['selection_type'] = '2.2 эрх'
                 result.append(selected)
 
     if not result:
@@ -251,7 +251,7 @@ def select_for_fourth_round(df, quota_config, max_per_province=2):
                     selected = ordered.head(quota).copy()
 
             if len(selected) > 0:
-                selected['selection_type'] = '4-р даваанд шалгарсан'
+                selected['selection_type'] = 'Улсын эрх'
                 result.append(selected)
 
     if not result:
@@ -645,9 +645,10 @@ class Command(BaseCommand):
                 # Хуучин award-уудыг устгах
                 second_olympiad_ids_for_third = combined_third['second_olympiad_id'].dropna().unique().tolist()
 
+                # Хуучин болон шинэ нэртэй award-уудыг устгах
                 deleted_count, _ = Award.objects.filter(
                     olympiad_id__in=second_olympiad_ids_for_third,
-                    place='3-р даваанд шалгарсан'
+                    place__in=['2.2 эрх', '3-р даваанд шалгарсан']
                 ).delete()
                 if deleted_count:
                     log.write(f'Хуучин {deleted_count} 3-р давааны award устгагдлаа.')
@@ -668,9 +669,10 @@ class Command(BaseCommand):
                 # Хуучин award-уудыг устгах
                 second_olympiad_ids_for_fourth = combined_fourth['second_olympiad_id'].dropna().unique().tolist()
 
+                # Хуучин болон шинэ нэртэй award-уудыг устгах
                 deleted_count, _ = Award.objects.filter(
                     olympiad_id__in=second_olympiad_ids_for_fourth,
-                    place='4-р даваанд шалгарсан'
+                    place__in=['Улсын эрх', '4-р даваанд шалгарсан']
                 ).delete()
                 if deleted_count:
                     log.write(f'Хуучин {deleted_count} 4-р давааны award устгагдлаа.')
@@ -699,9 +701,10 @@ class Command(BaseCommand):
             # Хуучин тэмдэглэгээг арилгах
             for ss in ScoreSheet.objects.filter(olympiad_id__in=all_second_olympiad_ids):
                 if ss.prizes:
-                    # 3-р, 4-р даваатай холбоотой хэсгийг арилгах
+                    # 2.2 эрх, Улсын эрх, хуучин 3-р/4-р даваа холбоотой хэсгийг арилгах
                     parts = [p.strip() for p in ss.prizes.split(',')
-                             if '3-р даваа' not in p and '4-р даваа' not in p]
+                             if '2.2 эрх' not in p and 'Улсын эрх' not in p
+                             and '3-р даваа' not in p and '4-р даваа' not in p]
                     ss.prizes = ', '.join(parts) if parts else ''
                     ss.save()
 
