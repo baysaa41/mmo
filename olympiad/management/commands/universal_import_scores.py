@@ -58,6 +58,7 @@ class Command(BaseCommand):
         parser.add_argument('--dry-run', action='store_true', help='Зөвхөн харах горим (өгөгдөл хадгалахгүй)')
         parser.add_argument('--log-file', type=str, default='import_log.txt', help='Log файлын нэр')
         parser.add_argument('--move-to-processed', action='store_true', help='Амжилттай импортолсон файлуудыг processed фолдерт хуулах')
+        parser.add_argument('--force-import', action='store_true', help='Зөвхөн ID-аар хэрэглэгч олох, сургууль аймгийн шалгалтыг алгасах')
 
     # Ангиллын pattern - sheet нэрээс ангилал таних
     CATEGORY_PATTERNS = {
@@ -74,6 +75,15 @@ class Command(BaseCommand):
         data_path = options['data_path']
         dry_run = options['dry_run']
         log_file = options['log_file']
+        force_import = options.get('force_import', False)
+
+        # force_import горимыг instance variable болгон хадгалах
+        self.force_import = force_import
+
+        if force_import:
+            self.stdout.write(self.style.WARNING(
+                "\n⚡ FORCE-IMPORT горим идэвхжсэн: Зөвхөн ID-аар хэрэглэгч олох, сургууль/аймгийн шалгалтыг алгасах\n"
+            ))
 
         # Статистик хадгалах
         self.stats = {
@@ -466,6 +476,9 @@ class Command(BaseCommand):
         """
         User = get_user_model()
 
+        # Force-import горим: Зөвхөн ID-аар олох, сургууль/аймгийн шалгалтыг алгасах
+        force_import = getattr(self, 'force_import', False)
+
         # 1. ID-аар хайх - янз бүрийн форматыг дэмжинэ
         if pd.notna(uid):
             # "U231632" гэх мэт текст ID
@@ -488,6 +501,13 @@ class Command(BaseCommand):
                 try:
                     uid_int = int(float(uid))
                     user = User.objects.get(id=uid_int)
+
+                    # Force-import горим: ID-аар олдсон бол шууд буцаах
+                    if force_import:
+                        self.stdout.write(self.style.SUCCESS(
+                            f"      ✅ [FORCE] ID {uid_int} олдлоо: {user.last_name} {user.first_name}"
+                        ))
+                        return user
 
                     # Province мэдээлэл шалгах
                     user_province = getattr(user.data, 'province_id', None) if hasattr(user, 'data') and user.data else None
@@ -642,10 +662,22 @@ class Command(BaseCommand):
                         # Шинэ хэрэглэгч үүсгэх рүү шилжих (pass)
 
                 except (User.DoesNotExist, ValueError, TypeError):
-                    pass
+                    # Force-import горим: ID олдоогүй бол алдаа
+                    if force_import:
+                        self.stdout.write(self.style.ERROR(
+                            f"      ❌ [FORCE] ID {uid_int if 'uid_int' in dir() else uid} олдсонгүй"
+                        ))
+                        return None
 
-        # 2. Овог нэрээр хайх
-        elif last_name and first_name:
+        # Force-import горим: ID байхгүй эсвэл олдоогүй бол алдаа
+        if force_import:
+            self.stdout.write(self.style.ERROR(
+                f"      ❌ [FORCE] ID өгөгдөөгүй эсвэл буруу формат"
+            ))
+            return None
+
+        # 2. Овог нэрээр хайх (force_import горимд энд орохгүй)
+        if last_name and first_name:
             if province_id:
                 candidates = User.objects.filter(
                     last_name__iexact=last_name,
