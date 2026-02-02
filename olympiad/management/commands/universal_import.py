@@ -53,7 +53,7 @@ class Command(BaseCommand):
     """
 
     def add_arguments(self, parser):
-        parser.add_argument('config', type=str, help='Config (info.csv) файлын зам')
+        parser.add_argument('config', type=str, help='Config (info_second_round.csv) файлын зам')
         parser.add_argument('data_path', type=str, help='Файлууд байрлах хавтас')
         parser.add_argument('--dry-run', action='store_true', help='Зөвхөн харах горим (өгөгдөл хадгалахгүй)')
         parser.add_argument('--log-file', type=str, default='import_log.txt', help='Log файлын нэр')
