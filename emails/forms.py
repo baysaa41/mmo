@@ -33,6 +33,7 @@ class EmailCampaignForm(forms.ModelForm):
             'specific_province',
             'specific_school',
             'use_custom_list',
+            'unique_per_email',
             'daily_limit'
         ]
 
@@ -48,6 +49,7 @@ class EmailCampaignForm(forms.ModelForm):
             'specific_province': forms.Select(attrs={'id': 'province-select', 'class': 'form-select'}),
             'specific_school': forms.Select(attrs={'id': 'school-select', 'class': 'form-select'}),
             'use_custom_list': forms.CheckboxInput(attrs={'id': 'use-custom-list', 'class': 'form-check-input'}),
+            'unique_per_email': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'daily_limit': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
         }
 
@@ -64,11 +66,13 @@ class EmailCampaignForm(forms.ModelForm):
             'specific_province': 'Аймаг',
             'specific_school': 'Сургууль',
             'use_custom_list': 'Custom имэйл жагсаалт ашиглах',
+            'unique_per_email': 'Нэг имэйл рүү 1 удаа илгээх',
             'daily_limit': 'Өдрийн лимит',
         }
 
         help_texts = {
             'from_email': 'Энэ campaign-г ямар имэйл хаягаас илгээхийг сонгоно уу.',
+            'unique_per_email': 'Сонгосон бол нэг имэйл хаяг руу 1 л удаа илгээнэ. Сонгоогүй бол хэрэглэгч бүрт илгээнэ (ижил имэйлтэй хүмүүс бүгдэд очно).',
         }
 
     def __init__(self, *args, **kwargs):

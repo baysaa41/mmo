@@ -63,21 +63,44 @@ def create_recipients_from_filters(campaign_id):
         campaign.status = 'queued'; campaign.save()
         users = get_users_by_filters(campaign)
         total_users = users.count()
-        campaign.total_recipients = total_users; campaign.save(update_fields=['total_recipients'])
 
         if total_users == 0:
+            campaign.total_recipients = 0
             campaign.status = 'draft'; campaign.save()
             return "No users found"
 
-        batch_size = 2000
-        for i in range(0, total_users, batch_size):
-            batch_users = users[i:i + batch_size]
-            recipients = [
-                EmailRecipient(campaign=campaign, email=user.email, name=user.get_full_name() or user.username, user=user)
-                for user in batch_users
-            ]
+        # unique_per_email = True бол нэг имэйл хаяг руу 1 л удаа явуулна
+        if campaign.unique_per_email:
+            seen_emails = set()
+            recipients = []
+            for user in users.iterator():
+                email_lower = user.email.lower()
+                if email_lower not in seen_emails:
+                    seen_emails.add(email_lower)
+                    recipients.append(
+                        EmailRecipient(campaign=campaign, email=user.email, name=user.get_full_name() or user.username, user=user)
+                    )
+                    # Batch-ээр хадгалах
+                    if len(recipients) >= 2000:
+                        EmailRecipient.objects.bulk_create(recipients, batch_size=1000, ignore_conflicts=True)
+                        recipients = []
+            # Үлдсэнийг хадгалах
             if recipients:
                 EmailRecipient.objects.bulk_create(recipients, batch_size=1000, ignore_conflicts=True)
+            campaign.total_recipients = len(seen_emails)
+        else:
+            # Хэрэглэгч бүрт илгээнэ (ижил имэйлтэй хэрэглэгчид бүгдэд очно)
+            campaign.total_recipients = total_users
+            batch_size = 2000
+            for i in range(0, total_users, batch_size):
+                batch_users = users[i:i + batch_size]
+                recipients = [
+                    EmailRecipient(campaign=campaign, email=user.email, name=user.get_full_name() or user.username, user=user)
+                    for user in batch_users
+                ]
+                if recipients:
+                    EmailRecipient.objects.bulk_create(recipients, batch_size=1000, ignore_conflicts=True)
+
         campaign.status = 'draft'; campaign.save()
     except Exception as e:
         logger.error(f"Error creating recipients for campaign {campaign_id}: {e}")

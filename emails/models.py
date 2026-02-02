@@ -48,6 +48,11 @@ class EmailCampaign(models.Model):
     )
 
     use_custom_list = models.BooleanField(default=False, verbose_name='Custom имэйл жагсаалт')
+    unique_per_email = models.BooleanField(
+        default=True,
+        verbose_name='Нэг имэйл рүү 1 удаа',
+        help_text='Үнэн бол нэг имэйл хаяг руу зөвхөн 1 удаа илгээнэ. Худал бол хэрэглэгч бүрт илгээнэ (ижил имэйлтэй хэрэглэгчид бүгдэд явна).'
+    )
 
     STATUS_CHOICES = [
         ('draft', 'Draft'), ('queued', 'Queued'), ('sending', 'Sending'),
