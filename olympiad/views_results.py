@@ -4,7 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Avg, Max, Min
 from django.core.paginator import Paginator
 from datetime import datetime, timezone
-from .models import Olympiad, Problem, Result, SchoolYear, ScoreSheet
+from .models import Olympiad, Problem, Result, SchoolYear, ScoreSheet, OlympiadGroup
+from django_pandas.io import read_frame
 from accounts.models import Province
 from schools.models import School
 from django.contrib.auth.models import User
@@ -308,7 +309,7 @@ def olympiad_group_result_view(request, group_id):
             'quiz': '',
             'title': 'Оролцсон сурагч байхгүй.',
         }
-        return render(request, 'olympiad/pandas_results_view.html', context)
+        return render(request, 'olympiad/results/pandas_results_view.html', context)
 
     if olympiad_group.group_id:
         users = olympiad_group.group.user_set.all()
@@ -356,7 +357,7 @@ def olympiad_group_result_view(request, group_id):
         },
         'title': title,
     }
-    return render(request, 'olympiad/pandas_results_view.html', context)
+    return render(request, 'olympiad/results/pandas_results_view.html', context)
 
 @login_required
 def answers_view(request, olympiad_id):
