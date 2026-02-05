@@ -36,8 +36,6 @@
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
-                                <li><a class="dropdown-item" href="{% url 'participant_search' %}"><i
-                                        class="fas fa-users fa-fw me-2"></i>Оролцогчид</a></li>
                                 <li><a class="dropdown-item" href="{% url 'olympiad_supplement_home' %}"><i
                                         class="fas fa-upload fa-fw me-2"></i>Материал нэмж
                                     оруулах</a></li>
@@ -60,6 +58,14 @@
                                         class="fas fa-globe-asia fa-fw me-2"></i>Улаанбаатар, Бүс</a></li>
                                 <li><a class="dropdown-item" href="#"><i
                                         class="fas fa-flag fa-fw me-2"></i>Улс</a></li>
+
+                                {% if user.is_authenticated %}
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li><a class="dropdown-item" href="{% url 'participant_search' %}"><i
+                                            class="fas fa-users fa-fw me-2"></i>Оролцогчид</a></li>
+                                {% endif %}
                             </ul>
                         </li>
                     {% endif %}
