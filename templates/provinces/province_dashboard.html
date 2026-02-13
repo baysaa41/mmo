@@ -30,6 +30,37 @@
         </div>
     </div>
 
+    {% if user.is_staff %}
+        <div class="card border-warning mb-4">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-shield-alt me-1"></i> Удирдах хүн <span class="badge bg-dark">staff</span></span>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Одоогийн удирдах хүн:</strong>
+                    {% if province.contact_person %}
+                        {{ province.contact_person.last_name }} {{ province.contact_person.first_name }}
+                        <span class="text-muted">(ID: {{ province.contact_person.id }})</span>
+                    {% else %}
+                        <span class="text-muted">Тодорхойгүй</span>
+                    {% endif %}
+                </p>
+                <form method="post" action="{% url 'province_change_contact' province.id %}" class="d-flex align-items-end gap-2">
+                    {% csrf_token %}
+                    <div>
+                        <label for="contact_person_id" class="form-label mb-0" style="font-size: 0.85em;">Хэрэглэгчийн ID</label>
+                        <input type="number" name="contact_person_id" id="contact_person_id"
+                               class="form-control form-control-sm" style="width: 140px;"
+                               placeholder="ID оруулах"
+                               value="{{ province.contact_person.id|default:'' }}">
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-warning">Солих</button>
+                </form>
+                <div class="form-text">Хоосон орхиод "Солих" дарвал удирдах хүнийг хасна.</div>
+            </div>
+        </div>
+    {% endif %}
+
     <hr class="my-4">
 
     <div class="mb-4">

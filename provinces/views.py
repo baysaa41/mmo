@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.db import transaction
 from django.db.models import Q
 
-from accounts.models import Province
+from accounts.models import Province, Zone
 from olympiad.models import Olympiad, Award, ScoreSheet, Result, Problem, SchoolYear
 from olympiad.utils.group_management import ensure_olympiad_has_group, get_or_create_round2_group
 from schools.models import School
@@ -41,28 +42,58 @@ def my_managed_provinces(request):
     """Удирдаж байгаа аймгуудын жагсаалт - зөвхөн өөрийн удирдаж байгаа аймгууд"""
     from django.db.models import Q
 
-    # Зөвхөн өөрийн удирдаж байгаа аймгуудыг авах
-    # 1. Contact person болсон аймгууд
-    # 2. Province_{id}_Managers group-д орсон аймгууд
+    is_staff_access = False
 
-    # Province_{id}_Managers group-д байгаа аймгуудын ID-г олох
-    province_ids = []
-    user_groups = request.user.groups.filter(name__startswith='Province_', name__endswith='_Managers')
-    for group in user_groups:
-        # Province_123_Managers -> 123 гэж province_id-г ялгах
-        try:
-            province_id = int(group.name.replace('Province_', '').replace('_Managers', ''))
-            province_ids.append(province_id)
-        except (ValueError, AttributeError):
-            continue
+    if request.user.is_staff:
+        # Staff бол бүх аймгийг харуулна
+        managed_provinces = Province.objects.all().select_related('zone', 'contact_person').order_by('name')
+        is_staff_access = True
+    else:
+        # Province_{id}_Managers group-д байгаа аймгуудын ID-г олох
+        province_ids = []
+        user_groups = request.user.groups.filter(name__startswith='Province_', name__endswith='_Managers')
+        for group in user_groups:
+            try:
+                province_id = int(group.name.replace('Province_', '').replace('_Managers', ''))
+                province_ids.append(province_id)
+            except (ValueError, AttributeError):
+                continue
 
-    # Contact person эсвэл Province_{id}_Managers group-д байгаа аймгууд
-    managed_provinces = Province.objects.filter(
-        Q(contact_person=request.user) | Q(id__in=province_ids)
-    ).select_related('zone', 'contact_person').distinct().order_by('name')
+        # Contact person эсвэл Province_{id}_Managers group-д байгаа аймгууд
+        managed_provinces = Province.objects.filter(
+            Q(contact_person=request.user) | Q(id__in=province_ids)
+        ).select_related('zone', 'contact_person').distinct().order_by('name')
 
-    context = {'provinces': managed_provinces}
+    context = {
+        'provinces': managed_provinces,
+        'is_staff_access': is_staff_access,
+    }
     return render(request, 'provinces/my_managed_provinces.html', context)
+
+
+@staff_member_required
+def province_change_contact(request, province_id):
+    """Аймгийн удирдах хүнийг солих (staff only)"""
+    province = get_object_or_404(Province, id=province_id)
+
+    if request.method == 'POST':
+        user_id = request.POST.get('contact_person_id', '').strip()
+
+        if not user_id:
+            # Хоосон болгох
+            province.contact_person = None
+            province.save(update_fields=['contact_person'])
+            messages.success(request, f'"{province.name}" аймгийн удирдах хүнийг хаслаа.')
+        else:
+            try:
+                user = User.objects.get(id=int(user_id))
+                province.contact_person = user
+                province.save(update_fields=['contact_person'])
+                messages.success(request, f'"{province.name}" аймгийн удирдах хүнийг {user.last_name} {user.first_name} (ID: {user.id}) болгож солилоо.')
+            except (ValueError, User.DoesNotExist):
+                messages.error(request, f'ID={user_id} хэрэглэгч олдсонгүй.')
+
+    return redirect('province_dashboard', province_id=province_id)
 
 
 @login_required
@@ -923,3 +954,932 @@ def view_round1_province_results(request, province_id, olympiad_id):
         'students': students_list,
     }
     return render(request, 'provinces/round1_province_results.html', context)
+
+
+# =============================================================================
+# Zone (Бүс) level views - Round 3
+# =============================================================================
+
+def user_can_manage_zone(user, zone):
+    """Хэрэглэгч бүсийг удирдах эрхтэй эсэхийг шалгах"""
+    if user.is_staff:
+        return True
+
+    if zone.contact_person == user:
+        return True
+
+    group_name = f"Zone_{zone.id}_Managers"
+    if user.groups.filter(name=group_name).exists():
+        return True
+
+    return False
+
+
+@login_required
+def my_managed_zones(request):
+    """Удирдаж байгаа бүсүүдийн жагсаалт"""
+    is_staff_access = False
+
+    if request.user.is_staff:
+        # Staff бол бүх бүсийг харуулна
+        managed_zones = Zone.objects.all().select_related('contact_person').order_by('name')
+        is_staff_access = True
+    else:
+        zone_ids = []
+        user_groups = request.user.groups.filter(name__startswith='Zone_', name__endswith='_Managers')
+        for group in user_groups:
+            try:
+                zone_id = int(group.name.replace('Zone_', '').replace('_Managers', ''))
+                zone_ids.append(zone_id)
+            except (ValueError, AttributeError):
+                continue
+
+        managed_zones = Zone.objects.filter(
+            Q(contact_person=request.user) | Q(id__in=zone_ids)
+        ).select_related('contact_person').distinct().order_by('name')
+
+    context = {
+        'zones': managed_zones,
+        'is_staff_access': is_staff_access,
+    }
+    return render(request, 'provinces/my_managed_zones.html', context)
+
+
+@staff_member_required
+def zone_change_contact(request, zone_id):
+    """Бүсийн удирдах хүнийг солих (staff only)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+
+    if request.method == 'POST':
+        user_id = request.POST.get('contact_person_id', '').strip()
+
+        if not user_id:
+            zone.contact_person = None
+            zone.save(update_fields=['contact_person'])
+            messages.success(request, f'"{zone.name}" бүсийн удирдах хүнийг хаслаа.')
+        else:
+            try:
+                user = User.objects.get(id=int(user_id))
+                zone.contact_person = user
+                zone.save(update_fields=['contact_person'])
+                messages.success(request, f'"{zone.name}" бүсийн удирдах хүнийг {user.last_name} {user.first_name} (ID: {user.id}) болгож солилоо.')
+            except (ValueError, User.DoesNotExist):
+                messages.error(request, f'ID={user_id} хэрэглэгч олдсонгүй.')
+
+    return redirect('zone_dashboard', zone_id=zone_id)
+
+
+@login_required
+def zone_select_olympiads(request, zone_id):
+    """Бүсийн оролцох олимпиадуудыг сонгох"""
+    zone = get_object_or_404(Zone, id=zone_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Та энэ бүсийг удирдах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    current_school_year = SchoolYear.get_current()
+
+    # Энэ жилийн бүх Round 3 олимпиадууд
+    all_round3 = Olympiad.objects.filter(
+        round=3,
+        school_year=current_school_year
+    ).select_related('level', 'school_year').order_by('level__name')
+
+    # Аль хэдийн сонгогдсон олимпиадуудын ID
+    selected_ids = set(zone.olympiads.values_list('id', flat=True))
+
+    if request.method == 'POST':
+        chosen_ids = request.POST.getlist('olympiad_ids')
+        chosen_ids = [int(x) for x in chosen_ids if x.isdigit()]
+
+        # Зөвхөн энэ жилийн round=3 олимпиадуудаас сонгохыг баталгаажуулах
+        valid_ids = set(all_round3.values_list('id', flat=True))
+        chosen_ids = [oid for oid in chosen_ids if oid in valid_ids]
+
+        zone.olympiads.set(chosen_ids)
+        messages.success(request, f'{len(chosen_ids)} олимпиад сонгогдлоо.')
+        return redirect('zone_dashboard', zone_id=zone_id)
+
+    # Олимпиад бүрт сонгогдсон эсэхийг тэмдэглэх
+    for olympiad in all_round3:
+        olympiad.is_selected = olympiad.id in selected_ids
+
+    context = {
+        'zone': zone,
+        'all_round3': all_round3,
+        'current_school_year': current_school_year,
+    }
+    return render(request, 'provinces/zone_select_olympiads.html', context)
+
+
+@login_required
+def zone_dashboard(request, zone_id):
+    """Бүсийн удирдлагын самбар - Round 3 олимпиадуудыг харуулна"""
+    zone = get_object_or_404(Zone, id=zone_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Та энэ бүсийг удирдах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    current_school_year = SchoolYear.get_current()
+
+    # Бүсийн сонгосон Round 3 олимпиадууд (энэ жилийн)
+    round3_olympiads = zone.olympiads.filter(
+        round=3,
+        school_year=current_school_year
+    ).select_related('level', 'school_year', 'group').order_by('level__name')
+
+    # Бүлэг байхгүй олимпиадад автоматаар бүлэг үүсгэх
+    for olympiad in round3_olympiads:
+        group, created = ensure_olympiad_has_group(olympiad, group_name_template="Round3_Olympiad_{olympiad.id}")
+        if created:
+            messages.info(request, f'"{olympiad.name}" олимпиадад "{group.name}" бүлэг автоматаар үүсгэгдлээ.')
+
+    from accounts.models import UserMeta
+
+    # Zone доторх Province-уудын ID
+    zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
+
+    for olympiad in round3_olympiads:
+        is_teacher = olympiad.level and (olympiad.level.name.startswith('S') or olympiad.level.name.startswith('T'))
+        olympiad.is_teacher_olympiad = is_teacher
+
+        if is_teacher:
+            category_prefix = olympiad.level.name[0]
+
+            if olympiad.group:
+                olympiad.zone_registered = olympiad.group.user_set.filter(
+                    data__province_id__in=zone_province_ids,
+                    data__level__name__startswith=category_prefix
+                ).count()
+            else:
+                olympiad.zone_registered = 0
+
+            olympiad.zone_total = User.objects.filter(
+                data__province_id__in=zone_province_ids,
+                data__level__name__startswith=category_prefix
+            ).count()
+        else:
+            if olympiad.group:
+                olympiad.zone_registered = olympiad.group.user_set.filter(
+                    data__province_id__in=zone_province_ids
+                ).count()
+            else:
+                olympiad.zone_registered = 0
+
+            # Round 2 олимпиадууд (энэ Round 3-г зааж байгаа)
+            round2_olympiads = Olympiad.objects.filter(next_round=olympiad)
+
+            olympiad.zone_total = ScoreSheet.objects.filter(
+                olympiad__in=round2_olympiads,
+                user__data__province_id__in=zone_province_ids,
+                is_official=True
+            ).values('user').distinct().count()
+
+    teacher_olympiads = [o for o in round3_olympiads if o.is_teacher_olympiad]
+    student_olympiads = [o for o in round3_olympiads if not o.is_teacher_olympiad]
+
+    teacher_levels = sorted(set(o.level.name for o in teacher_olympiads if o.level))
+    student_levels = sorted(set(o.level.name for o in student_olympiads if o.level))
+
+    # Zone доторх аймгуудын жагсаалт
+    zone_provinces = Province.objects.filter(zone=zone).order_by('name')
+
+    context = {
+        'zone': zone,
+        'teacher_olympiads': teacher_olympiads,
+        'student_olympiads': student_olympiads,
+        'teacher_levels': ', '.join(teacher_levels),
+        'student_levels': ', '.join(student_levels),
+        'current_school_year': current_school_year,
+        'zone_provinces': zone_provinces,
+    }
+    return render(request, 'provinces/zone_dashboard.html', context)
+
+
+@login_required
+def zone_olympiad_view(request, zone_id, olympiad_id):
+    """Олимпиад удирдах үндсэн хуудас - 3 үндсэн үйлдэл (Zone level)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Та энэ бүсийг удирдах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    if olympiad.round != 3:
+        messages.error(request, 'Энэ олимпиад 3-р давааны олимпиад биш байна.')
+        return redirect('zone_dashboard', zone_id=zone_id)
+
+    if not zone.olympiads.filter(id=olympiad.id).exists():
+        messages.error(request, 'Энэ олимпиад таны бүсийн сонгосон олимпиадад ороогүй байна.')
+        return redirect('zone_dashboard', zone_id=zone_id)
+
+    group, created = ensure_olympiad_has_group(olympiad, group_name_template="Round3_Olympiad_{olympiad.id}")
+    if created:
+        messages.info(request, f'Олимпиадад "{group.name}" бүлэг автоматаар үүсгэгдлээ.')
+
+    is_teacher_olympiad = olympiad.level and (olympiad.level.name.startswith('S') or olympiad.level.name.startswith('T'))
+
+    total_registered = olympiad.group.user_set.count() if olympiad.group else 0
+
+    zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
+
+    zone_registered = 0
+    if olympiad.group:
+        zone_registered = olympiad.group.user_set.filter(
+            data__province_id__in=zone_province_ids
+        ).count()
+
+    if is_teacher_olympiad:
+        category_prefix = olympiad.level.name[0]
+
+        total_teachers = User.objects.filter(
+            data__province_id__in=zone_province_ids,
+            data__level__name__startswith=category_prefix
+        ).count()
+
+        context = {
+            'zone': zone,
+            'olympiad': olympiad,
+            'total_registered': total_registered,
+            'zone_registered': zone_registered,
+            'total_teachers': total_teachers,
+            'is_teacher_olympiad': True,
+        }
+    else:
+        round2_olympiads = Olympiad.objects.filter(next_round=olympiad)
+
+        round2_participants = ScoreSheet.objects.filter(
+            olympiad__in=round2_olympiads,
+            user__data__province_id__in=zone_province_ids,
+            is_official=True
+        ).values('user').distinct().count()
+
+        auto_registered = Award.objects.filter(
+            olympiad__in=round2_olympiads,
+            place__startswith='3.1',
+            contestant__data__province_id__in=zone_province_ids
+        ).count()
+
+        context = {
+            'zone': zone,
+            'olympiad': olympiad,
+            'total_registered': total_registered,
+            'zone_registered': zone_registered,
+            'round2_participants': round2_participants,
+            'auto_registered_count': auto_registered,
+            'is_teacher_olympiad': False,
+        }
+    return render(request, 'provinces/zone_olympiad_detail.html', context)
+
+
+@login_required
+def zone_add_students_by_threshold(request, zone_id, olympiad_id):
+    """Онооны босгоор нэмэлт сурагч бүртгэх (Zone level)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
+
+    if request.method == 'POST':
+        from .forms import ThresholdScoreForm
+        form = ThresholdScoreForm(request.POST)
+
+        if form.is_valid():
+            threshold = form.cleaned_data['threshold_score']
+
+            group, created = ensure_olympiad_has_group(olympiad, group_name_template="Round3_Olympiad_{olympiad.id}")
+
+            # Round 2 олимпиадуудыг олох (энэ Round 3-г зааж байгаа)
+            round2_olympiads = Olympiad.objects.filter(next_round=olympiad)
+
+            eligible_scoresheets = ScoreSheet.objects.filter(
+                olympiad__in=round2_olympiads,
+                total__gte=threshold,
+                is_official=True,
+                user__data__province_id__in=zone_province_ids
+            ).select_related('user').exclude(
+                user__groups=group
+            )
+
+            added_count = 0
+            with transaction.atomic():
+                for scoresheet in eligible_scoresheets:
+                    Award.objects.get_or_create(
+                        olympiad=scoresheet.olympiad,
+                        contestant=scoresheet.user,
+                        defaults={'place': '3.1 эрх нэмэлтээр (босго)'}
+                    )
+                    group.user_set.add(scoresheet.user)
+                    added_count += 1
+
+            messages.success(request, f'{added_count} сурагч нэмэгдлээ.')
+            return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+    else:
+        from .forms import ThresholdScoreForm
+        form = ThresholdScoreForm()
+
+    context = {
+        'zone': zone,
+        'olympiad': olympiad,
+        'form': form,
+    }
+    return render(request, 'provinces/zone_add_by_threshold.html', context)
+
+
+@login_required
+def zone_select_top_students(request, zone_id, olympiad_id):
+    """Аймаг бүрээс эрх аваагүй 3 хүртэл өндөр оноотой сурагч сонгох (Zone level)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    zone_provinces = Province.objects.filter(zone=zone).order_by('name')
+
+    # Round 2 олимпиадууд
+    round2_olympiads = Olympiad.objects.filter(next_round=olympiad)
+
+    # Жагсаалт болон нэмэлт эрхээр эрх авсан хүмүүсийн ID
+    already_qualified_users = Award.objects.filter(
+        olympiad__in=round2_olympiads,
+        place__in=['3.1 эрх жагсаалтаас', '3.1 эрх нэмэлтээр']
+    ).values_list('contestant_id', flat=True)
+
+    # Гараар сонгогдсон хүмүүсийн ID
+    manually_selected_users = Award.objects.filter(
+        olympiad__in=round2_olympiads,
+        place='3.1 эрх нэмэлтээр (гараар)'
+    ).values_list('contestant_id', flat=True)
+
+    # Аймаг бүрээр бүлэглэж харуулах
+    provinces_data = []
+    for province in zone_provinces:
+        # Энэ аймгийн эрх аваагүй сурагчдын ScoreSheet
+        all_province_scoresheets = ScoreSheet.objects.filter(
+            olympiad__in=round2_olympiads,
+            user__data__province=province,
+            is_official=True
+        ).exclude(
+            user_id__in=already_qualified_users
+        ).select_related('user', 'user__data__school').order_by('-total')
+
+        if not all_province_scoresheets.exists():
+            continue
+
+        top_3_scoresheets = list(all_province_scoresheets[:3])
+        if not top_3_scoresheets:
+            continue
+
+        third_score = top_3_scoresheets[-1].total if len(top_3_scoresheets) >= 3 else (
+            top_3_scoresheets[-1].total if top_3_scoresheets else 0
+        )
+
+        eligible_scoresheets = all_province_scoresheets.filter(total__gte=third_score)
+
+        students_data = []
+        for scoresheet in eligible_scoresheets:
+            scoresheet.is_manually_selected = scoresheet.user_id in manually_selected_users
+            students_data.append(scoresheet)
+
+        provinces_data.append({
+            'province': province,
+            'students': students_data,
+            'third_score': third_score
+        })
+
+    # POST: сонгосон сурагчдыг бүртгэх
+    if request.method == 'POST':
+        selected_user_ids = request.POST.getlist('selected_users')
+
+        from collections import Counter
+        province_counts = Counter()
+
+        selected_scoresheets = ScoreSheet.objects.filter(
+            olympiad__in=round2_olympiads,
+            user_id__in=selected_user_ids
+        ).select_related('user', 'user__data__province')
+
+        for ss in selected_scoresheets:
+            if hasattr(ss.user, 'data') and ss.user.data and ss.user.data.province:
+                province_counts[ss.user.data.province_id] += 1
+
+        for province_id_val, count in province_counts.items():
+            if count > 3:
+                messages.error(request, f'Аймаг бүрээс дээд тал нь 3 сурагч сонгоно уу.')
+                return redirect('zone_select_top_students',
+                              zone_id=zone_id, olympiad_id=olympiad_id)
+
+        group, created = ensure_olympiad_has_group(olympiad, group_name_template="Round3_Olympiad_{olympiad.id}")
+
+        added_count = 0
+        with transaction.atomic():
+            for ss in selected_scoresheets:
+                Award.objects.get_or_create(
+                    olympiad=ss.olympiad,
+                    contestant=ss.user,
+                    defaults={'place': '3.1 эрх нэмэлтээр (гараар)'}
+                )
+                group.user_set.add(ss.user)
+                added_count += 1
+
+        messages.success(request, f'{added_count} сурагч нэмэгдлээ.')
+        return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+    context = {
+        'zone': zone,
+        'olympiad': olympiad,
+        'provinces_data': provinces_data,
+    }
+    return render(request, 'provinces/zone_select_top_students.html', context)
+
+
+@login_required
+def zone_add_students_by_id(request, zone_id, olympiad_id):
+    """ID-гаар сурагч/багш нэмэх (Zone level)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    is_teacher_olympiad = olympiad.level and (olympiad.level.name.startswith('S') or olympiad.level.name.startswith('T'))
+    zone_province_ids = set(Province.objects.filter(zone=zone).values_list('id', flat=True))
+
+    if request.method == 'POST':
+        user_ids_input = request.POST.get('user_ids', '').strip()
+
+        if not user_ids_input:
+            messages.error(request, 'Хэрэглэгчийн ID оруулна уу.')
+            return redirect('zone_add_students_by_id', zone_id=zone_id, olympiad_id=olympiad_id)
+
+        import re
+        user_ids = re.split(r'[,\s\n]+', user_ids_input)
+        user_ids = [uid.strip() for uid in user_ids if uid.strip()]
+
+        try:
+            user_ids = [int(uid) for uid in user_ids]
+        except ValueError:
+            messages.error(request, 'ID буруу байна. Зөвхөн тоон утга оруулна уу.')
+            return redirect('zone_add_students_by_id', zone_id=zone_id, olympiad_id=olympiad_id)
+
+        group, created = ensure_olympiad_has_group(olympiad, group_name_template="Round3_Olympiad_{olympiad.id}")
+
+        users = User.objects.filter(id__in=user_ids).select_related('data', 'data__province')
+
+        found_ids = set(users.values_list('id', flat=True))
+        not_found_ids = set(user_ids) - found_ids
+
+        if not_found_ids:
+            messages.warning(request, f'Олдоогүй ID: {", ".join(map(str, not_found_ids))}')
+
+        added_count = 0
+        already_in_group = 0
+        wrong_zone = 0
+
+        if is_teacher_olympiad:
+            with transaction.atomic():
+                for user in users:
+                    if group.user_set.filter(id=user.id).exists():
+                        already_in_group += 1
+                        continue
+
+                    Award.objects.get_or_create(
+                        olympiad=olympiad,
+                        contestant=user,
+                        defaults={'place': '3.1 эрх (ID)'}
+                    )
+
+                    group.user_set.add(user)
+                    added_count += 1
+
+            if added_count > 0:
+                messages.success(request, f'{added_count} багш нэмэгдлээ.')
+            if already_in_group > 0:
+                messages.info(request, f'{already_in_group} багш аль хэдийн группт байна.')
+        else:
+            round2_olympiads = Olympiad.objects.filter(next_round=olympiad)
+
+            with transaction.atomic():
+                for user in users:
+                    # Zone шалгах (province нь энэ zone-д хамаарч байгаа эсэх)
+                    if hasattr(user, 'data') and user.data and user.data.province_id not in zone_province_ids:
+                        wrong_zone += 1
+                        continue
+
+                    if group.user_set.filter(id=user.id).exists():
+                        already_in_group += 1
+                        continue
+
+                    scoresheet = ScoreSheet.objects.filter(
+                        olympiad__in=round2_olympiads,
+                        user=user,
+                        is_official=True
+                    ).first()
+
+                    if scoresheet:
+                        award_olympiad = scoresheet.olympiad
+                    else:
+                        award_olympiad = round2_olympiads.first() if round2_olympiads.exists() else olympiad
+
+                    Award.objects.get_or_create(
+                        olympiad=award_olympiad,
+                        contestant=user,
+                        defaults={'place': '3.1 эрх нэмэлтээр (ID)'}
+                    )
+
+                    group.user_set.add(user)
+                    added_count += 1
+
+            if added_count > 0:
+                messages.success(request, f'{added_count} сурагч нэмэгдлээ.')
+            if already_in_group > 0:
+                messages.info(request, f'{already_in_group} сурагч аль хэдийн группт байна.')
+            if wrong_zone > 0:
+                messages.warning(request, f'{wrong_zone} сурагч өөр бүсийнх байна.')
+
+        return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+    context = {
+        'zone': zone,
+        'olympiad': olympiad,
+        'is_teacher_olympiad': is_teacher_olympiad,
+    }
+    return render(request, 'provinces/zone_add_students_by_id.html', context)
+
+
+@login_required
+def zone_generate_answer_sheet(request, zone_id, olympiad_id):
+    """Excel загвар үүсгэж татах (Zone level)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    group, created = ensure_olympiad_has_group(olympiad, group_name_template="Round3_Olympiad_{olympiad.id}")
+
+    zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
+
+    contestants = group.user_set.filter(
+        data__province_id__in=zone_province_ids
+    ).select_related('data__province', 'data__school').order_by(
+        'data__province__name', 'data__school__name', 'last_name', 'first_name'
+    )
+    problems = olympiad.problem_set.all().order_by('order')
+
+    answers_data = []
+    for c in contestants:
+        school_name = c.data.school.name if hasattr(c, 'data') and c.data.school else 'Тодорхойгүй'
+        province_name = c.data.province.name if hasattr(c, 'data') and c.data.province else 'Тодорхойгүй'
+        answers_data.append({
+            'ID': c.id,
+            'Овог': c.last_name,
+            'Нэр': c.first_name,
+            'Аймаг': province_name,
+            'Сургууль': school_name,
+            **{f'№{p.order}': '' for p in problems}
+        })
+
+    header = ['ID', 'Овог', 'Нэр', 'Аймаг', 'Сургууль'] + [f'№{p.order}' for p in problems]
+    answers_df = pd.DataFrame(answers_data, columns=header)
+
+    info_data = {
+        'Түлхүүр': ['olympiad_id', 'olympiad_name', 'zone_id', 'zone_name', 'level_id', 'level_name'],
+        'Утга': [
+            olympiad.id,
+            olympiad.name,
+            zone.id,
+            zone.name,
+            olympiad.level.id if olympiad.level else '',
+            olympiad.level.name if olympiad.level else ''
+        ]
+    }
+    info_df = pd.DataFrame(info_data)
+
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        answers_df.to_excel(writer, sheet_name='Хариулт', index=False)
+        info_df.to_excel(writer, sheet_name='Мэдээлэл', index=False)
+
+        workbook = writer.book
+        worksheet = writer.sheets['Хариулт']
+
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        bold_font = Font(bold=True)
+        center_align = Alignment(horizontal='center', vertical='center')
+
+        for cell in worksheet["1:1"]:
+            cell.font = bold_font
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row, max_col=worksheet.max_column):
+            for cell in row:
+                cell.border = thin_border
+
+        for i, column_cells in enumerate(worksheet.columns):
+            column_letter = column_cells[0].column_letter
+            if i < 5:
+                max_length = 0
+                for cell in column_cells:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                worksheet.column_dimensions[column_letter].width = min(max_length + 2, 30)
+            else:
+                worksheet.column_dimensions[column_letter].width = 5
+
+    output.seek(0)
+
+    filename = f"zone_{zone.id}_olympiad_{olympiad.id}.xlsx"
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+def zone_import_answer_sheet(request, zone_id, olympiad_id):
+    """Excel файл уншиж дүн оруулах (Zone level)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    if request.method == 'POST':
+        from .forms import UploadExcelForm
+        form = UploadExcelForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            excel_file = request.FILES['excel_file']
+
+            try:
+                xls = pd.ExcelFile(excel_file)
+
+                if 'Хариулт' not in xls.sheet_names or 'Мэдээлэл' not in xls.sheet_names:
+                    messages.error(request, 'Excel файлд "Хариулт" болон "Мэдээлэл" sheet байх ёстой.')
+                    return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+                info_df = pd.read_excel(excel_file, sheet_name='Мэдээлэл')
+                info_dict = dict(zip(info_df['Түлхүүр'], info_df['Утга']))
+
+                if int(info_dict.get('olympiad_id', 0)) != olympiad_id:
+                    messages.error(request, 'Олимпиадын ID таарахгүй байна.')
+                    return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+                if int(info_dict.get('zone_id', 0)) != zone_id:
+                    messages.error(request, 'Бүсийн ID таарахгүй байна.')
+                    return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+                answers_df = pd.read_excel(excel_file, sheet_name='Хариулт')
+                problems = olympiad.problem_set.all().order_by('order')
+                problem_dict = {f'№{p.order}': p for p in problems}
+
+                created_count = 0
+                updated_count = 0
+
+                with transaction.atomic():
+                    for idx, row in answers_df.iterrows():
+                        user_id = row['ID']
+
+                        try:
+                            user = User.objects.get(id=user_id)
+
+                            if olympiad.group and not olympiad.group.user_set.filter(id=user_id).exists():
+                                continue
+
+                            for col_name, problem in problem_dict.items():
+                                if col_name in row and pd.notna(row[col_name]):
+                                    answer_value = row[col_name]
+
+                                    score = 0
+                                    if hasattr(problem, 'numerical_answer') and problem.numerical_answer:
+                                        try:
+                                            if int(answer_value) == problem.numerical_answer:
+                                                score = problem.point
+                                        except (ValueError, TypeError):
+                                            pass
+
+                                    result, created = Result.objects.update_or_create(
+                                        contestant=user,
+                                        olympiad=olympiad,
+                                        problem=problem,
+                                        defaults={
+                                            'answer': int(answer_value) if answer_value else 0,
+                                            'score': score,
+                                            'state': 2
+                                        }
+                                    )
+
+                                    if created:
+                                        created_count += 1
+                                    else:
+                                        updated_count += 1
+
+                        except User.DoesNotExist:
+                            continue
+
+                messages.success(request, f'Амжилттай. Шинээр үүссэн: {created_count}, Шинэчлэгдсэн: {updated_count}')
+                return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+            except Exception as e:
+                messages.error(request, f'Алдаа гарлаа: {str(e)}')
+                return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+    return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+
+@login_required
+def zone_view_participants(request, zone_id, olympiad_id):
+    """Олимпиадад эрх авсан багш, сурагчдын жагсаалт (Zone level)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    if olympiad.round != 3:
+        messages.error(request, 'Энэ олимпиад 3-р давааны олимпиад биш байна.')
+        return redirect('zone_dashboard', zone_id=zone_id)
+
+    group, created = ensure_olympiad_has_group(olympiad, group_name_template="Round3_Olympiad_{olympiad.id}")
+
+    round2_olympiads = Olympiad.objects.filter(next_round=olympiad)
+
+    zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
+
+    participants = group.user_set.filter(
+        data__province_id__in=zone_province_ids
+    ).select_related('data__school', 'data__grade', 'data__province').order_by(
+        'data__province__name', 'data__school__name', 'last_name', 'first_name'
+    )
+
+    from collections import defaultdict
+    provinces_dict = defaultdict(lambda: defaultdict(list))
+
+    for user in participants:
+        province_name = user.data.province.name if hasattr(user, 'data') and user.data.province else 'Тодорхойгүй'
+        school_name = user.data.school.name if hasattr(user, 'data') and user.data.school else 'Сургуулиа бүртгээгүй'
+
+        award = Award.objects.filter(
+            olympiad__in=round2_olympiads,
+            contestant=user
+        ).first()
+
+        scoresheet = ScoreSheet.objects.filter(
+            olympiad__in=round2_olympiads,
+            user=user,
+            is_official=True
+        ).order_by('-total').first()
+
+        user.award_place = award.place if award else 'Тодорхойгүй'
+        user.round2_score = scoresheet.total if scoresheet else 0
+
+        provinces_dict[province_name][school_name].append(user)
+
+    # Dict-ийг list болгох
+    provinces_data = []
+    for province_name in sorted(provinces_dict.keys()):
+        schools_list = []
+        for school_name in sorted(provinces_dict[province_name].keys()):
+            schools_list.append({
+                'school_name': school_name,
+                'students': provinces_dict[province_name][school_name]
+            })
+        provinces_data.append({
+            'province_name': province_name,
+            'schools': schools_list,
+        })
+
+    context = {
+        'zone': zone,
+        'olympiad': olympiad,
+        'provinces_data': provinces_data,
+        'total_count': participants.count(),
+    }
+    return render(request, 'provinces/zone_participants.html', context)
+
+
+@login_required
+def zone_view_results(request, zone_id, olympiad_id):
+    """Үр дүн харах (Zone level)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    group, created = ensure_olympiad_has_group(olympiad, group_name_template="Round3_Olympiad_{olympiad.id}")
+
+    zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
+
+    group_user_ids = group.user_set.filter(
+        data__province_id__in=zone_province_ids
+    ).values_list('id', flat=True)
+
+    results = Result.objects.filter(
+        olympiad=olympiad,
+        contestant_id__in=group_user_ids
+    ).select_related('contestant', 'problem', 'contestant__data__school', 'contestant__data__province')
+
+    students_scores = {}
+    problems = olympiad.problem_set.all().order_by('order')
+
+    for result in results:
+        user_id = result.contestant.id
+        if user_id not in students_scores:
+            students_scores[user_id] = {
+                'user': result.contestant,
+                'school': result.contestant.data.school if hasattr(result.contestant, 'data') else None,
+                'province': result.contestant.data.province if hasattr(result.contestant, 'data') else None,
+                'scores': {},
+                'total': 0
+            }
+
+        students_scores[user_id]['scores'][result.problem.order] = result.score
+        students_scores[user_id]['total'] += result.score or 0
+
+    students_list = sorted(
+        students_scores.values(),
+        key=lambda x: (-x['total'], x['user'].last_name)
+    )
+
+    context = {
+        'zone': zone,
+        'olympiad': olympiad,
+        'students': students_list,
+        'problems': problems,
+    }
+    return render(request, 'provinces/zone_olympiad_results.html', context)
+
+
+@login_required
+def zone_view_round2_results(request, zone_id, olympiad_id):
+    """Round 2-ийн бүсийн дүнг харах (Round 3 олимпиадаас)"""
+    zone = get_object_or_404(Zone, id=zone_id)
+    round3_olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_zone(request.user, zone):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_zones')
+
+    round2_olympiads = Olympiad.objects.filter(next_round=round3_olympiad)
+
+    if not round2_olympiads.exists():
+        messages.warning(request, 'Round 2 олимпиад олдсонгүй.')
+        return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
+
+    zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
+
+    scoresheets = ScoreSheet.objects.filter(
+        olympiad__in=round2_olympiads,
+        user__data__province_id__in=zone_province_ids,
+        is_official=True
+    ).select_related('user', 'user__data__school', 'user__data__province', 'olympiad').order_by('-total', 'user__last_name')
+
+    students_list = []
+    for scoresheet in scoresheets:
+        award = Award.objects.filter(
+            olympiad=round3_olympiad,
+            contestant=scoresheet.user
+        ).first()
+
+        award_status = award.place if award else None
+
+        students_list.append({
+            'user': scoresheet.user,
+            'school': scoresheet.user.data.school if hasattr(scoresheet.user, 'data') else None,
+            'province': scoresheet.user.data.province if hasattr(scoresheet.user, 'data') else None,
+            'total': scoresheet.total,
+            'olympiad': scoresheet.olympiad,
+            'award_status': award_status,
+        })
+
+    context = {
+        'zone': zone,
+        'round3_olympiad': round3_olympiad,
+        'round2_olympiads': round2_olympiads,
+        'students': students_list,
+    }
+    return render(request, 'provinces/zone_round2_results.html', context)

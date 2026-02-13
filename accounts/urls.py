@@ -44,6 +44,7 @@ urlpatterns = [
     # dashboard
     path('dashboard/', admin.dashboard_view, name='admin_dashboard'),
     path('commands-guide/', admin.command_guide_view, name='commands_guide'),
+    path('province-contacts/', admin.province_contacts, name='province_contacts'),
 
     path(
         'password-reset/<uidb64>/<token>/',

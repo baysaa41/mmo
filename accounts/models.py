@@ -113,6 +113,8 @@ class Province(models.Model):
 class Zone(models.Model):
     name = models.CharField(max_length=120, null=True)
     description = models.TextField()
+    contact_person = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_zones')
+    olympiads = models.ManyToManyField('olympiad.Olympiad', blank=True, related_name='zones')
 
     class Meta:
         permissions = [
