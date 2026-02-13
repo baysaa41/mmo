@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Босгоор нэмэх - {{ zone.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_zones' %}">Миний бүсүүд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'zone_dashboard' zone.id %}">{{ zone.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}">{{ olympiad.name }} - {{ olympiad.level.name }}</a></li>
+            <li class="breadcrumb-item active">Босгоор нэмэх</li>
+        </ol>
+    </nav>
+
+    <h2>Онооны босгоор сурагч нэмэх</h2>
+    <p class="text-muted">{{ olympiad.name }} - {{ olympiad.level.name }} | {{ zone.name }}</p>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    {{ form.threshold_score.label_tag }}
+                    {% render_field form.threshold_score %}
+                    <div class="form-text">{{ form.threshold_score.help_text }}</div>
+                    {% if form.threshold_score.errors %}
+                        <div class="text-danger">{{ form.threshold_score.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>Тайлбар:</strong>
+                    <ul class="mb-0">
+                        <li>Round 2-ийн тухайн түвшний олимпиадын оноог харгалзана</li>
+                        <li>Босго оноо ба түүнээс дээш оноо авсан сурагчдыг автоматаар нэмнэ</li>
+                        <li>Зөвхөн {{ zone.name }} бүсийн аймгуудын сурагчдыг нэмнэ</li>
+                        <li>Аль хэдийн бүртгэгдсэн сурагчдыг алгасна</li>
+                    </ul>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Сурагч нэмэх</button>
+                    <a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}"
+                       class="btn btn-secondary">Буцах</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Үр дүн - {{ olympiad.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_zones' %}">Миний бүсүүд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'zone_dashboard' zone.id %}">{{ zone.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}">{{ olympiad.name }} - {{ olympiad.level.name }}</a></li>
+            <li class="breadcrumb-item active">Үр дүн</li>
+        </ol>
+    </nav>
+
+    <h2>{{ olympiad.name }} - {{ olympiad.level.name }} | Үр дүн</h2>
+    <p class="text-muted">{{ zone.name }}</p>
+
+    {% if students %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Овог нэр</th>
+                        <th>Аймаг</th>
+                        <th>Сургууль</th>
+                        <th>Нийт оноо</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ student.user.last_name }} {{ student.user.first_name }}</td>
+                            <td>{{ student.province.name|default:"Тодорхойгүй" }}</td>
+                            <td>{{ student.school.name|default:"Тодорхойгүй" }}</td>
+                            <td class="fw-bold">{{ student.total|floatformat:1 }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-info">
+            <strong>Нийт:</strong> {{ students|length }} сурагч
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Үр дүн байхгүй байна. Дүн оруулаагүй эсвэл сурагч бүртгээгүй байна.
+        </div>
+    {% endif %}
+
+    <div class="mb-4">
+        <a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}"
+           class="btn btn-secondary">Буцах</a>
+    </div>
+</div>
+{% endblock %}

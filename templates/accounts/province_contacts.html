@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Аймаг, бүсийн удирдах хүмүүс{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Аймаг, бүсийн удирдах хүмүүс</h2>
+    <p class="text-muted">Аймаг бүрийн contact person-г харах, солих, шинээр үүсгэх</p>
+
+    <!-- Бүсүүд -->
+    <h4 class="mt-4 mb-3">Бүсүүд</h4>
+    <div class="table-responsive mb-5">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 5%;">ID</th>
+                    <th style="width: 20%;">Бүс</th>
+                    <th style="width: 30%;">Удирдах хүн</th>
+                    <th style="width: 25%;">ID-аар солих</th>
+                    <th style="width: 20%;">Шинээр үүсгэх</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for zone in zones %}
+                    <tr>
+                        <td>{{ zone.id }}</td>
+                        <td><strong>{{ zone.name }}</strong></td>
+                        <td>
+                            {% if zone.contact_person %}
+                                {{ zone.contact_person.last_name }} {{ zone.contact_person.first_name }}
+                                <span class="text-muted">(ID: {{ zone.contact_person.id }})</span>
+                                {% if zone.contact_person.email %}
+                                    <br><small class="text-muted">{{ zone.contact_person.email }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-danger">Тодорхойгүй</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" class="d-flex gap-1 align-items-center">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="change_zone_contact">
+                                <input type="hidden" name="zone_id" value="{{ zone.id }}">
+                                <input type="number" name="user_id" class="form-control form-control-sm" style="width: 100px;"
+                                       placeholder="User ID" value="{{ zone.contact_person.id|default:'' }}">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Солих</button>
+                            </form>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-success"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#createModal"
+                                    data-entity-type="zone"
+                                    data-entity-id="{{ zone.id }}"
+                                    data-entity-name="{{ zone.name }}">
+                                + Шинэ хэрэглэгч
+                            </button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Аймгууд -->
+    <h4 class="mt-4 mb-3">Аймаг, дүүргүүд</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 5%;">ID</th>
+                    <th style="width: 15%;">Аймаг</th>
+                    <th style="width: 10%;">Бүс</th>
+                    <th style="width: 25%;">Удирдах хүн</th>
+                    <th style="width: 25%;">ID-аар солих</th>
+                    <th style="width: 20%;">Шинээр үүсгэх</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for province in provinces %}
+                    <tr>
+                        <td>{{ province.id }}</td>
+                        <td><strong>{{ province.name }}</strong></td>
+                        <td>{{ province.zone.name|default:"-" }}</td>
+                        <td>
+                            {% if province.contact_person %}
+                                {{ province.contact_person.last_name }} {{ province.contact_person.first_name }}
+                                <span class="text-muted">(ID: {{ province.contact_person.id }})</span>
+                                {% if province.contact_person.email %}
+                                    <br><small class="text-muted">{{ province.contact_person.email }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-danger">Тодорхойгүй</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" class="d-flex gap-1 align-items-center">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="change_province_contact">
+                                <input type="hidden" name="province_id" value="{{ province.id }}">
+                                <input type="number" name="user_id" class="form-control form-control-sm" style="width: 100px;"
+                                       placeholder="User ID" value="{{ province.contact_person.id|default:'' }}">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Солих</button>
+                            </form>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-success"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#createModal"
+                                    data-entity-type="province"
+                                    data-entity-id="{{ province.id }}"
+                                    data-entity-name="{{ province.name }}">
+                                + Шинэ хэрэглэгч
+                            </button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Шинэ хэрэглэгч үүсгэх Modal -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="modal_action" value="">
+                <input type="hidden" name="province_id" id="modal_province_id" value="">
+                <input type="hidden" name="zone_id" id="modal_zone_id" value="">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createModalLabel">Шинэ удирдах хүн үүсгэх</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3">
+                        <strong id="modal_entity_name"></strong> -д шинэ удирдах хүн үүсгэнэ.
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_last_name" class="form-label">Овог <span class="text-danger">*</span></label>
+                        <input type="text" name="new_last_name" id="new_last_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_first_name" class="form-label">Нэр <span class="text-danger">*</span></label>
+                        <input type="text" name="new_first_name" id="new_first_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_email" class="form-label">Имэйл</label>
+                        <input type="email" name="new_email" id="new_email" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_phone" class="form-label">Утас</label>
+                        <input type="text" name="new_phone" id="new_phone" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Болих</button>
+                    <button type="submit" class="btn btn-success">Үүсгэж холбох</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var createModal = document.getElementById('createModal');
+    if (createModal) {
+        createModal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            var entityType = button.getAttribute('data-entity-type');
+            var entityId = button.getAttribute('data-entity-id');
+            var entityName = button.getAttribute('data-entity-name');
+
+            document.getElementById('modal_entity_name').textContent = entityName;
+
+            if (entityType === 'province') {
+                document.getElementById('modal_action').value = 'create_and_assign_province';
+                document.getElementById('modal_province_id').value = entityId;
+                document.getElementById('modal_zone_id').value = '';
+            } else {
+                document.getElementById('modal_action').value = 'create_and_assign_zone';
+                document.getElementById('modal_zone_id').value = entityId;
+                document.getElementById('modal_province_id').value = '';
+            }
+
+            // Clear form
+            document.getElementById('new_last_name').value = '';
+            document.getElementById('new_first_name').value = '';
+            document.getElementById('new_email').value = '';
+            document.getElementById('new_phone').value = '';
+        });
+    }
+});
+</script>
+{% endblock %}

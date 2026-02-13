@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Оролцогчид - {{ olympiad.name }} - {{ zone.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_zones' %}">Миний бүсүүд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'zone_dashboard' zone.id %}">{{ zone.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}">{{ olympiad.name }} - {{ olympiad.level.name }}</a></li>
+            <li class="breadcrumb-item active">Оролцогчид</li>
+        </ol>
+    </nav>
+
+    <h2>{{ olympiad.name }} - {{ olympiad.level.name }}</h2>
+    <p class="text-muted">{{ zone.name }}-ын эрх авсан багш, сурагчид</p>
+
+    <div class="alert alert-success">
+        <strong>Нийт:</strong> {{ total_count }} хүн
+    </div>
+
+    {% if provinces_data %}
+        {% for province_group in provinces_data %}
+            <h4 class="mt-4 mb-3">{{ province_group.province_name }}</h4>
+
+            {% for school_group in province_group.schools %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">{{ school_group.school_name }}</h5>
+                        <small class="text-muted">{{ school_group.students|length }} хүн</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>ID</th>
+                                        <th>Овог</th>
+                                        <th>Нэр</th>
+                                        <th>Анги</th>
+                                        <th>Round 2 оноо</th>
+                                        <th>Эрх авсан төрөл</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student in school_group.students %}
+                                        <tr>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>{{ student.id }}</td>
+                                            <td>{{ student.last_name }}</td>
+                                            <td>{{ student.first_name }}</td>
+                                            <td>
+                                                {% if student.data.grade %}
+                                                    {{ student.data.grade.name }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info">{{ student.round2_score }}</span>
+                                            </td>
+                                            <td>
+                                                {% if "жагсаалтаас" in student.award_place %}
+                                                    <span class="badge bg-success">{{ student.award_place }}</span>
+                                                {% elif "босго" in student.award_place %}
+                                                    <span class="badge bg-primary">{{ student.award_place }}</span>
+                                                {% elif "гараар" in student.award_place %}
+                                                    <span class="badge bg-warning text-dark">{{ student.award_place }}</span>
+                                                {% elif "нэмэлтээр" in student.award_place %}
+                                                    <span class="badge bg-secondary">{{ student.award_place }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-light text-dark">{{ student.award_place }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-warning">
+            {{ zone.name }}-аас одоогоор энэ олимпиадад эрх авсан хүн байхгүй байна.
+        </div>
+    {% endif %}
+
+    <div class="mt-3">
+        <a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}" class="btn btn-secondary">
+            Буцах
+        </a>
+    </div>
+</div>
+{% endblock %}

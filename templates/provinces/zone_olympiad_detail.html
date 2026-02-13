@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ olympiad.name}} - {{ zone.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_zones' %}">Миний бүсүүд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'zone_dashboard' zone.id %}">{{ zone.name }}</a></li>
+            <li class="breadcrumb-item active">{{ olympiad.name }} - {{ olympiad.level.name }}</li>
+        </ol>
+    </nav>
+
+    <h2>{{ olympiad.name }} - {{ olympiad.level.name }}</h2>
+    <p class="text-muted">{{ zone.name }}</p>
+
+    <div class="alert alert-info">
+        {% if is_teacher_olympiad %}
+            <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} багш (бүх бүсээс)
+            <br>
+            <strong>{{ zone.name }}-ын бүртгэлтэй:</strong>
+            <span class="badge bg-success">{{ zone_registered }}</span> /
+            <span class="badge bg-info">{{ total_teachers }}</span>
+            <small class="text-muted">(бүртгүүлсэн / нийт багш)</small>
+            <br>
+            <a href="{% url 'zone_view_participants' zone.id olympiad.id %}" class="btn btn-sm btn-outline-primary mt-2">
+                {{ zone.name }}-ын оролцогчдын жагсаалт харах
+            </a>
+        {% else %}
+            <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} сурагч (бүх бүсээс)
+            <br>
+            <strong>{{ zone.name }}-ын бүртгэлтэй:</strong>
+            <span class="badge bg-success">{{ zone_registered }}</span> /
+            <span class="badge bg-info">{{ round2_participants }}</span>
+            <small class="text-muted">(Round 3 шалгарсан / Round 2 оролцсон)</small>
+            <br>
+            <strong>Автомат бүртгэл:</strong> {{ auto_registered_count }} (Round 2-ийн жагсаалтаас)
+            <br>
+            <a href="{% url 'zone_view_participants' zone.id olympiad.id %}" class="btn btn-sm btn-outline-primary mt-2">
+                {{ zone.name }}-ын оролцогчдын жагсаалт харах
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <!-- Card 1: Нэмэлт бүртгэл -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">1. Нэмэлт бүртгэл</h5>
+                </div>
+                <div class="card-body">
+                    {% if is_teacher_olympiad %}
+                        <p>ID-гаар багш нэмнэ.</p>
+                        <a href="{% url 'zone_add_students_by_id' zone.id olympiad.id %}"
+                           class="btn btn-primary btn-sm d-block">ID-гаар нэмэх</a>
+                    {% else %}
+                        <p>Онооны босгоор, аймгаас гараар эсвэл ID-гаар сурагч нэмнэ.</p>
+                        <a href="{% url 'zone_add_students_by_threshold' zone.id olympiad.id %}"
+                           class="btn btn-primary btn-sm d-block mb-2">Босгоор нэмэх</a>
+                        <a href="{% url 'zone_select_top_students' zone.id olympiad.id %}"
+                           class="btn btn-secondary btn-sm d-block mb-2">Гараар сонгох (аймаг бүрээс 3 хүртэл)</a>
+                        <a href="{% url 'zone_add_students_by_id' zone.id olympiad.id %}"
+                           class="btn btn-outline-primary btn-sm d-block">ID-гаар нэмэх</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Дүн оруулах -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">2. Дүн оруулах</h5>
+                </div>
+                <div class="card-body">
+                    <p>Excel загвар татаж, бөглөөд системд оруулна.</p>
+                    <a href="{% url 'zone_generate_answer_sheet' zone.id olympiad.id %}"
+                       class="btn btn-success btn-sm d-block mb-2">Загвар татах</a>
+                    <button type="button" class="btn btn-outline-success btn-sm d-block"
+                            data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        Файл оруулах
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Үр дүн -->
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">3. Үр дүн харах</h5>
+                </div>
+                <div class="card-body">
+                    {% if is_teacher_olympiad %}
+                        <p>Оруулсан дүнгийн хүснэгтийг харна.</p>
+                        <a href="{% url 'zone_view_results' zone.id olympiad.id %}"
+                           class="btn btn-info btn-sm d-block">Үр дүн харах</a>
+                    {% else %}
+                        <p>2-р болон 3-р давааны дүнгийн хүснэгтийг харна.</p>
+                        <a href="{% url 'zone_view_results' zone.id olympiad.id %}"
+                           class="btn btn-info btn-sm d-block mb-2">3-р давааны дүн харах</a>
+                        <a href="{% url 'zone_view_round2_results' zone.id olympiad.id %}"
+                           class="btn btn-outline-info btn-sm d-block">2-р давааны дүн харах</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">Excel файл оруулах</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" enctype="multipart/form-data"
+                  action="{% url 'zone_import_answer_sheet' zone.id olympiad.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">Excel файл сонгох</label>
+                        <input type="file" name="excel_file" id="excel_file" class="form-control"
+                               accept=".xlsx,.xls" required>
+                    </div>
+                    <div class="alert alert-warning">
+                        <strong>Анхаар:</strong> Зөвхөн "Хариулт" болон "Мэдээлэл" sheet-тэй Excel файлыг оруулна уу.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Болих</button>
+                    <button type="submit" class="btn btn-primary">Оруулах</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

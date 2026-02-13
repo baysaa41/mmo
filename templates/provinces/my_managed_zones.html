@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Миний бүсүүд{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Миний удирддаг бүсүүд</h2>
+    <p class="text-muted">Таны удирдлагад байгаа бүсүүд</p>
+
+    {% if is_staff_access %}
+        <div class="alert alert-warning d-flex align-items-center">
+            <i class="fas fa-shield-alt me-2"></i>
+            <span>Та <strong>staff</strong> эрхээр бүх бүсийг удирдах боломжтой.</span>
+        </div>
+    {% endif %}
+
+    {% if zones %}
+        <div class="row">
+            {% for zone in zones %}
+                <div class="col-md-4 mb-3">
+                    <div class="card{% if is_staff_access %} border-warning{% endif %}">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                {{ zone.name }}
+                                {% if is_staff_access %}
+                                    <span class="badge bg-warning text-dark" style="font-size: 0.6em;">staff</span>
+                                {% endif %}
+                            </h5>
+                            <p class="card-text">
+                                {{ zone.description|default:"" }}
+                            </p>
+                            <a href="{% url 'zone_dashboard' zone.id %}" class="btn btn-primary btn-sm">
+                                Удирдах
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Та одоогоор ямар ч бүсийг удирдаж байхгүй байна.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
