@@ -31,6 +31,8 @@ urlpatterns = [
     path('zones/<int:zone_id>/select-olympiads/', views.zone_select_olympiads, name='zone_select_olympiads'),
     path('zones/<int:zone_id>/olympiad/<int:olympiad_id>/',
          views.zone_olympiad_view, name='zone_olympiad_view'),
+    path('zones/<int:zone_id>/olympiad/<int:olympiad_id>/add-all-qualified/',
+         views.zone_add_all_qualified, name='zone_add_all_qualified'),
     path('zones/<int:zone_id>/olympiad/<int:olympiad_id>/add-by-threshold/',
          views.zone_add_students_by_threshold, name='zone_add_students_by_threshold'),
     path('zones/<int:zone_id>/olympiad/<int:olympiad_id>/select-top-students/',

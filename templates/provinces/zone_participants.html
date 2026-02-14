@@ -14,85 +14,112 @@
     </nav>
 
     <h2>{{ olympiad.name }} - {{ olympiad.level.name }}</h2>
-    <p class="text-muted">{{ zone.name }}-ын эрх авсан багш, сурагчид</p>
+    <p class="text-muted">{{ zone.name }} - бүртгэлтэй оролцогчид</p>
 
     <div class="alert alert-success">
         <strong>Нийт:</strong> {{ total_count }} хүн
     </div>
 
-    {% if provinces_data %}
-        {% for province_group in provinces_data %}
-            <h4 class="mt-4 mb-3">{{ province_group.province_name }}</h4>
-
-            {% for school_group in province_group.schools %}
-                <div class="card mb-3">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">{{ school_group.school_name }}</h5>
-                        <small class="text-muted">{{ school_group.students|length }} хүн</small>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead>
+    {% if students %}
+        <form method="post" id="removeForm">
+            {% csrf_token %}
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:30px">
+                                        <input type="checkbox" class="form-check-input" id="selectAll">
+                                    </th>
+                                    <th style="width:40px">#</th>
+                                    <th>ID</th>
+                                    <th>Овог</th>
+                                    <th>Нэр</th>
+                                    <th>Аймаг, Дүүрэг</th>
+                                    <th>Сургууль</th>
+                                    <th>Анги</th>
+                                    <th class="text-center">2.1 оноо</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
                                     <tr>
-                                        <th>#</th>
-                                        <th>ID</th>
-                                        <th>Овог</th>
-                                        <th>Нэр</th>
-                                        <th>Анги</th>
-                                        <th>Round 2 оноо</th>
-                                        <th>Эрх авсан төрөл</th>
+                                        <td>
+                                            <input type="checkbox" name="remove_users"
+                                                   value="{{ student.id }}" class="form-check-input row-check">
+                                        </td>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ student.id }}</td>
+                                        <td>{{ student.last_name }}</td>
+                                        <td>{{ student.first_name }}</td>
+                                        <td>{{ student.province_name }}</td>
+                                        <td>{{ student.school_name }}</td>
+                                        <td>
+                                            {% if student.data.grade %}
+                                                {{ student.data.grade.name }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-info">{{ student.round2_score }}</span>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {% for student in school_group.students %}
-                                        <tr>
-                                            <td>{{ forloop.counter }}</td>
-                                            <td>{{ student.id }}</td>
-                                            <td>{{ student.last_name }}</td>
-                                            <td>{{ student.first_name }}</td>
-                                            <td>
-                                                {% if student.data.grade %}
-                                                    {{ student.data.grade.name }}
-                                                {% else %}
-                                                    -
-                                                {% endif %}
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-info">{{ student.round2_score }}</span>
-                                            </td>
-                                            <td>
-                                                {% if "жагсаалтаас" in student.award_place %}
-                                                    <span class="badge bg-success">{{ student.award_place }}</span>
-                                                {% elif "босго" in student.award_place %}
-                                                    <span class="badge bg-primary">{{ student.award_place }}</span>
-                                                {% elif "гараар" in student.award_place %}
-                                                    <span class="badge bg-warning text-dark">{{ student.award_place }}</span>
-                                                {% elif "нэмэлтээр" in student.award_place %}
-                                                    <span class="badge bg-secondary">{{ student.award_place }}</span>
-                                                {% else %}
-                                                    <span class="badge bg-light text-dark">{{ student.award_place }}</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            {% endfor %}
-        {% endfor %}
+            </div>
+
+            <div class="d-flex gap-2 mt-3 mb-4">
+                <button type="submit" class="btn btn-danger"
+                        onclick="return confirm('Сонгосон оролцогчдыг хасах уу?')"
+                        id="removeBtn" disabled>
+                    <i class="fas fa-user-minus me-1"></i> Сонгосон оролцогчдыг хасах
+                </button>
+                <a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}" class="btn btn-secondary">
+                    Буцах
+                </a>
+            </div>
+        </form>
     {% else %}
         <div class="alert alert-warning">
-            {{ zone.name }}-аас одоогоор энэ олимпиадад эрх авсан хүн байхгүй байна.
+            {{ zone.name }}-аас одоогоор энэ олимпиадад бүртгэлтэй хүн байхгүй байна.
+        </div>
+        <div class="mt-3">
+            <a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}" class="btn btn-secondary">
+                Буцах
+            </a>
         </div>
     {% endif %}
-
-    <div class="mt-3">
-        <a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}" class="btn btn-secondary">
-            Буцах
-        </a>
-    </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const rowChecks = document.querySelectorAll('.row-check');
+    const removeBtn = document.getElementById('removeBtn');
+
+    function updateBtn() {
+        const checked = document.querySelectorAll('.row-check:checked').length;
+        removeBtn.disabled = checked === 0;
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            rowChecks.forEach(cb => cb.checked = this.checked);
+            updateBtn();
+        });
+    }
+
+    rowChecks.forEach(cb => {
+        cb.addEventListener('change', function() {
+            selectAll.checked = document.querySelectorAll('.row-check:checked').length === rowChecks.length;
+            updateBtn();
+        });
+    });
+});
+</script>
 {% endblock %}

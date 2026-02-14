@@ -13,63 +13,64 @@
         </ol>
     </nav>
 
-    <h2>Аймаг бүрээс топ сурагчдыг сонгох</h2>
+    <h2>Аймаг бүрээс сурагч сонгох</h2>
     <p class="text-muted">{{ olympiad.name }} - {{ olympiad.level.name }} | {{ zone.name }}</p>
 
     <div class="alert alert-info">
-        <strong>Анхаар:</strong>
-        <ul class="mb-0">
-            <li>Жагсаалт болон нэмэлт эрхээр эрх аваагүй эхний 3 сурагчийг аймаг бүрээс харуулна.</li>
-            <li>Хэрэв 3-5 байр ижил оноотой бол бүх тэдгээрийг харуулна.</li>
-            <li>Аймаг бүрээс дээд тал нь 3 сурагч сонгох боломжтой.</li>
-            <li>Өмнө гараар сонгосон сурагчид автоматаар тэмдэглэгдсэн байна.</li>
-        </ul>
+        <strong>Тайлбар:</strong>
+        <span class="badge bg-success">Ногоон</span> = бүртгэлтэй,
+        <span class="badge bg-light text-dark border">Цагаан</span> = эрх авсан (бүртгэлгүй),
+        <span class="badge bg-warning text-dark">Шар</span> = оноо тэнцсэн.
+        Бүртгэлгүй сурагчдыг чеклээд бүртгэнэ.
     </div>
 
     {% if provinces_data %}
         <form method="post" id="selectStudentsForm">
             {% csrf_token %}
 
-            {% for province_data in provinces_data %}
+            {% for pd in provinces_data %}
                 <div class="card mb-3">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            {{ province_data.province.name }}
-                            <small class="text-muted">({{ province_data.students|length }} сурагч)</small>
+                            {{ pd.province.name }}
+                            <small class="text-muted">({{ pd.qualified_count }} эрхтэй + {{ pd.next_count }} дараах)</small>
                         </h5>
-                        <small class="text-muted">3-р оноо: {{ province_data.third_score|floatformat:1 }}</small>
+                        {% if pd.cutoff_score %}
+                            <small class="text-muted">Босго: {{ pd.cutoff_score|floatformat:1 }}</small>
+                        {% endif %}
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead>
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light">
                                     <tr>
-                                        <th width="50">Сонгох</th>
-                                        <th>#</th>
-                                        <th>Овог нэр</th>
-                                        <th>Сургууль</th>
-                                        <th>Round 2 оноо</th>
-                                        <th>Статус</th>
+                                        <th style="width:3%"></th>
+                                        <th style="width:4%">#</th>
+                                        <th style="width:7%">ID</th>
+                                        <th style="width:15%">Овог</th>
+                                        <th style="width:15%">Нэр</th>
+                                        <th style="width:30%">Сургууль</th>
+                                        <th style="width:10%" class="text-center">2.1 оноо</th>
+                                        <th style="width:16%" class="text-center">Бүртгэл</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for student in province_data.students %}
-                                        <tr {% if student.is_manually_selected %}class="table-success"{% elif student.total == province_data.third_score %}class="table-warning"{% endif %}>
+                                    {% for student in pd.qualified %}
+                                        <tr {% if student.is_registered %}class="table-success"{% endif %}>
                                             <td>
-                                                <input type="checkbox"
-                                                       name="selected_users"
-                                                       value="{{ student.user.id }}"
-                                                       class="form-check-input student-checkbox"
-                                                       data-province-id="{{ province_data.province.id }}"
-                                                       {% if student.is_manually_selected %}checked{% endif %}>
-                                            </td>
-                                            <td>{{ forloop.counter }}</td>
-                                            <td>
-                                                {{ student.user.last_name }} {{ student.user.first_name }}
-                                                {% if student.is_manually_selected %}
-                                                    <span class="badge bg-success">&#10003;</span>
+                                                {% if student.is_registered %}
+                                                    <i class="fas fa-check-circle text-success"></i>
+                                                {% else %}
+                                                    <input type="checkbox"
+                                                           name="selected_users"
+                                                           value="{{ student.user.id }}"
+                                                           class="form-check-input">
                                                 {% endif %}
                                             </td>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>{{ student.user.id }}</td>
+                                            <td>{{ student.user.last_name }}</td>
+                                            <td>{{ student.user.first_name }}</td>
                                             <td>
                                                 {% if student.user.data.school %}
                                                     {{ student.user.data.school.name }}
@@ -77,17 +78,58 @@
                                                     -
                                                 {% endif %}
                                             </td>
-                                            <td>
+                                            <td class="text-center">
                                                 <span class="badge bg-info">{{ student.total|floatformat:1 }}</span>
-                                                {% if student.total == province_data.third_score and forloop.counter > 3 %}
-                                                    <span class="badge bg-warning text-dark" title="3-р сурагчтай ижил оноо">Ижил</span>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if student.is_registered %}
+                                                    <span class="badge bg-success">Бүртгэлтэй</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Бүртгэлгүй</span>
                                                 {% endif %}
                                             </td>
+                                        </tr>
+                                    {% endfor %}
+
+                                    {% if pd.qualified and pd.next_students %}
+                                        <tr class="table-secondary">
+                                            <td colspan="8" class="text-center fw-bold py-1">
+                                                <small>Дараагийн сурагчид</small>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+
+                                    {% for student in pd.next_students %}
+                                        <tr {% if student.is_registered %}class="table-success"{% endif %}>
                                             <td>
-                                                {% if student.is_manually_selected %}
-                                                    <span class="badge bg-success">Өмнө сонгосон</span>
+                                                {% if student.is_registered %}
+                                                    <i class="fas fa-check-circle text-success"></i>
                                                 {% else %}
-                                                    <span class="badge bg-secondary">Шинэ</span>
+                                                    <input type="checkbox"
+                                                           name="selected_users"
+                                                           value="{{ student.user.id }}"
+                                                           class="form-check-input">
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ forloop.counter }}</td>
+                                            <td>{{ student.user.id }}</td>
+                                            <td>{{ student.user.last_name }}</td>
+                                            <td>{{ student.user.first_name }}</td>
+                                            <td>
+                                                {% if student.user.data.school %}
+                                                    {{ student.user.data.school.name }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info">{{ student.total|floatformat:1 }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if student.is_registered %}
+                                                    <span class="badge bg-success">Бүртгэлтэй</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Бүртгэлгүй</span>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -95,77 +137,22 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="province-count-warning alert alert-danger d-none"
-                             data-province-id="{{ province_data.province.id }}">
-                            <strong>Анхаар:</strong> Энэ аймгаас 3-аас илүү сурагч сонгосон байна!
-                        </div>
                     </div>
                 </div>
             {% endfor %}
 
             <div class="d-flex gap-2 mb-4">
-                <button type="submit" class="btn btn-primary" id="submitBtn">Сонгосон сурагчдыг бүртгэх</button>
+                <button type="submit" class="btn btn-primary">Сонгосон сурагчдыг бүртгэх</button>
                 <a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}"
                    class="btn btn-secondary">Буцах</a>
             </div>
         </form>
     {% else %}
         <div class="alert alert-info">
-            Эрх аваагүй сурагч байхгүй байна.
+            2.1 даваанд оролцсон сурагч байхгүй байна.
         </div>
         <a href="{% url 'zone_olympiad_view' zone.id olympiad.id %}"
            class="btn btn-secondary">Буцах</a>
     {% endif %}
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('selectStudentsForm');
-    if (!form) return;
-
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-    const submitBtn = document.getElementById('submitBtn');
-
-    function validateProvinceCounts() {
-        const provinceCounts = {};
-
-        checkboxes.forEach(checkbox => {
-            if (checkbox.checked) {
-                const provinceId = checkbox.dataset.provinceId;
-                provinceCounts[provinceId] = (provinceCounts[provinceId] || 0) + 1;
-            }
-        });
-
-        let hasError = false;
-
-        document.querySelectorAll('.province-count-warning').forEach(warning => {
-            const provinceId = warning.dataset.provinceId;
-            const count = provinceCounts[provinceId] || 0;
-
-            if (count > 3) {
-                warning.classList.remove('d-none');
-                hasError = true;
-            } else {
-                warning.classList.add('d-none');
-            }
-        });
-
-        submitBtn.disabled = hasError;
-
-        return !hasError;
-    }
-
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', validateProvinceCounts);
-    });
-
-    form.addEventListener('submit', function(e) {
-        if (!validateProvinceCounts()) {
-            e.preventDefault();
-            alert('Аймаг бүрээс дээд тал нь 3 сурагч сонгоно уу!');
-            return false;
-        }
-    });
-});
-</script>
 {% endblock %}

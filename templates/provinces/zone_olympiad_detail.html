@@ -17,31 +17,18 @@
     <p class="text-muted">{{ zone.name }}</p>
 
     <div class="alert alert-info">
-        {% if is_teacher_olympiad %}
-            <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} багш (бүх бүсээс)
-            <br>
-            <strong>{{ zone.name }}-ын бүртгэлтэй:</strong>
-            <span class="badge bg-success">{{ zone_registered }}</span> /
-            <span class="badge bg-info">{{ total_teachers }}</span>
-            <small class="text-muted">(бүртгүүлсэн / нийт багш)</small>
-            <br>
-            <a href="{% url 'zone_view_participants' zone.id olympiad.id %}" class="btn btn-sm btn-outline-primary mt-2">
-                {{ zone.name }}-ын оролцогчдын жагсаалт харах
-            </a>
-        {% else %}
-            <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} сурагч (бүх бүсээс)
-            <br>
-            <strong>{{ zone.name }}-ын бүртгэлтэй:</strong>
-            <span class="badge bg-success">{{ zone_registered }}</span> /
-            <span class="badge bg-info">{{ round2_participants }}</span>
-            <small class="text-muted">(Round 3 шалгарсан / Round 2 оролцсон)</small>
-            <br>
-            <strong>Автомат бүртгэл:</strong> {{ auto_registered_count }} (Round 2-ийн жагсаалтаас)
-            <br>
-            <a href="{% url 'zone_view_participants' zone.id olympiad.id %}" class="btn btn-sm btn-outline-primary mt-2">
-                {{ zone.name }}-ын оролцогчдын жагсаалт харах
-            </a>
-        {% endif %}
+        <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} (бүх бүсээс)
+        <br>
+        <strong>{{ zone.name }}-ын бүртгэлтэй:</strong>
+        <span class="badge bg-success">{{ zone_registered }}</span> /
+        <span class="badge bg-info">{{ round2_participants }}</span>
+        <small class="text-muted">(бүртгэлтэй / 2.1 оролцсон)</small>
+        <br>
+        <strong>2.2 эрх авсан:</strong> {{ auto_registered_count }}
+        <br>
+        <a href="{% url 'zone_view_participants' zone.id olympiad.id %}" class="btn btn-sm btn-outline-primary mt-2">
+            {{ zone.name }}-ын оролцогчдын жагсаалт харах
+        </a>
     </div>
 
     <div class="row">
@@ -52,19 +39,17 @@
                     <h5 class="mb-0">1. Нэмэлт бүртгэл</h5>
                 </div>
                 <div class="card-body">
-                    {% if is_teacher_olympiad %}
-                        <p>ID-гаар багш нэмнэ.</p>
-                        <a href="{% url 'zone_add_students_by_id' zone.id olympiad.id %}"
-                           class="btn btn-primary btn-sm d-block">ID-гаар нэмэх</a>
-                    {% else %}
-                        <p>Онооны босгоор, аймгаас гараар эсвэл ID-гаар сурагч нэмнэ.</p>
-                        <a href="{% url 'zone_add_students_by_threshold' zone.id olympiad.id %}"
-                           class="btn btn-primary btn-sm d-block mb-2">Босгоор нэмэх</a>
-                        <a href="{% url 'zone_select_top_students' zone.id olympiad.id %}"
-                           class="btn btn-secondary btn-sm d-block mb-2">Гараар сонгох (аймаг бүрээс 3 хүртэл)</a>
-                        <a href="{% url 'zone_add_students_by_id' zone.id olympiad.id %}"
-                           class="btn btn-outline-primary btn-sm d-block">ID-гаар нэмэх</a>
-                    {% endif %}
+                    <form method="post" action="{% url 'zone_add_all_qualified' zone.id olympiad.id %}" class="mb-2">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-sm d-block w-100"
+                                onclick="return confirm('2.2 эрх авсан бүгдийг нэмэх үү?')">
+                            <i class="fas fa-users me-1"></i> Эрх авсан бүгдийг нэмэх
+                        </button>
+                    </form>
+                    <a href="{% url 'zone_select_top_students' zone.id olympiad.id %}"
+                       class="btn btn-secondary btn-sm d-block mb-2">Гараар сонгох</a>
+                    <a href="{% url 'zone_add_students_by_id' zone.id olympiad.id %}"
+                       class="btn btn-outline-primary btn-sm d-block">ID-гаар нэмэх</a>
                 </div>
             </div>
         </div>
@@ -94,17 +79,10 @@
                     <h5 class="mb-0">3. Үр дүн харах</h5>
                 </div>
                 <div class="card-body">
-                    {% if is_teacher_olympiad %}
-                        <p>Оруулсан дүнгийн хүснэгтийг харна.</p>
-                        <a href="{% url 'zone_view_results' zone.id olympiad.id %}"
-                           class="btn btn-info btn-sm d-block">Үр дүн харах</a>
-                    {% else %}
-                        <p>2-р болон 3-р давааны дүнгийн хүснэгтийг харна.</p>
-                        <a href="{% url 'zone_view_results' zone.id olympiad.id %}"
-                           class="btn btn-info btn-sm d-block mb-2">3-р давааны дүн харах</a>
-                        <a href="{% url 'zone_view_round2_results' zone.id olympiad.id %}"
-                           class="btn btn-outline-info btn-sm d-block">2-р давааны дүн харах</a>
-                    {% endif %}
+                    <a href="{% url 'zone_view_results' zone.id olympiad.id %}"
+                       class="btn btn-info btn-sm d-block mb-2">2.2 дүн харах</a>
+                    <a href="{% url 'zone_view_round2_results' zone.id olympiad.id %}"
+                       class="btn btn-outline-info btn-sm d-block">2.1 дүн харах</a>
                 </div>
             </div>
         </div>
