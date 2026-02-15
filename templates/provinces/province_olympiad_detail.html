@@ -18,7 +18,6 @@
 
     <div class="alert alert-info">
         {% if is_teacher_olympiad %}
-            {# Багш нарын олимпиад (S, T) #}
             <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} багш (бүх аймгаас)
             <br>
             <strong>{{ province.name }}-ын бүртгэлтэй:</strong>
@@ -30,7 +29,6 @@
                 {{ province.name }}-ын оролцогчдын жагсаалт харах
             </a>
         {% else %}
-            {# Сурагчдын олимпиад #}
             <strong>Нийт бүртгэлтэй:</strong> {{ total_registered }} сурагч (бүх аймгаас)
             <br>
             <strong>{{ province.name }}-ын бүртгэлтэй:</strong>
@@ -46,6 +44,50 @@
         {% endif %}
     </div>
 
+    <!-- Заавар -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-25" data-bs-toggle="collapse" data-bs-target="#guideCollapse" style="cursor:pointer">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Бүртгэгч, зохион байгуулагчийн заавар
+                <i class="fas fa-chevron-down float-end mt-1"></i>
+            </h5>
+        </div>
+        <div id="guideCollapse" class="collapse show">
+            <div class="card-body">
+                <h6 class="fw-bold">1. Бүртгэл (олимпиадаас өмнө)</h6>
+                {% if is_teacher_olympiad %}
+                    <ol>
+                        <li>Багш нарыг хэрэглэгчийн <strong>"ID-гаар нэмэх"</strong> товчоор бүртгэнэ.</li>
+                        <li><strong>"Оролцогчдын жагсаалт"</strong>-аас бүртгэлтэй багш нарыг шалгаж, шаардлагатай бол хасна.</li>
+                    </ol>
+                {% else %}
+                    <ol>
+                        <li><strong>"Босгоор нэмэх"</strong> — 1-р давааны онооны босго тогтоож, босгоос дээш оноотой бүх сурагчдыг автоматаар бүртгэнэ.</li>
+                        <li><strong>"Гараар сонгох"</strong> — сургууль тус бүрийн топ сурагчдаас гараар сонгож бүртгэнэ.</li>
+                        <li>Тодорхой хүнийг хэрэглэгчийн ID-аар нэмэх бол <strong>"ID-гаар нэмэх"</strong>-ийг ашиглана.</li>
+                        <li><strong>"Оролцогчдын жагсаалт"</strong>-аас бүртгэлтэй сурагчдыг шалгаж, шаардлагатай бол хасна.</li>
+                    </ol>
+                {% endif %}
+
+                <h6 class="fw-bold mt-3">2. Дүн оруулах (олимпиадын дараа)</h6>
+                <ol>
+                    <li><strong>"Загвар татах"</strong> товч дарж бүртгэлтэй оролцогчдын нэрс бүхий Excel файл татна.</li>
+                    <li>Excel файлын бодлого тус бүрийн баганад оролцогч бүрийн <strong>оноог</strong> бичнэ.</li>
+                    <li><strong>"Файл оруулах"</strong> товч дарж бөглөсөн Excel файлыг системд оруулна.</li>
+                </ol>
+
+                <h6 class="fw-bold mt-3">3. Үр дүн</h6>
+                <ul>
+                    {% if is_teacher_olympiad %}
+                        <li><strong>"Үр дүн харах"</strong> — тухайн олимпиадын оруулсан дүнг харна.</li>
+                    {% else %}
+                        <li><strong>"2-р давааны дүн"</strong> — тухайн олимпиадын оруулсан дүнг харна.</li>
+                        <li><strong>"1-р давааны дүн"</strong> — өмнөх давааны дүнг харна.</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Card 1: Нэмэлт бүртгэл -->
         <div class="col-md-4 mb-3">
@@ -55,15 +97,13 @@
                 </div>
                 <div class="card-body">
                     {% if is_teacher_olympiad %}
-                        <p>ID-гаар багш нэмнэ.</p>
                         <a href="{% url 'add_students_by_id' province.id olympiad.id %}"
                            class="btn btn-primary btn-sm d-block">ID-гаар нэмэх</a>
                     {% else %}
-                        <p>Онооны босгоор, сургуулиас гараар эсвэл ID-гаар сурагч нэмнэ.</p>
                         <a href="{% url 'add_students_by_threshold' province.id olympiad.id %}"
                            class="btn btn-primary btn-sm d-block mb-2">Босгоор нэмэх</a>
                         <a href="{% url 'select_top_students_by_school' province.id olympiad.id %}"
-                           class="btn btn-secondary btn-sm d-block mb-2">Гараар сонгох (3 хүртэл)</a>
+                           class="btn btn-secondary btn-sm d-block mb-2">Гараар сонгох</a>
                         <a href="{% url 'add_students_by_id' province.id olympiad.id %}"
                            class="btn btn-outline-primary btn-sm d-block">ID-гаар нэмэх</a>
                     {% endif %}
@@ -97,11 +137,9 @@
                 </div>
                 <div class="card-body">
                     {% if is_teacher_olympiad %}
-                        <p>Оруулсан дүнгийн хүснэгтийг харна.</p>
                         <a href="{% url 'view_province_olympiad_results' province.id olympiad.id %}"
                            class="btn btn-info btn-sm d-block">Үр дүн харах</a>
                     {% else %}
-                        <p>1-р болон 2-р давааны дүнгийн хүснэгтийг харна.</p>
                         <a href="{% url 'view_province_olympiad_results' province.id olympiad.id %}"
                            class="btn btn-info btn-sm d-block mb-2">2-р давааны дүн харах</a>
                         <a href="{% url 'view_round1_province_results' province.id olympiad.id %}"

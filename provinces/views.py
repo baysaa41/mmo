@@ -746,12 +746,14 @@ def import_province_answer_sheet(request, province_id, olympiad_id):
 
                                     # Оноо бодож гаргах
                                     score = 0
-                                    if hasattr(problem, 'numerical_answer') and problem.numerical_answer:
-                                        try:
-                                            if int(answer_value) == problem.numerical_answer:
-                                                score = problem.point
-                                        except (ValueError, TypeError):
-                                            pass
+                                    try:
+                                        ans_int = int(answer_value)
+                                        if problem.numerical_answer is not None and ans_int == problem.numerical_answer:
+                                            score = problem.max_score
+                                        elif problem.numerical_answer2 is not None and ans_int == problem.numerical_answer2:
+                                            score = problem.max_score
+                                    except (ValueError, TypeError):
+                                        pass
 
                                     # Result үүсгэх/шинэчлэх
                                     result, created = Result.objects.update_or_create(
@@ -1733,20 +1735,16 @@ def zone_import_answer_sheet(request, zone_id, olympiad_id):
                                 if col_name in row and pd.notna(row[col_name]):
                                     answer_value = row[col_name]
 
-                                    score = 0
-                                    if hasattr(problem, 'numerical_answer') and problem.numerical_answer:
-                                        try:
-                                            if int(answer_value) == problem.numerical_answer:
-                                                score = problem.point
-                                        except (ValueError, TypeError):
-                                            pass
+                                    try:
+                                        score = float(answer_value)
+                                    except (ValueError, TypeError):
+                                        score = 0
 
                                     result, created = Result.objects.update_or_create(
                                         contestant=user,
                                         olympiad=olympiad,
                                         problem=problem,
                                         defaults={
-                                            'answer': int(answer_value) if answer_value else 0,
                                             'score': score,
                                             'state': 2
                                         }
@@ -1926,10 +1924,7 @@ def zone_view_round2_results(request, zone_id, olympiad_id):
         messages.warning(request, 'Round 2 олимпиад олдсонгүй.')
         return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
 
-    if zone.id == 5:
-        zone_provinces = Province.objects.all().order_by('name')
-    else:
-        zone_provinces = Province.objects.filter(zone=zone).order_by('name')
+    zone_provinces = Province.objects.filter(zone=zone).order_by('name')
 
     # Аймаг сонгох (GET parameter)
     selected_province_id = request.GET.get('province')
@@ -1949,7 +1944,8 @@ def zone_view_round2_results(request, zone_id, olympiad_id):
     scoresheets = ScoreSheet.objects.filter(
         olympiad__in=round2_olympiads,
         user__data__province_id__in=filter_province_ids,
-        is_official=True
+        is_official=True,
+        total__gt=0,
     ).select_related('user', 'user__data__school', 'user__data__province', 'olympiad').order_by('-total', 'user__last_name')
 
     # 2.2 эрх авсан хэрэглэгчдийн ID-г нэг query-гаар авах
@@ -1965,7 +1961,7 @@ def zone_view_round2_results(request, zone_id, olympiad_id):
             'user': scoresheet.user,
             'school': scoresheet.user.data.school if hasattr(scoresheet.user, 'data') else None,
             'province': scoresheet.user.data.province if hasattr(scoresheet.user, 'data') else None,
-            'total': scoresheet.total,
+            'total': scoresheet.total or 0,
             'olympiad': scoresheet.olympiad,
             'is_qualified': scoresheet.user_id in qualified_user_ids,
         })
