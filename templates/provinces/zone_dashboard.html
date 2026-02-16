@@ -58,6 +58,33 @@
         </div>
     {% endif %}
 
+    <!-- Заавар -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-25" data-bs-toggle="collapse" data-bs-target="#guideCollapse" style="cursor:pointer">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Заавар
+                <i class="fas fa-chevron-down float-end mt-1"></i>
+            </h5>
+        </div>
+        <div id="guideCollapse" class="collapse show">
+            <div class="card-body">
+                <h6 class="fw-bold">Ерөнхий</h6>
+                <ul>
+                    <li><strong>"Олимпиад сонгох"</strong> — бүсийн олимпиадад оролцох олимпиадуудыг сонгоно.</li>
+                    <li>Доорх хүснэгтэд бүртгүүлсэн болон 2-р даваанд оролцсон тоог харна.</li>
+                </ul>
+
+                <h6 class="fw-bold mt-3">Олимпиад удирдах</h6>
+                <ol>
+                    <li><strong>"Удирдах"</strong> товч дарж олимпиадын дэлгэрэнгүй хуудас руу орно.</li>
+                    <li><strong>"Эрх авсан бүгдийг нэмэх"</strong> — 2-р давааны дүнгээс эрх авсан оролцогчдыг автоматаар бүртгэнэ.</li>
+                    <li><strong>"Гараар сонгох"</strong> — аймаг тус бүрийн топ оролцогчдоос нэмэлтээр сонгоно.</li>
+                    <li><strong>"ID-гаар нэмэх"</strong> — тодорхой хүнийг ID-аар нэмнэ.</li>
+                    <li>Дүн оруулах: Excel загвар татаж, оноо бичээд системд хуулна.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
     {% if zone_provinces %}
         <div class="alert alert-light">
             <strong>Бүсийн аймгууд:</strong>
@@ -81,7 +108,7 @@
                     <tr>
                         <th style="width: 40%;">Олимпиад - Ангилал</th>
                         <th style="width: 25%;">Бүсийн олимпиадад бүртгүүлсэн</th>
-                        <th style="width: 25%;">Бүсийн нийт багш нар</th>
+                        <th style="width: 25%;">2-р даваанд оролцсон</th>
                         <th style="width: 10%;">Үйлдэл</th>
                     </tr>
                 </thead>
@@ -120,7 +147,7 @@
                     <tr>
                         <th style="width: 40%;">Олимпиад - Ангилал</th>
                         <th style="width: 25%;">Бүсийн олимпиадад оролцох</th>
-                        <th style="width: 25%;">2-р давааны олимпиадад оролцсон</th>
+                        <th style="width: 25%;">2-р даваанд оролцсон</th>
                         <th style="width: 10%;">Үйлдэл</th>
                     </tr>
                 </thead>

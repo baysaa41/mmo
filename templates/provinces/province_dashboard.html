@@ -22,7 +22,7 @@
         </div>
         <div>
             <a href="{% url 'all_schools_registry' %}?p={{ province.id }}" class="btn btn-outline-primary me-2">
-                <i class="fas fa-list me-2"></i>Сургуулын бүртгэл
+                <i class="fas fa-list me-2"></i>Сургуулийн бүртгэл
             </a>
             <a href="{% url 'manage_all_schools' %}?p={{ province.id }}" class="btn btn-outline-secondary">
                 <i class="fas fa-school me-2"></i>Сургуулиуд удирдах
@@ -60,6 +60,42 @@
             </div>
         </div>
     {% endif %}
+
+    <!-- Заавар -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-25" data-bs-toggle="collapse" data-bs-target="#guideCollapse" style="cursor:pointer">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Заавар
+                <i class="fas fa-chevron-down float-end mt-1"></i>
+            </h5>
+        </div>
+        <div id="guideCollapse" class="collapse show">
+            <div class="card-body">
+                <h6 class="fw-bold">Ерөнхий</h6>
+                <ul>
+                    <li><strong>"Сургуулийн бүртгэл"</strong> — аймгийн сургуулиудын менежер, бүртгэгч багшийн мэдээллийг харах, засах.</li>
+                    <li><strong>"Сургуулиуд удирдах"</strong> — сургуулиудын удирдлагын самбар руу орох.</li>
+                    <li><strong>"Файлууд"</strong> — олимпиадын заавар, хуваарь зэрэг баримт бичгүүдийг татах.</li>
+                </ul>
+
+                <h6 class="fw-bold mt-3">Багш нарын олимпиад</h6>
+                <ol>
+                    <li><strong>"Удирдах"</strong> товч дарж олимпиадын дэлгэрэнгүй хуудас руу орно.</li>
+                    <li><strong>"Жагсаалтаас сонгох"</strong> — тухайн аймгийн багш нарыг жагсаалтаас сонгож бүртгэнэ.</li>
+                    <li><strong>"ID-гаар нэмэх"</strong> — тодорхой хүнийг ID-аар нэмнэ.</li>
+                    <li>Дүн оруулах: Excel загвар татаж, оноо бичээд системд хуулна.</li>
+                </ol>
+
+                <h6 class="fw-bold mt-3">Сурагчдын олимпиад</h6>
+                <ol>
+                    <li><strong>"Удирдах"</strong> товч дарж олимпиадын дэлгэрэнгүй хуудас руу орно.</li>
+                    <li><strong>"Эрх авсан сурагчдыг нэмэх"</strong> — 1-р давааны дүнгээс эрх авсан бүх сурагчдыг автоматаар бүртгэнэ.</li>
+                    <li><strong>"Босгоор нэмэх"</strong> — онооны босго тогтоож автоматаар бүртгэнэ.</li>
+                    <li><strong>"Гараар сонгох"</strong> — сургууль тус бүрээс гараар сонгоно.</li>
+                    <li>Дүн оруулах: Excel загвар татаж, оноо бичээд системд хуулна.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
 
     <hr class="my-4">
 

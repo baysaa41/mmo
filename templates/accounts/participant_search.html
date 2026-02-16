@@ -80,17 +80,18 @@
         <table class="table table-hover table-sm">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>ID</th>
-                    <th>Овог</th>
-                    <th>Нэр</th>
-                    <th>Аймаг</th>
+                    <th width="30">#</th>
+                    <th width="50">ID</th>
+                    <th width="120">Овог</th>
+                    <th width="120">Нэр</th>
+                    <th width="120">Аймаг</th>
                     <th>Сургууль</th>
-                    <th>Анги</th>
+                    <th width="100">Анги</th>
                     {% if request.user.is_staff %}
-                    <th><span class="text-danger" title="Зөвхөн админ харна">Регистр *</span></th>
-                    <th><span class="text-danger" title="Зөвхөн админ харна">Утас *</span></th>
+                    <th width="100"><span class="text-danger" title="Зөвхөн админ харна">Регистр *</span></th>
+                    <th width="90"><span class="text-danger" title="Зөвхөн админ харна">Утас *</span></th>
                     <th><span class="text-danger" title="Зөвхөн админ харна">Имэйл *</span></th>
+                    <th width="90">Үйлдэл</th>
                     {% endif %}
                 </tr>
             </thead>
@@ -108,11 +109,15 @@
                     <td>{% if user.data and user.data.reg_num %}<a href="?q=Регистр={{ user.data.reg_num }}">{{ user.data.reg_num }}</a>{% endif %}</td>
                     <td>{% if user.data and user.data.mobile %}<a href="?q=Утас={{ user.data.mobile }}">{{ user.data.mobile }}</a>{% endif %}</td>
                     <td>{% if user.email %}<a href="?q=Имэйл={{ user.email }}">{{ user.email }}</a>{% endif %}</td>
+                    <td>
+                        <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-sm btn-outline-secondary" title="Засах"><i class="fas fa-edit"></i></a>
+                        <a href="{% url 'change_student_password' user.id %}" class="btn btn-sm btn-outline-secondary" title="Нууц үг солих"><i class="fas fa-key"></i></a>
+                    </td>
                     {% endif %}
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="{% if request.user.is_staff %}10{% else %}7{% endif %}" class="text-center text-muted py-4">
+                    <td colspan="{% if request.user.is_staff %}11{% else %}7{% endif %}" class="text-center text-muted py-4">
                         {% if search_query or selected_province or selected_zone or selected_school %}
                         Хайлт олдсонгүй
                         {% else %}

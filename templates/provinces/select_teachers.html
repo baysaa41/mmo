@@ -30,12 +30,6 @@
                 <button type="button" class="btn btn-warning btn-sm" id="selectPreviousYear">
                     Өмнөх жил оролцсон бүгдийг сонгох
                 </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="selectAll">
-                    Бүгдийг сонгох
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="deselectAll">
-                    Бүгдийг болих
-                </button>
                 <a href="{% url 'merge_teacher_list' province.id olympiad.id %}"
                    class="btn btn-outline-danger btn-sm ms-auto">Давхар бүртгэл нэгтгэх</a>
             </div>
@@ -44,7 +38,7 @@
                 <table class="table table-sm table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th width="50">Сонгох</th>
+                            <th width="50"><input type="checkbox" class="form-check-input" id="selectAll"></th>
                             <th>#</th>
                             <th>ID</th>
                             <th>Овог</th>
@@ -146,17 +140,17 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCount();
     });
 
-    // Бүгдийг сонгох
-    document.getElementById('selectAll').addEventListener('click', function() {
-        checkboxes.forEach(cb => { cb.checked = true; });
+    // Бүгдийг сонгох / болих
+    const selectAll = document.getElementById('selectAll');
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => { cb.checked = selectAll.checked; });
         updateCount();
     });
 
-    // Бүгдийг болих
-    document.getElementById('deselectAll').addEventListener('click', function() {
-        checkboxes.forEach(cb => { cb.checked = false; });
-        updateCount();
-    });
+    // Нэг checkbox өөрчлөгдөхөд selectAll-г sync хийх
+    checkboxes.forEach(cb => cb.addEventListener('change', function() {
+        selectAll.checked = document.querySelectorAll('.teacher-checkbox:checked').length === checkboxes.length;
+    }));
 
     // Submit confirm
     form.addEventListener('submit', function(e) {

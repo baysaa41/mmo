@@ -9,9 +9,11 @@
         {% endif %}
     </div>
 
+    {% if user.is_staff or managed_province %}
     <div class="mb-3">
-        <a href="{% url 'all_schools_registry' %}" class="btn btn-outline-primary">📋 Сургуулийн бүртгэл</a>
+        <a href="{% url 'all_schools_registry' %}{% if managed_province %}?p={{ managed_province.id }}{% endif %}" class="btn btn-outline-primary">📋 Сургуулийн бүртгэл</a>
     </div>
+    {% endif %}
 
     {% if my_schools %}
         <p class="text-muted">Та доорх сургуулиудын мэдээллийг удирдах боломжтой. Сургуулийн нэр дээр дарж удирдлагын самбар луу орно уу.</p>
@@ -50,7 +52,6 @@
     {% else %}
         <div class="alert alert-info">
             <h5>Таны удирдлагад бүртгэлтэй сургууль одоогоор байхгүй байна.</h5>
-            <p class="mb-0">Та <a href="{% url 'all_schools_registry' %}" class="alert-link">Сургуулийн бүртгэл</a> хуудаснаас бусад сургуулиудыг үзэж болно.</p>
         </div>
     {% endif %}
 </div>

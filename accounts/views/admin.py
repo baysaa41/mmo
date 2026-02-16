@@ -532,6 +532,7 @@ def merge_request_detail(request, pk):
     """
     from ..models import UserMergeRequest
     from olympiad.models import ScoreSheet, Result
+    from schools.models import School
 
     merge_request = get_object_or_404(
         UserMergeRequest.objects.select_related(
@@ -543,30 +544,33 @@ def merge_request_detail(request, pk):
     )
 
     # Get users involved
-    users = merge_request.get_users().select_related('data__province', 'data__school', 'data__grade')
+    users = merge_request.get_users().select_related(
+        'data__province', 'data__school', 'data__grade', 'data__level')
 
     # Check for missing users (deleted after merge)
     existing_user_ids = set(users.values_list('id', flat=True))
     requested_user_ids = set(merge_request.user_ids)
     missing_user_ids = requested_user_ids - existing_user_ids
 
-    if missing_user_ids:
+    if missing_user_ids and merge_request.status == 'pending':
         messages.warning(
             request,
             f"Анхаар: {len(missing_user_ids)} хэрэглэгч олдсонгүй (ID: {', '.join(map(str, missing_user_ids))}). "
             f"Магадгүй өмнө нь нэгтгэгдсэн байж болзошгүй."
         )
 
+    # Sort users by last login
+    users_list = list(users)
+    users_list.sort(
+        key=lambda u: u.last_login or timezone.make_aware(datetime.datetime.min),
+        reverse=True
+    )
+
     # Get olympiad participation for each user
     user_olympiads = {}
-    for user in users:
-        # Get all scoresheets
+    for user in users_list:
         scoresheets = ScoreSheet.objects.filter(user=user).select_related('olympiad')
-
-        # Get all results
         results = Result.objects.filter(contestant=user).select_related('olympiad', 'problem')
-
-        # Combine olympiad IDs
         olympiad_ids = set()
         olympiad_ids.update(scoresheets.values_list('olympiad_id', flat=True))
         olympiad_ids.update(results.values_list('olympiad_id', flat=True))
@@ -578,27 +582,155 @@ def merge_request_detail(request, pk):
             'results': results,
         }
 
-    # Detect conflicts if not already done
-    if not merge_request.conflicts_data:
-        merge_request.detect_conflicts()
-        merge_request.save()
+    # Extract saved field_selections from conflicts_data (sent by school/province merge request)
+    saved_field_selections = {}
+    if isinstance(merge_request.conflicts_data, dict):
+        saved_field_selections = merge_request.conflicts_data.get('field_selections', {})
 
     # Attach confirmation data to user objects for easier template access
-    users_list = []
-    for user in users:
+    for user in users_list:
         user_id_str = str(user.id)
         user.confirmation = merge_request.confirmations.get(user_id_str, {
             'status': 'unknown',
             'confirmed_at': None,
             'rejected_at': None,
         })
-        users_list.append(user)
+
+    # Determine primary user for field comparison
+    primary_user = merge_request.primary_user
+    primary_id = primary_user.id if primary_user else (users_list[0].id if users_list else None)
+
+    # Build field comparison data (like school merge step 2)
+    compare_fields = []
+    field_defs = [
+        ('last_name', 'Овог', 'user'),
+        ('first_name', 'Нэр', 'user'),
+        ('email', 'Имэйл', 'user'),
+        ('reg_num', 'РД', 'meta'),
+        ('school', 'Сургууль', 'meta_fk'),
+        ('province', 'Аймаг', 'meta_fk'),
+        ('grade', 'Анги', 'meta_fk'),
+        ('level', 'Ангилал', 'meta_fk'),
+        ('mobile', 'Утас', 'meta'),
+        ('gender', 'Хүйс', 'meta'),
+    ]
+
+    for field_name, label, field_type in field_defs:
+        values = []
+        for u in users_list:
+            if field_type == 'user':
+                val = getattr(u, field_name, '') or ''
+                values.append({'user_id': u.id, 'value': str(val), 'raw_value': str(val)})
+            elif field_type == 'meta':
+                meta = getattr(u, 'data', None)
+                val = getattr(meta, field_name, '') if meta else ''
+                val = val if val is not None else ''
+                values.append({'user_id': u.id, 'value': str(val), 'raw_value': str(val)})
+            elif field_type == 'meta_fk':
+                meta = getattr(u, 'data', None)
+                obj = getattr(meta, field_name, None) if meta else None
+                display = str(obj) if obj else ''
+                raw = str(obj.id) if obj else ''
+                values.append({'user_id': u.id, 'value': display, 'raw_value': raw})
+
+        non_empty = [v['value'] for v in values if v['value']]
+        unique_values = set(non_empty)
+        is_different = len(unique_values) > 1
+
+        # Use saved field selection if available (from requester's choices)
+        saved_val = saved_field_selections.get(field_name)
+        if saved_val:
+            auto_selected = str(saved_val)
+            # Find display value
+            matched = next((v for v in values if v['raw_value'] == auto_selected), None)
+            auto_selected_display = matched['value'] if matched else auto_selected
+        else:
+            primary_val = next((v for v in values if v['user_id'] == primary_id), None)
+            if primary_val and primary_val['raw_value']:
+                auto_selected = primary_val['raw_value']
+                auto_selected_display = primary_val['value']
+            else:
+                first_non_empty = next((v for v in values if v['raw_value']), None)
+                auto_selected = first_non_empty['raw_value'] if first_non_empty else ''
+                auto_selected_display = first_non_empty['value'] if first_non_empty else ''
+
+        compare_fields.append({
+            'name': field_name,
+            'label': label,
+            'field_type': field_type,
+            'values': values,
+            'is_different': is_different,
+            'all_empty': len(non_empty) == 0,
+            'auto_selected': auto_selected,
+            'auto_selected_display': auto_selected_display,
+        })
+
+    # Build result conflicts with selectable options
+    result_conflicts = []
+    if primary_id:
+        duplicate_users_for_conflicts = [u for u in users_list if u.id != primary_id]
+        for dup_user in duplicate_users_for_conflicts:
+            dup_results = Result.objects.filter(contestant=dup_user).select_related('olympiad', 'problem')
+            for dup_result in dup_results:
+                primary_result = Result.objects.filter(
+                    contestant_id=primary_id,
+                    olympiad=dup_result.olympiad,
+                    problem=dup_result.problem
+                ).first()
+                if primary_result and (primary_result.answer != dup_result.answer or primary_result.score != dup_result.score):
+                    conflict_key = f"conflict_{dup_result.olympiad.id}_{dup_result.problem.id}"
+                    result_conflicts.append({
+                        'key': conflict_key,
+                        'dup_user_id': dup_user.id,
+                        'dup_user_name': f"{dup_user.last_name} {dup_user.first_name}",
+                        'olympiad_id': dup_result.olympiad.id,
+                        'olympiad_name': dup_result.olympiad.name,
+                        'problem_id': dup_result.problem.id,
+                        'problem_order': dup_result.problem.order,
+                        'primary_score': primary_result.score,
+                        'dup_score': dup_result.score,
+                        'primary_answer': primary_result.answer,
+                        'dup_answer': dup_result.answer,
+                        'primary_result_id': primary_result.id,
+                        'dup_result_id': dup_result.id,
+                    })
+
+    # Get all schools for dropdown
+    all_schools = School.objects.all().order_by('name')
+
+    # Build readable display of requester's selections
+    saved_selections_display = []
+    if saved_field_selections:
+        field_labels = {
+            'last_name': 'Овог', 'first_name': 'Нэр', 'email': 'Имэйл',
+            'reg_num': 'РД', 'school': 'Сургууль', 'province': 'Аймаг',
+            'grade': 'Анги', 'level': 'Ангилал', 'mobile': 'Утас', 'gender': 'Хүйс',
+        }
+        from ..models import Province, Grade, Level
+        fk_fields = {'school': School, 'province': Province, 'grade': Grade, 'level': Level}
+        for fn, val in saved_field_selections.items():
+            label = field_labels.get(fn, fn)
+            if fn in fk_fields and val:
+                try:
+                    obj = fk_fields[fn].objects.get(id=int(val))
+                    display_val = str(obj)
+                except (fk_fields[fn].DoesNotExist, ValueError):
+                    display_val = val
+            else:
+                display_val = val
+            saved_selections_display.append({'label': label, 'value': display_val})
 
     context = {
         'merge_request': merge_request,
         'users': users_list,
         'user_olympiads': user_olympiads,
         'conflicts': merge_request.conflicts_data or [],
+        'compare_fields': compare_fields,
+        'result_conflicts': result_conflicts,
+        'primary_id': primary_id,
+        'all_schools': all_schools,
+        'saved_field_selections': saved_field_selections,
+        'saved_selections_display': saved_selections_display,
     }
 
     return render(request, 'accounts/merge_request_detail.html', context)
@@ -609,7 +741,7 @@ def merge_request_approve(request, pk):
     """
     Нэгтгэх хүсэлтийг баталгаажуулж, автомат нэгтгэх
     """
-    from ..models import UserMergeRequest
+    from ..models import UserMergeRequest, UserMeta
     from django.contrib.auth.models import User
 
     merge_request = get_object_or_404(UserMergeRequest, pk=pk)
@@ -645,27 +777,29 @@ def merge_request_approve(request, pk):
                 messages.error(request, "Буруу үндсэн хэрэглэгч сонгосон байна.")
                 return redirect('merge_request_detail', pk=pk)
 
-        # Check for conflicts one more time
-        conflicts = merge_request.detect_conflicts()
+        # Collect field selections from form
+        all_field_names = ['last_name', 'first_name', 'email', 'reg_num', 'school',
+                           'province', 'grade', 'level', 'mobile', 'gender']
+        field_selections = {}
+        for fn in all_field_names:
+            val = request.POST.get(f'field_{fn}', '').strip()
+            if val:
+                field_selections[fn] = val
 
-        if conflicts:
-            merge_request.status = UserMergeRequest.Status.REJECTED
-            merge_request.reviewed_by = request.user
-            merge_request.reviewed_at = timezone.now()
-            merge_request.review_notes = f"Дүнгийн зөрчилтэй байгаа тул татгалзсан. {review_notes}"
-            merge_request.save()
-
-            messages.error(
-                request,
-                f"Нэгтгэх боломжгүй! {len(conflicts)} зөрчил илэрлээ. "
-                f"Эхлээд мэдээллийн сангаас зөрчлийг засна уу."
-            )
-            return redirect('merge_request_detail', pk=pk)
+        # Collect conflict resolutions
+        conflict_resolutions = {}
+        for key, val in request.POST.items():
+            if key.startswith('conflict_'):
+                conflict_resolutions[key] = val
 
         # Proceed with merge
         try:
             with transaction.atomic():
-                success = _perform_merge(merge_request)
+                success = _perform_merge(
+                    merge_request,
+                    field_selections=field_selections,
+                    conflict_resolutions=conflict_resolutions,
+                )
 
                 if success:
                     merge_request.status = UserMergeRequest.Status.COMPLETED
@@ -721,14 +855,19 @@ def merge_request_reject(request, pk):
     return redirect('merge_request_detail', pk=pk)
 
 
-def _perform_merge(merge_request):
+def _perform_merge(merge_request, field_selections=None, conflict_resolutions=None):
     """
-    Нэгтгэх үйлдлийг гүйцэтгэх (automerge_users.py-н логикийг ашиглана)
+    Нэгтгэх үйлдлийг гүйцэтгэх.
+    field_selections: dict of field_name -> value (админ сонгосон утгууд)
+    conflict_resolutions: dict of conflict_key -> 'primary' or 'dup' (дүнгийн зөрчил шийдвэр)
     """
     from olympiad.models import Result, Award, Comment, ScoreSheet
     from schools.models import School
     from ..models import UserMeta
     from django.contrib.auth.models import User
+
+    field_selections = field_selections or {}
+    conflict_resolutions = conflict_resolutions or {}
 
     users = list(merge_request.get_users())
 
@@ -749,56 +888,107 @@ def _perform_merge(merge_request):
     # Ensure primary user has UserMeta
     primary_meta, _ = UserMeta.objects.get_or_create(user=primary_user)
 
-    # Collect best data from all users
-    best_data = {'user': {}, 'meta': {}}
-    all_users_for_merge = [primary_user] + duplicate_users
+    if field_selections:
+        # Apply admin-selected field values
+        user_fields = ['last_name', 'first_name', 'email']
+        for field in user_fields:
+            value = field_selections.get(field, '')
+            if value:
+                setattr(primary_user, field, value)
+        primary_user.save()
 
-    cyrillic_pattern = re.compile(r'[а-яА-ЯөӨүҮ]')
-    def is_cyrillic(s):
-        return s and bool(cyrillic_pattern.search(s))
+        meta_fields = ['reg_num', 'mobile', 'gender']
+        meta_fk_fields = ['school', 'province', 'grade', 'level']
 
-    for user in all_users_for_merge:
-        # Prefer Cyrillic names
-        current_best_fn = best_data['user'].get('first_name')
-        if user.first_name and (not current_best_fn or
-            (is_cyrillic(user.first_name) and not is_cyrillic(current_best_fn))):
-            best_data['user']['first_name'] = user.first_name
+        for field in meta_fields:
+            value = field_selections.get(field, '')
+            if value:
+                if field == 'mobile':
+                    try:
+                        setattr(primary_meta, field, int(value))
+                    except ValueError:
+                        pass
+                else:
+                    setattr(primary_meta, field, value)
 
-        current_best_ln = best_data['user'].get('last_name')
-        if user.last_name and (not current_best_ln or
-            (is_cyrillic(user.last_name) and not is_cyrillic(current_best_ln))):
-            best_data['user']['last_name'] = user.last_name
+        for field in meta_fk_fields:
+            value = field_selections.get(field, '')
+            if value:
+                try:
+                    setattr(primary_meta, f'{field}_id', int(value))
+                except ValueError:
+                    pass
 
-        if not best_data['user'].get('email') and user.email:
-            best_data['user']['email'] = user.email
+        primary_meta.save()
+    else:
+        # Legacy auto-select: collect best data from all users
+        best_data = {'user': {}, 'meta': {}}
+        all_users_for_merge = [primary_user] + duplicate_users
 
-        if hasattr(user, 'data'):
-            meta = user.data
-            if not best_data['meta'].get('school') and meta.school:
-                best_data['meta']['school'] = meta.school
-            if not best_data['meta'].get('grade') and meta.grade:
-                best_data['meta']['grade'] = meta.grade
-            if not best_data['meta'].get('mobile') and meta.mobile:
-                best_data['meta']['mobile'] = meta.mobile
-            if not best_data['meta'].get('reg_num') and meta.reg_num:
-                best_data['meta']['reg_num'] = meta.reg_num
+        cyrillic_pattern = re.compile(r'[а-яА-ЯөӨүҮ]')
+        def is_cyrillic(s):
+            return s and bool(cyrillic_pattern.search(s))
 
-    # Apply best data to primary user
-    for field, value in best_data['user'].items():
-        setattr(primary_user, field, value)
-    primary_user.save()
+        for user in all_users_for_merge:
+            current_best_fn = best_data['user'].get('first_name')
+            if user.first_name and (not current_best_fn or
+                (is_cyrillic(user.first_name) and not is_cyrillic(current_best_fn))):
+                best_data['user']['first_name'] = user.first_name
 
-    for field, value in best_data['meta'].items():
-        setattr(primary_meta, field, value)
-    primary_meta.save()
+            current_best_ln = best_data['user'].get('last_name')
+            if user.last_name and (not current_best_ln or
+                (is_cyrillic(user.last_name) and not is_cyrillic(current_best_ln))):
+                best_data['user']['last_name'] = user.last_name
+
+            if not best_data['user'].get('email') and user.email:
+                best_data['user']['email'] = user.email
+
+            if hasattr(user, 'data'):
+                meta = user.data
+                if not best_data['meta'].get('school') and meta.school:
+                    best_data['meta']['school'] = meta.school
+                if not best_data['meta'].get('grade') and meta.grade:
+                    best_data['meta']['grade'] = meta.grade
+                if not best_data['meta'].get('mobile') and meta.mobile:
+                    best_data['meta']['mobile'] = meta.mobile
+                if not best_data['meta'].get('reg_num') and meta.reg_num:
+                    best_data['meta']['reg_num'] = meta.reg_num
+
+        for field, value in best_data['user'].items():
+            setattr(primary_user, field, value)
+        primary_user.save()
+
+        for field, value in best_data['meta'].items():
+            setattr(primary_meta, field, value)
+        primary_meta.save()
+
+    # Apply conflict resolutions (choose which Result to keep)
+    if conflict_resolutions:
+        for dup_user in duplicate_users:
+            dup_results = Result.objects.filter(contestant=dup_user).select_related('olympiad', 'problem')
+            for dup_result in dup_results:
+                primary_result = Result.objects.filter(
+                    contestant=primary_user,
+                    olympiad=dup_result.olympiad,
+                    problem=dup_result.problem
+                ).first()
+                if primary_result:
+                    conflict_key = f"conflict_{dup_result.olympiad.id}_{dup_result.problem.id}"
+                    choice = conflict_resolutions.get(conflict_key, 'primary')
+                    if choice == 'dup':
+                        # Use duplicate's answer and score
+                        primary_result.answer = dup_result.answer
+                        primary_result.score = dup_result.score
+                        primary_result.save()
+                    # Delete duplicate result either way
+                    dup_result.delete()
 
     # Migrate relationships
     for dup_user in duplicate_users:
         # Add groups
-        duplicate_user_groups = dup_user.groups.all()
-        primary_user.groups.add(*duplicate_user_groups)
+        primary_user.groups.add(*dup_user.groups.all())
 
-        # Update foreign keys
+        # Update foreign keys (Results without conflicts already handled above)
         Result.objects.filter(contestant=dup_user).update(contestant=primary_user)
         Award.objects.filter(contestant=dup_user).update(contestant=primary_user)
         Comment.objects.filter(author=dup_user).update(author=primary_user)

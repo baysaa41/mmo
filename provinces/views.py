@@ -622,13 +622,10 @@ def select_teachers(request, province_id, olympiad_id):
                 round=2
             )
             for prev_oly in prev_olympiads:
-                # Group гишүүд
-                if prev_oly.group:
-                    prev_group_ids = set(prev_oly.group.user_set.values_list('id', flat=True))
-                    previous_year_ids.update(prev_group_ids)
-                # ScoreSheet-тэй хэрэглэгчид
+                # Тухайн аймгаас орсон ScoreSheet-тэй хэрэглэгчид
                 prev_ss_ids = set(ScoreSheet.objects.filter(
-                    olympiad=prev_oly
+                    olympiad=prev_oly,
+                    school__province=province
                 ).values_list('user_id', flat=True))
                 previous_year_ids.update(prev_ss_ids)
 
@@ -636,8 +633,8 @@ def select_teachers(request, province_id, olympiad_id):
         selected_ids = request.POST.getlist('selected_users')
         selected_ids_set = {int(uid) for uid in selected_ids if uid.isdigit()}
 
-        # Тухайн аймгийн багш нарын ID (form-д байгаа бүх багш)
-        all_teacher_ids = set(teachers.values_list('id', flat=True))
+        # Form-д байгаа бүх багш нарын ID (аймгийн багш + өмнөх жилийн оролцогчид)
+        all_teacher_ids = set(teachers.values_list('id', flat=True)) | previous_year_ids
 
         added_count = 0
         removed_count = 0
@@ -679,6 +676,7 @@ def select_teachers(request, province_id, olympiad_id):
         return redirect('province_olympiad_view', province_id=province_id, olympiad_id=olympiad_id)
 
     # Багш нарын жагсаалт бэлдэх
+    teacher_ids = set(teachers.values_list('id', flat=True))
     teachers_list = []
     for teacher in teachers:
         teachers_list.append({
@@ -687,6 +685,20 @@ def select_teachers(request, province_id, olympiad_id):
             'is_registered': teacher.id in registered_user_ids,
             'is_previous_year': teacher.id in previous_year_ids,
         })
+
+    # Өмнөх жилийн ScoreSheet-тэй боловч одоогийн жагсаалтад байхгүй хэрэглэгчдийг нэмэх
+    missing_prev_ids = previous_year_ids - teacher_ids - registered_user_ids
+    if missing_prev_ids:
+        missing_teachers = User.objects.filter(
+            id__in=missing_prev_ids
+        ).select_related('data', 'data__school').order_by('last_name', 'first_name')
+        for teacher in missing_teachers:
+            teachers_list.append({
+                'user': teacher,
+                'school': teacher.data.school if hasattr(teacher, 'data') and teacher.data else None,
+                'is_registered': False,
+                'is_previous_year': True,
+            })
 
     context = {
         'province': province,
@@ -895,12 +907,13 @@ def merge_teachers(request, province_id, olympiad_id):
                 reason=f'{province.name} - {olympiad.name} багш нарын бүртгэлээс нэгтгэх хүсэлт ({", ".join(conflict_reasons)}).',
                 status=UserMergeRequest.Status.PENDING,
                 requires_user_confirmation=False,
-                conflicts_data={
-                    'field_selections': field_selections,
-                    'conflict_reasons': conflict_reasons,
-                },
             )
             merge_request.detect_conflicts()
+            merge_request.conflicts_data = {
+                'result_conflicts': merge_request.conflicts_data or [],
+                'field_selections': field_selections,
+                'conflict_reasons': conflict_reasons,
+            }
             merge_request.save()
 
             messages.info(
@@ -1657,50 +1670,37 @@ def zone_dashboard(request, zone_id):
 
     from accounts.models import UserMeta
 
-    # Zone доторх Province-уудын ID (zone_id=5 бол бүгд)
-    if zone.id == 5:
-        zone_province_ids = None
-    else:
-        zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
+    # Zone доторх Province-уудын ID
+    zone_province_ids = Province.objects.filter(zone=zone).values_list('id', flat=True)
 
     for olympiad in round3_olympiads:
         is_teacher = olympiad.level and (olympiad.level.name.startswith('S') or olympiad.level.name.startswith('T'))
         olympiad.is_teacher_olympiad = is_teacher
 
-        if is_teacher:
-            category_prefix = olympiad.level.name[0]
-
-            if olympiad.group:
-                qs = olympiad.group.user_set.filter(data__level__name__startswith=category_prefix)
-                if zone_province_ids is not None:
-                    qs = qs.filter(data__province_id__in=zone_province_ids)
-                olympiad.zone_registered = qs.count()
-            else:
-                olympiad.zone_registered = 0
-
-            qs = User.objects.filter(data__level__name__startswith=category_prefix)
+        # 3-р давааны бүртгэлтэй тоо
+        if olympiad.group:
+            qs = olympiad.group.user_set.all()
+            if is_teacher:
+                category_prefix = olympiad.level.name[0]
+                qs = qs.filter(data__level__name__startswith=category_prefix)
             if zone_province_ids is not None:
                 qs = qs.filter(data__province_id__in=zone_province_ids)
-            olympiad.zone_total = qs.count()
+            olympiad.zone_registered = qs.count()
         else:
-            if olympiad.group:
-                qs = olympiad.group.user_set.all()
-                if zone_province_ids is not None:
-                    qs = qs.filter(data__province_id__in=zone_province_ids)
-                olympiad.zone_registered = qs.count()
-            else:
-                olympiad.zone_registered = 0
+            olympiad.zone_registered = 0
 
-            # Round 2 олимпиадууд (энэ Round 3-г зааж байгаа)
-            round2_olympiads = Olympiad.objects.filter(next_round=olympiad)
-
-            qs = ScoreSheet.objects.filter(
-                olympiad__in=round2_olympiads,
-                is_official=True
-            )
-            if zone_province_ids is not None:
-                qs = qs.filter(user__data__province_id__in=zone_province_ids)
-            olympiad.zone_total = qs.values('user').distinct().count()
+        # 2-р давааны олимпиадад оролцсон тоо (ScoreSheet-ээс)
+        round2_olympiads = Olympiad.objects.filter(
+            school_year=olympiad.school_year,
+            level=olympiad.level,
+            round=2
+        )
+        qs = ScoreSheet.objects.filter(
+            olympiad__in=round2_olympiads,
+        )
+        if zone_province_ids is not None:
+            qs = qs.filter(school__province_id__in=zone_province_ids)
+        olympiad.zone_total = qs.values('user').distinct().count()
 
     teacher_olympiads = [o for o in round3_olympiads if o.is_teacher_olympiad]
     student_olympiads = [o for o in round3_olympiads if not o.is_teacher_olympiad]
@@ -1708,11 +1708,8 @@ def zone_dashboard(request, zone_id):
     teacher_levels = sorted(set(o.level.name for o in teacher_olympiads if o.level))
     student_levels = sorted(set(o.level.name for o in student_olympiads if o.level))
 
-    # Zone доторх аймгуудын жагсаалт (zone_id=5 бол бүгд)
-    if zone.id == 5:
-        zone_provinces = Province.objects.all().order_by('name')
-    else:
-        zone_provinces = Province.objects.filter(zone=zone).order_by('name')
+    # Zone доторх аймгуудын жагсаалт
+    zone_provinces = Province.objects.filter(zone=zone).order_by('name')
 
     context = {
         'zone': zone,

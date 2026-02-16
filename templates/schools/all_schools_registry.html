@@ -54,14 +54,29 @@
                     {% endif %}
 
                     <div class="mt-2">
-                        {% if school.manager %}
-                            <small><strong>Менежер:</strong> {{ school.manager.get_full_name|default:school.manager.username }} ({{ school.manager.username }})</small>
-                        {% endif %}
-                        {% if school.user %}
-                            <small class="ms-3"><strong>Бүртгэгч багш:</strong> {{ school.user.get_full_name|default:school.user.username }} ({{ school.user.username }})</small>
-                        {% else %}
-                            <small class="text-muted ms-3"><strong>Бүртгэгч багш:</strong> (Тодорхойгүй)</small>
-                        {% endif %}
+                        <small><strong>Менежер:</strong>
+                            {% if school.manager %}
+                                {{ school.manager.get_full_name|default:school.manager.username }} ({{ school.manager.username }})
+                                {% if can_manage %}
+                                    <a href="{% url 'edit_school_admin' school.manager.id %}" class="ms-1" title="Мэдээлэл засах"><i class="fas fa-pen fa-xs"></i></a>
+                                    <a href="{% url 'change_school_manager_password' school.manager.id %}" class="ms-1" title="Нууц үг солих"><i class="fas fa-key fa-xs"></i></a>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">(Тодорхойгүй)</span>
+                            {% endif %}
+                        </small>
+                        <small class="ms-3"><strong>Бүртгэгч багш:</strong>
+                            {% if school.user %}
+                                {{ school.user.get_full_name|default:school.user.username }} ({{ school.user.username }})
+                                {% if can_manage %}
+                                    <a href="{% url 'edit_school_admin' school.user.id %}" class="ms-1" title="Мэдээлэл засах"><i class="fas fa-pen fa-xs"></i></a>
+                                    <a href="{% url 'change_school_admin_password' school.user.id %}" class="ms-1" title="Нууц үг солих"><i class="fas fa-key fa-xs"></i></a>
+                                    <a href="{% url 'change_school_admin' school.id %}" class="ms-1" title="Бүртгэгч багш солих"><i class="fas fa-exchange-alt fa-xs"></i></a>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">(Тодорхойгүй)</span>
+                            {% endif %}
+                        </small>
                     </div>
 
                     <div class="mt-2">

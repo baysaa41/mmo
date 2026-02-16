@@ -6,12 +6,47 @@
             <h2 class="mb-1">{{ school.name }}</h2>
             <p class="lead text-muted mb-0">{{ school.province.name }}</p>
         </div>
-        {% if is_manager %}
-            <a href="{% url 'manager_change_moderator' school.id %}" class="btn btn-warning btn-sm">👤 Бүртгэгч багш солих</a>
-        {% endif %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'edit_school_info' school.id %}" class="btn btn-outline-secondary btn-sm">Мэдээлэл засах</a>
+            {% if is_manager %}
+                <a href="{% url 'manager_change_moderator' school.id %}" class="btn btn-warning btn-sm">Бүртгэгч багш солих</a>
+            {% endif %}
+        </div>
     </div>
 
     <a href="{% url 'my_managed_schools' %}" class="btn btn-secondary btn-sm mb-4">&larr; Миний сургуулиуд</a>
+
+    <!-- Заавар -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning bg-opacity-25" data-bs-toggle="collapse" data-bs-target="#guideCollapse" style="cursor:pointer">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Заавар
+                <i class="fas fa-chevron-down float-end mt-1"></i>
+            </h5>
+        </div>
+        <div id="guideCollapse" class="collapse show">
+            <div class="card-body">
+                <h6 class="fw-bold">Сургуулийн мэдээлэл</h6>
+                <ul>
+                    <li>Менежер, бүртгэгч багшийн мэдээллийг <i class="fas fa-pen fa-xs"></i> засах, <i class="fas fa-key fa-xs"></i> нууц үг солих товчоор өөрчилнө.</li>
+                    <li><strong>"Мэдээлэл засах"</strong> товчоор сургуулийн нэр, хаяг зэрэг мэдээллийг засна.</li>
+                </ul>
+
+                <h6 class="fw-bold mt-3">Сурагчдын бүртгэл</h6>
+                <ul>
+                    <li>Ангиллын нэр дээр дарж тухайн ангиллын сурагчдын жагсаалтыг харна.</li>
+                    <li><strong>"Бүх сурагчид"</strong> дээр дарж нийт сурагчдыг харна.</li>
+                </ul>
+
+                <h6 class="fw-bold mt-3">I давааны олимпиад</h6>
+                <ol>
+                    <li>Олимпиадын нэр дээр дарж дэлгэрэнгүй хуудас руу орно.</li>
+                    <li><strong>"Загвар татах"</strong> — сурагчдын жагсаалт бүхий Excel файл татна.</li>
+                    <li>Excel файлд хариултыг бичээд <strong>"Системд хуулах"</strong> товчоор оруулна.</li>
+                    <li><strong>"Хариулт харах"</strong>, <strong>"Дүн харах"</strong> товчоор дүнг шалгана.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
 
     <!-- School Info Card -->
     <div class="card mb-4">
@@ -22,8 +57,13 @@
                     <p class="mb-1"><strong>Менежер:</strong>
                         {% if school.manager %}
                             {{ school.manager.get_full_name|default:school.manager.username }} ({{ school.manager.username }})
+                            <a href="{% url 'edit_school_admin' school.manager.id %}" class="ms-1" title="Мэдээлэл засах"><i class="fas fa-pen fa-xs"></i></a>
+                            <a href="{% url 'change_school_manager_password' school.manager.id %}" class="ms-1" title="Нууц үг солих"><i class="fas fa-key fa-xs"></i></a>
                         {% else %}
                             <span class="text-muted">(Тодорхойгүй)</span>
+                        {% endif %}
+                        {% if request.user.is_staff or is_province_contact %}
+                        <a href="{% url 'change_school_manager' school.id %}" class="ms-1" title="Менежер солих"><i class="fas fa-exchange-alt fa-xs"></i></a>
                         {% endif %}
                     </p>
                 </div>
@@ -31,8 +71,13 @@
                     <p class="mb-1"><strong>Бүртгэгч багш:</strong>
                         {% if school.user %}
                             {{ school.user.get_full_name|default:school.user.username }} ({{ school.user.username }})
+                            <a href="{% url 'edit_school_admin' school.user.id %}" class="ms-1" title="Мэдээлэл засах"><i class="fas fa-pen fa-xs"></i></a>
+                            <a href="{% url 'change_school_admin_password' school.user.id %}" class="ms-1" title="Нууц үг солих"><i class="fas fa-key fa-xs"></i></a>
                         {% else %}
                             <span class="text-muted">(Тодорхойгүй)</span>
+                        {% endif %}
+                        {% if request.user.is_staff or is_manager or is_province_contact %}
+                        <a href="{% url 'change_school_admin' school.id %}" class="ms-1" title="Бүртгэгч багш солих"><i class="fas fa-exchange-alt fa-xs"></i></a>
                         {% endif %}
                     </p>
                 </div>

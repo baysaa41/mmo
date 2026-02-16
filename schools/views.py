@@ -45,8 +45,19 @@ def my_managed_schools_view(request):
     schools_managing = request.user.managing.all()
     my_schools = (schools_moderating | schools_managing).select_related('user', 'manager', 'group', 'province').distinct().order_by('province__name', 'name')
 
+    # Аймгийн contact_person эсвэл Province manager эсэхийг шалгах
+    managed_province = Province.objects.filter(contact_person=request.user).first()
+    if not managed_province:
+        import re as _re
+        for g in request.user.groups.values_list('name', flat=True):
+            m = _re.match(r'^Province_(\d+)_Managers$', g)
+            if m:
+                managed_province = Province.objects.filter(id=int(m.group(1))).first()
+                break
+
     context = {
         'my_schools': my_schools,
+        'managed_province': managed_province,
     }
     return render(request, 'schools/my_managed_schools.html', context)
 
@@ -102,11 +113,14 @@ def all_schools_registry_view(request):
 
     schools = schools_qs.order_by('province__name', 'name')
 
+    can_manage = is_staff or managed_province is not None
+
     context = {
         'schools': schools,
         'search_query': name_query,
         'managed_province': managed_province,
         'is_staff': is_staff,
+        'can_manage': can_manage,
     }
     return render(request, 'schools/all_schools_registry.html', context)
 
@@ -159,9 +173,12 @@ def school_dashboard(request, school_id):
         groups=school.group
     )
 
+    is_province_contact = school.province and school.province.contact_person == request.user
+
     context = {
         'school': school,
-        'is_manager': is_manager,  # <-- manager эсэхийг context-д нэмэх
+        'is_manager': is_manager,
+        'is_province_contact': is_province_contact,
         'student_counts_by_level': student_counts,
         'uncategorized_count': uncategorized_count,
         'pending_students': pending_students,
@@ -956,25 +973,33 @@ def manage_all_schools_view(request):
     }
     return render(request, 'schools/manage_all_schools.html', context)
 
-@staff_member_required
+@login_required
 def change_school_admin_view(request, school_id):
     """
-    Сургуулийн админыг хайж олоод солих хуудас.
+    Сургуулийн бүртгэгч багшийг хайж олоод солих хуудас.
+    Staff болон аймгийн contact_person хандах эрхтэй.
     """
     school = get_object_or_404(School, id=school_id)
+
+    is_province_contact = school.province and school.province.contact_person == request.user
+    is_manager = school.manager == request.user
+    if not request.user.is_staff and not is_province_contact and not is_manager:
+        messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
+        return redirect('my_managed_schools')
+
     search_results = None
 
     if request.method == 'POST':
-        # Хэрэв "assign_admin" үйлдэл хийгдэж байвал
         if 'assign_admin' in request.POST:
             user_id = request.POST.get('user_id')
             new_admin = get_object_or_404(User, id=user_id)
             school.user = new_admin
             school.save()
-            messages.success(request, f"'{school.name}' сургуулийн админыг '{new_admin.get_full_name()}' хэрэглэгчээр амжилттай солилоо.")
-            return redirect('manage_all_schools')
+            messages.success(request, f"'{school.name}' сургуулийн бүртгэгч багшийг '{new_admin.get_full_name()}' хэрэглэгчээр амжилттай солилоо.")
+            if request.user.is_staff:
+                return redirect('manage_all_schools')
+            return redirect('school_dashboard', school_id=school.id)
 
-        # Хэрэв "search_users" үйлдэл хийгдэж байвал
         search_form = UserSearchForm(request.POST)
         if search_form.is_valid():
             search_results = search_form.search_users()
@@ -990,11 +1015,20 @@ def change_school_admin_view(request, school_id):
     return render(request, 'schools/change_school_admin.html', context)
 
 
-@staff_member_required
+@login_required
 def edit_school_admin_view(request, user_id):
     """Сургуулийн админы профайлыг засах хуудас."""
     target_user = get_object_or_404(User, id=user_id)
-    # Админ хэрэглэгчид UserMeta байхгүй бол үүсгэх
+
+    # Эрх шалгах: target_user-ийн сургуулийг олоод access шалгах
+    if not request.user.is_staff:
+        target_school = School.objects.filter(
+            Q(user=target_user) | Q(manager=target_user)
+        ).first()
+        if not target_school or not target_school.user_has_access(request.user):
+            messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
+            return redirect('my_managed_schools')
+
     user_meta, created = UserMeta.objects.get_or_create(user=target_user)
 
     if request.method == 'POST':
@@ -1004,7 +1038,9 @@ def edit_school_admin_view(request, user_id):
             user_form.save()
             user_meta_form.save()
             messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн мэдээллийг амжилттай шинэчиллээ.")
-            return redirect('manage_all_schools')
+            if request.user.is_staff:
+                return redirect('manage_all_schools')
+            return redirect('school_dashboard', school_id=target_school.id)
     else:
         user_form = UserForm(instance=target_user)
         user_meta_form = UserMetaForm(instance=user_meta)
@@ -1017,24 +1053,35 @@ def edit_school_admin_view(request, user_id):
     return render(request, 'schools/edit_school_admin.html', context)
 
 
-@staff_member_required
+@login_required
 def change_school_admin_password_view(request, user_id):
     """Сургуулийн админы нууц үгийг солих хуудас."""
     target_user = get_object_or_404(User, id=user_id)
 
-    # Аюулгүй байдлын шалгалт: staff хэрэглэгч өөр staff-ийн нууц үгийг солихыг хориглох
+    # Эрх шалгах
+    target_school = None
+    if not request.user.is_staff:
+        target_school = School.objects.filter(
+            Q(user=target_user) | Q(manager=target_user)
+        ).first()
+        if not target_school or not target_school.user_has_access(request.user):
+            messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
+            return redirect('my_managed_schools')
+
+    # Staff хэрэглэгч өөр staff-ийн нууц үгийг солихыг хориглох
     if target_user.is_staff or target_user.is_superuser:
-        # Өөрийнхөөс бусад staff-ийн нууц үгийг солихгүй
         if target_user != request.user:
             messages.error(request, "Та өөр staff эрхтэй хэрэглэгчийн нууц үгийг солих боломжгүй.")
-            return redirect('manage_all_schools')
+            return redirect('my_managed_schools')
 
     if request.method == 'POST':
         form = SchoolAdminPasswordChangeForm(user=target_user, data=request.POST)
         if form.is_valid():
             form.save()
             messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн нууц үгийг амжилттай солилоо.")
-            return redirect('manage_all_schools')
+            if request.user.is_staff:
+                return redirect('manage_all_schools')
+            return redirect('school_dashboard', school_id=target_school.id)
     else:
         form = SchoolAdminPasswordChangeForm(user=target_user)
 
@@ -1042,7 +1089,7 @@ def change_school_admin_password_view(request, user_id):
         'form': form,
         'target_user': target_user,
     }
-    return render(request, 'schools/change_password.html', context) # Өмнөх template-г дахин ашиглаж болно
+    return render(request, 'schools/change_password.html', context)
 
 
 def school_list_view(request):
@@ -1076,36 +1123,21 @@ def edit_school_info_view(request, school_id):
     school = get_object_or_404(School, id=school_id)
 
     # Эрх шалгах
-    is_staff = request.user.is_staff
-    can_edit = False
-
-    if is_staff:
-        can_edit = True
-    elif school.province:
-        # Аймгийн manager эсэхийг шалгах
-        if school.province.contact_person == request.user:
-            can_edit = True
-        elif request.user.groups.filter(name=f"Province_{school.province.id}_Managers").exists():
-            can_edit = True
-
-    if not can_edit:
+    if not school.user_has_access(request.user):
         messages.error(request, 'Та энэ сургуулийн мэдээлэл засах эрхгүй.')
         return redirect('my_managed_schools')
 
     if request.method == 'POST':
-        # Хэрэв сургуулийн мэдээлэл өөрчлөх form илгээгдсэн бол
         if 'save_school_info' in request.POST:
             info_form = EditSchoolInfoForm(request.POST, instance=school)
             if info_form.is_valid():
                 info_form.save()
                 messages.success(request, "Сургуулийн мэдээлэл амжилттай шинэчлэгдлээ.")
-                # Province manager бол өөрийн аймгийн хуудас руу буцаах
-                if not is_staff and school.province:
-                    return redirect(f'/schools/manage-all/?p={school.province.id}')
-                return redirect('manage_all_schools')
+                if request.user.is_staff:
+                    return redirect('manage_all_schools')
+                return redirect('school_dashboard', school_id=school.id)
     else:
         info_form = EditSchoolInfoForm(instance=school)
-        moderator_form = SchoolModeratorChangeForm()
 
     return render(request, 'schools/edit_school_info.html', {
         'school': school,
@@ -1153,25 +1185,32 @@ def manager_change_moderator_view(request, school_id):
     return render(request, 'schools/manager_change_moderator.html', context)
 
 
-@staff_member_required
+@login_required
 def change_school_manager_view(request, school_id):
     """
-    Staff хэрэглэгч сургуулийн менежерийг хайж олоод солих хуудас.
+    Сургуулийн менежерийг хайж олоод солих хуудас.
+    Staff болон аймгийн contact_person хандах эрхтэй.
     """
     school = get_object_or_404(School, id=school_id)
+
+    is_province_contact = school.province and school.province.contact_person == request.user
+    if not request.user.is_staff and not is_province_contact:
+        messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
+        return redirect('my_managed_schools')
+
     search_results = None
 
     if request.method == 'POST':
-        # Хэрэв "assign_manager" үйлдэл хийгдэж байвал
         if 'assign_manager' in request.POST:
             user_id = request.POST.get('user_id')
             new_manager = get_object_or_404(User, id=user_id)
             school.manager = new_manager
             school.save()
             messages.success(request, f"'{school.name}' сургуулийн менежерийг '{new_manager.get_full_name()}' хэрэглэгчээр амжилттай солилоо.")
-            return redirect('manage_all_schools')
+            if request.user.is_staff:
+                return redirect('manage_all_schools')
+            return redirect('school_dashboard', school_id=school.id)
 
-        # Хэрэв "search_users" үйлдэл хийгдэж байвал
         search_form = UserSearchForm(request.POST)
         if search_form.is_valid():
             search_results = search_form.search_users()
@@ -1187,26 +1226,37 @@ def change_school_manager_view(request, school_id):
     return render(request, 'schools/change_school_manager.html', context)
 
 
-@staff_member_required
+@login_required
 def change_school_manager_password_view(request, user_id):
     """
     Сургуулийн менежерийн нууц үгийг солих хуудас.
     """
     target_user = get_object_or_404(User, id=user_id)
 
-    # Аюулгүй байдлын шалгалт: staff хэрэглэгч өөр staff-ийн нууц үгийг солихыг хориглох
+    # Эрх шалгах
+    target_school = None
+    if not request.user.is_staff:
+        target_school = School.objects.filter(
+            Q(user=target_user) | Q(manager=target_user)
+        ).first()
+        if not target_school or not target_school.user_has_access(request.user):
+            messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
+            return redirect('my_managed_schools')
+
+    # Staff хэрэглэгч өөр staff-ийн нууц үгийг солихыг хориглох
     if target_user.is_staff or target_user.is_superuser:
-        # Өөрийнхөөс бусад staff-ийн нууц үгийг солихгүй
         if target_user != request.user:
             messages.error(request, "Та өөр staff эрхтэй хэрэглэгчийн нууц үгийг солих боломжгүй.")
-            return redirect('manage_all_schools')
+            return redirect('my_managed_schools')
 
     if request.method == 'POST':
         form = SchoolAdminPasswordChangeForm(user=target_user, data=request.POST)
         if form.is_valid():
             form.save()
             messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн нууц үгийг амжилттай солилоо.")
-            return redirect('manage_all_schools')
+            if request.user.is_staff:
+                return redirect('manage_all_schools')
+            return redirect('school_dashboard', school_id=target_school.id)
     else:
         form = SchoolAdminPasswordChangeForm(user=target_user)
 
@@ -1376,12 +1426,14 @@ def merge_school_users(request, school_id):
                 reason=f'{school.name} сургуулийн бүртгэлээс нэгтгэх хүсэлт ({", ".join(conflict_reasons)}).',
                 status=UserMergeRequest.Status.PENDING,
                 requires_user_confirmation=False,
-                conflicts_data={
-                    'field_selections': field_selections,
-                    'conflict_reasons': conflict_reasons,
-                },
             )
             merge_request.detect_conflicts()
+            # Save field_selections alongside conflicts
+            merge_request.conflicts_data = {
+                'result_conflicts': merge_request.conflicts_data or [],
+                'field_selections': field_selections,
+                'conflict_reasons': conflict_reasons,
+            }
             merge_request.save()
 
             messages.info(
