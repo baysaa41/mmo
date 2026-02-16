@@ -125,6 +125,24 @@ class Olympiad(models.Model):
     def active(self):
         return self.is_active()
 
+    def get_next_round_olympiad(self):
+        if self.round not in (1, 2, 3):
+            return None
+        return Olympiad.objects.filter(
+            school_year=self.school_year,
+            level=self.level,
+            round=self.round + 1,
+        ).first()
+
+    def get_prev_round_olympiad(self):
+        if self.round not in (2, 3, 4):
+            return None
+        return Olympiad.objects.filter(
+            school_year=self.school_year,
+            level=self.level,
+            round=self.round - 1,
+        ).first()
+
     class Meta:
         ordering = ['-school_year_id','-id']
 
