@@ -5,18 +5,9 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h2><i class="fas fa-search"></i> Оролцогч хайх</h2>
-            <p class="text-muted mb-0">Давхардсан данс олж, нэгтгэх хүсэлт илгээх</p>
-        </div>
-        {% if user.is_staff %}
-        <div>
-            <a href="{% url 'merge_requests_list' %}" class="btn btn-primary">
-                <i class="fas fa-tasks"></i> Нэгтгэх хүсэлтүүд
-            </a>
-        </div>
-        {% endif %}
+    <div class="mb-3">
+        <h2><i class="fas fa-search"></i> Оролцогч хайх</h2>
+        <p class="text-muted mb-0">Оролцогчийн мэдээлэл хайх</p>
     </div>
 
     <!-- Search Form -->
@@ -24,8 +15,24 @@
         <div class="row g-3">
             <div class="col-md-4">
                 <input type="text" name="q" class="form-control"
-                       placeholder="Овог, нэр, ID, регистр, утас..."
+                       placeholder="Овог=Бат, Нэр=Дорж ..."
                        value="{{ search_query }}">
+                <div class="form-text">
+                    <a href="#" data-bs-toggle="collapse" data-bs-target="#searchHelp" class="text-decoration-none">
+                        <small>Хайлтын заавар</small>
+                    </a>
+                    <div class="collapse" id="searchHelp">
+                        <div class="mt-1">
+                            <small class="text-muted">
+                                <strong>Энгийн хайлт:</strong> нэр, овог, ID{% if request.user.is_staff %}, регистр, утас, имэйл{% endif %}-аар хайна<br>
+                                <strong>Нарийвчилсан хайлт:</strong> талбар=утга таслалаар зааглана (AND логик)<br>
+                                <code>id=123</code> <code>username=bat</code> <code>Овог=Бат</code> <code>Нэр=Дорж</code>
+                                {% if request.user.is_staff %}<code>Регистр=УБ</code> <code>Утас=9911</code> <code>Имэйл=bat@</code> {% endif %}<code>Сургууль=1-р</code> <code>Аймаг=УБ</code><br>
+                                Жишээ: <code>Овог=Бат, Аймаг=Дорнод</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-2">
                 <select name="p" id="id_province" class="form-select">
@@ -68,59 +75,44 @@
         </div>
     </form>
 
-    <!-- Selected Users Info -->
-    <div class="alert alert-info" id="selection-info" style="display: none;">
-        <span id="selected-count">0</span> хэрэглэгч сонгосон байна.
-        <button type="button" class="btn btn-sm btn-success float-end"
-                id="create-merge-btn" disabled>
-            <i class="fas fa-compress-arrows-alt"></i> Нэгтгэх хүсэлт үүсгэх
-        </button>
-    </div>
-
     <!-- Results Table -->
     <div class="table-responsive">
         <table class="table table-hover table-sm">
             <thead>
                 <tr>
-                    <th style="width: 50px;"><input type="checkbox" id="select-all"></th>
+                    <th>#</th>
                     <th>ID</th>
                     <th>Овог</th>
                     <th>Нэр</th>
-                    {% if request.user.is_staff %}
-                    <th>Регистр</th>
-                    {% endif %}
                     <th>Аймаг</th>
                     <th>Сургууль</th>
                     <th>Анги</th>
                     {% if request.user.is_staff %}
-                    <th>Утас</th>
+                    <th><span class="text-danger" title="Зөвхөн админ харна">Регистр *</span></th>
+                    <th><span class="text-danger" title="Зөвхөн админ харна">Утас *</span></th>
+                    <th><span class="text-danger" title="Зөвхөн админ харна">Имэйл *</span></th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for user in users %}
                 <tr>
-                    <td>
-                        <input type="checkbox" class="user-checkbox"
-                               value="{{ user.id }}"
-                               data-name="{{ user.last_name }} {{ user.first_name }}">
-                    </td>
+                    <td>{{ forloop.counter }}</td>
                     <td>{{ user.id }}</td>
                     <td>{{ user.last_name }}</td>
                     <td>{{ user.first_name }}</td>
-                    {% if request.user.is_staff %}
-                    <td>{% if user.data %}{{ user.data.reg_num }}{% endif %}</td>
-                    {% endif %}
                     <td>{% if user.data and user.data.province %}{{ user.data.province.name }}{% endif %}</td>
                     <td>{% if user.data and user.data.school %}{{ user.data.school.name }}{% endif %}</td>
                     <td>{% if user.data and user.data.grade %}{{ user.data.grade.name }}{% endif %}</td>
                     {% if request.user.is_staff %}
-                    <td>{% if user.data %}{{ user.data.mobile }}{% endif %}</td>
+                    <td>{% if user.data and user.data.reg_num %}<a href="?q=Регистр={{ user.data.reg_num }}">{{ user.data.reg_num }}</a>{% endif %}</td>
+                    <td>{% if user.data and user.data.mobile %}<a href="?q=Утас={{ user.data.mobile }}">{{ user.data.mobile }}</a>{% endif %}</td>
+                    <td>{% if user.email %}<a href="?q=Имэйл={{ user.email }}">{{ user.email }}</a>{% endif %}</td>
                     {% endif %}
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="{% if request.user.is_staff %}9{% else %}7{% endif %}" class="text-center text-muted py-4">
+                    <td colspan="{% if request.user.is_staff %}10{% else %}7{% endif %}" class="text-center text-muted py-4">
                         {% if search_query or selected_province or selected_zone or selected_school %}
                         Хайлт олдсонгүй
                         {% else %}
@@ -155,85 +147,10 @@
     {% endif %}
 </div>
 
-<!-- Merge Request Modal -->
-<div class="modal fade" id="mergeRequestModal" tabindex="-1" aria-labelledby="mergeRequestModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post" action="{% url 'create_merge_request' %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title" id="mergeRequestModalLabel">Нэгтгэх хүсэлт үүсгэх</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Та дараах хэрэглэгчдийг нэгтгэх хүсэлт илгээх гэж байна:</p>
-                    <ul id="selected-users-list" class="list-unstyled">
-                    </ul>
-
-                    <input type="hidden" name="user_ids" id="user_ids_input">
-
-                    <div class="mb-3">
-                        <label for="reason" class="form-label">Шалтгаан (заавал биш)</label>
-                        <textarea name="reason" id="reason" class="form-control" rows="3"
-                                  placeholder="Яагаад эдгээр хэрэглэгчдийг нэгтгэх шаардлагатай вэ?"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Болих</button>
-                    <button type="submit" class="btn btn-primary">Хүсэлт илгээх</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Checkbox management
-let selectedUsers = new Set();
-
-document.querySelectorAll('.user-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', updateSelection);
-});
-
-document.getElementById('select-all').addEventListener('change', function() {
-    document.querySelectorAll('.user-checkbox').forEach(checkbox => {
-        checkbox.checked = this.checked;
-    });
-    updateSelection();
-});
-
-function updateSelection() {
-    selectedUsers.clear();
-    let usersList = [];
-
-    document.querySelectorAll('.user-checkbox:checked').forEach(checkbox => {
-        selectedUsers.add(checkbox.value);
-        usersList.push({
-            id: checkbox.value,
-            name: checkbox.dataset.name
-        });
-    });
-
-    const count = selectedUsers.size;
-    document.getElementById('selected-count').textContent = count;
-    document.getElementById('selection-info').style.display = count > 0 ? 'block' : 'none';
-    document.getElementById('create-merge-btn').disabled = count < 2;
-
-    // Update modal content
-    const userListHtml = usersList.map(u => `<li class="mb-1"><strong>ID ${u.id}:</strong> ${u.name}</li>`).join('');
-    document.getElementById('selected-users-list').innerHTML = userListHtml;
-    document.getElementById('user_ids_input').value = Array.from(selectedUsers).join(',');
-}
-
-// Create merge request button
-document.getElementById('create-merge-btn').addEventListener('click', function() {
-    const modal = new bootstrap.Modal(document.getElementById('mergeRequestModal'));
-    modal.show();
-});
-
 // AJAX school loading based on province selection
 document.getElementById('id_province').addEventListener('change', function() {
     const provinceId = this.value;

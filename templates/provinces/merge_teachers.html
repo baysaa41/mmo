@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+
+{% block title %}Багш нэгтгэх - {{ province.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_provinces' %}">Миний аймгууд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_dashboard' province.id %}">{{ province.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_olympiad_view' province.id olympiad.id %}">{{ olympiad.name }} - {{ olympiad.level.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'select_teachers' province.id olympiad.id %}">Багш сонгох</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'merge_teacher_list' province.id olympiad.id %}">Нэгтгэх</a></li>
+            <li class="breadcrumb-item active">Мэдээлэл харьцуулах</li>
+        </ol>
+    </nav>
+
+    <h2>Багш нарыг нэгтгэх</h2>
+    <p class="text-muted">{{ olympiad.name }} - {{ olympiad.level.name }} | {{ province.name }}</p>
+
+    {% if step == 1 %}
+    {# ====== STEP 1: Select primary user ====== #}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Шат 1: Үндсэн хэрэглэгч сонгох</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">Нэгтгэсний дараа аль хэрэглэгчийн бүртгэл үлдэхийг сонгоно уу. Сүүлд нэвтэрсэн хэрэглэгчийг сонгохыг зөвлөж байна.</p>
+            <form method="get" action="{% url 'merge_teachers' province.id olympiad.id %}" id="step1Form">
+                <input type="hidden" name="user_ids" value="{{ user_ids_str }}">
+                <input type="hidden" name="step" value="2">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="50">Сонгох</th>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Овог</th>
+                                <th>Нэр</th>
+                                <th>Имэйл</th>
+                                <th>Сургууль</th>
+                                <th>РД</th>
+                                <th>Утас</th>
+                                <th>Сүүлд нэвтэрсэн</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ud in user_data %}
+                            <tr>
+                                <td>
+                                    <input type="radio" name="primary" value="{{ ud.user.id }}"
+                                           class="form-check-input"
+                                           {% if ud.user.id == default_primary_id %}checked{% endif %}>
+                                </td>
+                                <td>{{ ud.user.id }}</td>
+                                <td>{{ ud.user.username }}</td>
+                                <td>{{ ud.user.last_name }}</td>
+                                <td>{{ ud.user.first_name }}</td>
+                                <td>{{ ud.user.email }}</td>
+                                <td>{% if ud.school %}{{ ud.school.name }}{% else %}-{% endif %}</td>
+                                <td>{{ ud.reg_num|default:"-" }}</td>
+                                <td>{{ ud.mobile|default:"-" }}</td>
+                                <td>{% if ud.last_login %}{{ ud.last_login|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Үргэлжлүүлэх</button>
+                    <a href="{% url 'select_teachers' province.id olympiad.id %}" class="btn btn-secondary">Буцах</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% elif step == 2 %}
+    {# ====== STEP 2: Compare and merge ====== #}
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="mb-0">Шат 2: Мэдээлэл харьцуулж нэгтгэх</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">
+                Үндсэн хэрэглэгч: <strong>{{ primary_user.last_name }} {{ primary_user.first_name }}</strong> (ID: {{ primary_id }}).
+                Зөрүүтэй талбаруудыг шар өнгөөр тэмдэглэсэн — аль утгыг авахаа сонгоно уу.
+            </p>
+
+            {% if result_conflicts %}
+            <div class="alert alert-danger">
+                <strong>Анхааруулга: Дүнгийн зөрчил илэрлээ!</strong>
+                <p class="mb-1">Нэгтгэхэд дараах дүнгүүд зөрчилтэй байна:</p>
+                <ul class="mb-0">
+                    {% for rc in result_conflicts %}
+                    <li>
+                        {{ rc.olympiad_name }}, Бодлого #{{ rc.problem_order }}:
+                        Үндсэн (оноо={{ rc.primary_score }}, хариулт={{ rc.primary_answer }})
+                        vs ID:{{ rc.dup_user.id }} (оноо={{ rc.dup_score }}, хариулт={{ rc.dup_answer }})
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="mt-2 mb-0">Нэгтгэхэд үндсэн хэрэглэгчийн дүн хэвээр үлдэнэ.</p>
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'merge_teachers' province.id olympiad.id %}?user_ids={{ user_ids_str }}" id="mergeForm">
+                {% csrf_token %}
+                <input type="hidden" name="user_ids" value="{{ user_ids_str }}">
+                <input type="hidden" name="primary_id" value="{{ primary_id }}">
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Талбар</th>
+                                {% for u in users %}
+                                <th {% if u.id == primary_id %}class="table-primary"{% endif %}>
+                                    ID:{{ u.id }}
+                                    {% if u.id == primary_id %}<span class="badge bg-primary">Үндсэн</span>{% endif %}
+                                </th>
+                                {% endfor %}
+                                <th>Сонголт</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for field in compare_fields %}
+                            <tr class="{% if field.is_different %}table-warning{% endif %}">
+                                <td><strong>{{ field.label }}</strong></td>
+                                {% for v in field.values %}
+                                <td {% if v.user_id == primary_id %}class="table-primary"{% endif %}>
+                                    {{ v.value|default:"-" }}
+                                </td>
+                                {% endfor %}
+                                <td>
+                                    {% if field.all_empty and field.name == "school" %}
+                                        {# Сургууль бүгд хоосон → dropdown #}
+                                        <select name="field_school" class="form-select form-select-sm">
+                                            <option value="">-- Сургууль сонгох --</option>
+                                            {% for s in province_schools %}
+                                            <option value="{{ s.id }}">{{ s.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    {% elif field.all_empty and field.field_type != "meta_fk" %}
+                                        {# Бүгд хоосон, FK биш → шууд текст оруулах #}
+                                        <input type="text" name="field_{{ field.name }}"
+                                               class="form-control form-control-sm"
+                                               placeholder="{{ field.label }} оруулах">
+                                    {% elif field.is_different %}
+                                        {% for v in field.values %}
+                                            {% if v.raw_value %}
+                                            <div class="form-check">
+                                                <input type="radio"
+                                                       name="field_{{ field.name }}"
+                                                       value="{{ v.raw_value }}"
+                                                       class="form-check-input field-radio"
+                                                       data-field="{{ field.name }}"
+                                                       id="field_{{ field.name }}_{{ v.user_id }}"
+                                                       {% if v.raw_value == field.auto_selected %}checked{% endif %}>
+                                                <label class="form-check-label" for="field_{{ field.name }}_{{ v.user_id }}">
+                                                    {{ v.value }}
+                                                </label>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if field.name == "school" %}
+                                        <div class="form-check">
+                                            <input type="radio"
+                                                   name="field_school"
+                                                   value="__other_school__"
+                                                   class="form-check-input field-radio"
+                                                   data-field="school"
+                                                   id="field_school_other">
+                                            <label class="form-check-label" for="field_school_other">
+                                                Бусад сургууль
+                                            </label>
+                                        </div>
+                                        <select class="form-select form-select-sm mt-1 d-none" id="schoolSelect">
+                                            <option value="">-- Сургууль сонгох --</option>
+                                            {% for s in province_schools %}
+                                            <option value="{{ s.id }}">{{ s.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        {% elif field.field_type != "meta_fk" %}
+                                        <div class="form-check">
+                                            <input type="radio"
+                                                   name="field_{{ field.name }}"
+                                                   value="__custom__"
+                                                   class="form-check-input field-radio"
+                                                   data-field="{{ field.name }}"
+                                                   id="field_{{ field.name }}_custom">
+                                            <label class="form-check-label" for="field_{{ field.name }}_custom">
+                                                Гараар бичих
+                                            </label>
+                                        </div>
+                                        <input type="text"
+                                               class="form-control form-control-sm mt-1 custom-input d-none"
+                                               data-field="{{ field.name }}"
+                                               placeholder="{{ field.label }} оруулах">
+                                        {% endif %}
+                                    {% else %}
+                                        {% if field.name == "school" %}
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input type="hidden" name="field_school" value="{{ field.auto_selected }}"
+                                                   class="same-value-hidden" data-field="school" id="schoolHidden">
+                                            <span class="text-muted same-value-text" data-field="school">{{ field.auto_selected_display|default:"-" }}</span>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1"
+                                                    id="schoolChangeBtn" title="Бусад сургууль">
+                                                <i class="fas fa-pen fa-xs"></i>
+                                            </button>
+                                        </div>
+                                        <select class="form-select form-select-sm mt-1 d-none" id="schoolSelectSame">
+                                            <option value="">-- Бусад сургууль сонгох --</option>
+                                            {% for s in province_schools %}
+                                            <option value="{{ s.id }}" {% if s.id|stringformat:"d" == field.auto_selected %}selected{% endif %}>{{ s.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        {% elif field.field_type != "meta_fk" %}
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input type="hidden" name="field_{{ field.name }}" value="{{ field.auto_selected }}"
+                                                   class="same-value-hidden" data-field="{{ field.name }}">
+                                            <span class="text-muted same-value-text" data-field="{{ field.name }}">{{ field.auto_selected_display|default:"-" }}</span>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm edit-btn py-0 px-1"
+                                                    data-field="{{ field.name }}" title="Засах">
+                                                <i class="fas fa-pen fa-xs"></i>
+                                            </button>
+                                        </div>
+                                        <input type="text"
+                                               class="form-control form-control-sm mt-1 edit-input d-none"
+                                               data-field="{{ field.name }}"
+                                               value="{{ field.auto_selected }}"
+                                               placeholder="{{ field.label }} оруулах">
+                                        {% else %}
+                                        <input type="hidden" name="field_{{ field.name }}" value="{{ field.auto_selected }}">
+                                        <span class="text-muted">{{ field.auto_selected_display|default:"-" }}</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% if needs_staff_approval %}
+                <div class="alert alert-warning mt-3">
+                    Нэр зөрүүтэй эсвэл дүнгийн давхцал байгаа тул нэгтгэх хүсэлт админд илгээгдэнэ.
+                </div>
+                {% endif %}
+
+                <div class="d-flex gap-2 mt-3">
+                    {% if needs_staff_approval %}
+                    <button type="submit" class="btn btn-warning" id="mergeBtn">Нэгтгэх хүсэлт илгээх</button>
+                    {% else %}
+                    <button type="submit" class="btn btn-danger" id="mergeBtn">Нэгтгэх</button>
+                    {% endif %}
+                    <a href="{% url 'merge_teachers' province.id olympiad.id %}?user_ids={{ user_ids_str }}"
+                       class="btn btn-secondary">Буцах (Шат 1)</a>
+                    <a href="{% url 'select_teachers' province.id olympiad.id %}"
+                       class="btn btn-outline-secondary">Цуцлах</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var mergeForm = document.getElementById('mergeForm');
+    if (!mergeForm) return;
+
+    // "Гараар бичих" radio → custom text input, "Бусад сургууль" → select
+    var schoolSelect = document.getElementById('schoolSelect');
+    mergeForm.querySelectorAll('.field-radio').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            var field = this.dataset.field;
+            // School dropdown
+            if (field === 'school' && schoolSelect) {
+                if (this.value === '__other_school__') {
+                    schoolSelect.classList.remove('d-none');
+                    schoolSelect.focus();
+                } else {
+                    schoolSelect.classList.add('d-none');
+                }
+                return;
+            }
+            // Custom text input
+            var customInput = mergeForm.querySelector('.custom-input[data-field="' + field + '"]');
+            if (!customInput) return;
+            if (this.value === '__custom__') {
+                customInput.classList.remove('d-none');
+                customInput.focus();
+            } else {
+                customInput.classList.add('d-none');
+            }
+        });
+    });
+
+    // Ижил сургуулийн "Бусад сургууль" товч
+    var schoolChangeBtn = document.getElementById('schoolChangeBtn');
+    var schoolSelectSame = document.getElementById('schoolSelectSame');
+    var schoolHidden = document.getElementById('schoolHidden');
+    if (schoolChangeBtn && schoolSelectSame) {
+        schoolChangeBtn.addEventListener('click', function() {
+            var textSpan = mergeForm.querySelector('.same-value-text[data-field="school"]');
+            if (schoolHidden) schoolHidden.remove();
+            if (textSpan) textSpan.classList.add('d-none');
+            schoolChangeBtn.classList.add('d-none');
+            schoolSelectSame.classList.remove('d-none');
+            schoolSelectSame.name = 'field_school';
+            schoolSelectSame.focus();
+        });
+    }
+
+    // Ижил утгатай талбарын "Засах" товч
+    mergeForm.querySelectorAll('.edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var field = this.dataset.field;
+            var hiddenInput = mergeForm.querySelector('.same-value-hidden[data-field="' + field + '"]');
+            var textSpan = mergeForm.querySelector('.same-value-text[data-field="' + field + '"]');
+            var editInput = mergeForm.querySelector('.edit-input[data-field="' + field + '"]');
+            hiddenInput.remove();
+            textSpan.classList.add('d-none');
+            this.classList.add('d-none');
+            editInput.classList.remove('d-none');
+            editInput.name = 'field_' + field;
+            editInput.focus();
+        });
+    });
+
+    // Submit: custom input / school select утгыг radio-н оронд ашиглах
+    mergeForm.addEventListener('submit', function(e) {
+        // Custom text inputs
+        mergeForm.querySelectorAll('.custom-input').forEach(function(input) {
+            var field = input.dataset.field;
+            var selectedRadio = mergeForm.querySelector('input[name="field_' + field + '"]:checked');
+            if (selectedRadio && selectedRadio.value === '__custom__') {
+                selectedRadio.value = input.value.trim();
+            }
+        });
+        // School select
+        var schoolRadio = mergeForm.querySelector('input[name="field_school"]:checked');
+        if (schoolRadio && schoolRadio.value === '__other_school__' && schoolSelect) {
+            schoolRadio.value = schoolSelect.value;
+        }
+
+        var msg = {% if needs_staff_approval %}'Нэгтгэх хүсэлт админд илгээх үү?'{% else %}'Нэгтгэлт буцаагдахгүй. Давхар хэрэглэгчийн бүртгэл устгагдана. Үргэлжлүүлэх үү?'{% endif %};
+        if (!confirm(msg)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

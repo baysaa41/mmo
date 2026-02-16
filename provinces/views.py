@@ -345,82 +345,75 @@ def select_top_students_by_school(request, province_id, olympiad_id):
     # Round 1 олимпиадууд
     round1_olympiads = Olympiad.objects.filter(next_round=olympiad)
 
-    # Жагсаалт болон нэмэлт эрхээр (босго, гараар биш) эрх авсан хүмүүсийн ID
-    already_qualified_users = Award.objects.filter(
+    # Эрх авсан хүмүүсийн ID → place
+    qualified_awards = {}
+    for award in Award.objects.filter(
         olympiad__in=round1_olympiads,
-        place__in=['2.1 эрх жагсаалтаас', '2.1 эрх нэмэлтээр']
-    ).values_list('contestant_id', flat=True)
+        place__startswith='2.1 эрх',
+    ):
+        qualified_awards[award.contestant_id] = award.place
 
-    # Гараар сонгогдсон хүмүүсийн ID (чеклэж харуулах)
-    manually_selected_users = Award.objects.filter(
-        olympiad__in=round1_olympiads,
-        place='2.1 эрх нэмэлтээр (гараар)'
-    ).values_list('contestant_id', flat=True)
-
-    # Сургуулиудаар бүлэглэж, эрх аваагүй топ сурагчдыг харуулах
+    # Сургуулиудаар бүлэглэж, эрх авсан + ижил оноотой сурагчдыг харуулах
     schools_data = []
     schools = School.objects.filter(province=province)
 
     for school in schools:
-        # Энэ сургуулийн эрх аваагүй сурагчдын ScoreSheet
+        # Энэ сургуулийн бүх ScoreSheet (оноогоор буурахаар)
         all_school_scoresheets = ScoreSheet.objects.filter(
             olympiad__in=round1_olympiads,
             school=school,
             is_official=True
-        ).exclude(
-            user_id__in=already_qualified_users
         ).select_related('user').order_by('-total')
 
         if not all_school_scoresheets.exists():
             continue
 
-        # Эхний 3 сурагчийн оноог авах
-        top_3_scoresheets = list(all_school_scoresheets[:3])
-        if not top_3_scoresheets:
+        # Эрх авсан сурагчдыг ялгах
+        qualified_scoresheets = []
+        for ss in all_school_scoresheets:
+            if ss.user_id in qualified_awards:
+                ss.award_place = qualified_awards[ss.user_id]
+                ss.is_qualified = True
+                qualified_scoresheets.append(ss)
+
+        if not qualified_scoresheets:
             continue
 
-        # 3-р сурагчийн оноо
-        third_score = top_3_scoresheets[-1].total if len(top_3_scoresheets) >= 3 else (
-            top_3_scoresheets[-1].total if top_3_scoresheets else 0
-        )
+        # Эрх аваагүй сурагчдаас хамгийн өндөр оноотой + ижил оноотой сурагчид
+        top_unqualified_score = None
+        for ss in all_school_scoresheets:
+            if ss.user_id not in qualified_awards:
+                top_unqualified_score = ss.total
+                break
 
-        # Ижил оноотой бүх сурагчдыг авах
-        eligible_scoresheets = all_school_scoresheets.filter(total__gte=third_score)
+        tie_scoresheets = []
+        if top_unqualified_score is not None:
+            for ss in all_school_scoresheets:
+                if ss.user_id not in qualified_awards and ss.total == top_unqualified_score:
+                    ss.is_qualified = False
+                    ss.award_place = None
+                    tie_scoresheets.append(ss)
 
-        # Хэрэглэгчид нэмэлт мэдээлэл хавсаргах (гараар сонгогдсон эсэх)
-        students_data = []
-        for scoresheet in eligible_scoresheets:
-            scoresheet.is_manually_selected = scoresheet.user_id in manually_selected_users
-            students_data.append(scoresheet)
+        students_data = qualified_scoresheets + tie_scoresheets
+        # Оноогоор буурахаар эрэмбэлэх
+        students_data.sort(key=lambda s: (-s.total, not s.is_qualified))
 
         schools_data.append({
             'school': school,
             'students': students_data,
-            'third_score': third_score
+            'top_unqualified_score': top_unqualified_score,
+            'qualified_count': len(qualified_scoresheets),
+            'tie_count': len(tie_scoresheets),
         })
 
     # POST: сонгосон сурагчдыг бүртгэх
     if request.method == 'POST':
         selected_user_ids = request.POST.getlist('selected_users')
 
-        # Сургууль бүрээс 3-аас илүүгүй шалгах
-        from collections import Counter
-        school_counts = Counter()
-
         selected_scoresheets = ScoreSheet.objects.filter(
             olympiad__in=round1_olympiads,
             user_id__in=selected_user_ids
         ).select_related('school', 'user')
-
-        for ss in selected_scoresheets:
-            school_counts[ss.school.id] += 1
-
-        # Шалгалт
-        for school_id, count in school_counts.items():
-            if count > 3:
-                messages.error(request, f'Сургууль бүрээс дээд тал нь 3 сурагч сонгоно уу.')
-                return redirect('select_top_students_by_school',
-                              province_id=province_id, olympiad_id=olympiad_id)
 
         # Олимпиадад бүлэг байгаа эсэхийг шалгаад, байхгүй бол үүсгэх
         group, created = ensure_olympiad_has_group(olympiad)
@@ -584,6 +577,547 @@ def add_students_by_id(request, province_id, olympiad_id):
 
 
 @login_required
+def select_teachers(request, province_id, olympiad_id):
+    """Тухайн аймгийн багш нарын жагсаалтаас сонгож бүртгэх"""
+    province = get_object_or_404(Province, id=province_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_province(request.user, province):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_provinces')
+
+    # Багш нарын олимпиад эсэхийг шалгах
+    is_teacher_olympiad = olympiad.level and (olympiad.level.name.startswith('S') or olympiad.level.name.startswith('T'))
+    if not is_teacher_olympiad:
+        messages.error(request, 'Энэ олимпиад багш нарын олимпиад биш байна.')
+        return redirect('province_olympiad_view', province_id=province_id, olympiad_id=olympiad_id)
+
+    # Олимпиадад бүлэг байгаа эсэхийг шалгаад, байхгүй бол үүсгэх
+    group, created = ensure_olympiad_has_group(olympiad)
+
+    # Ангилалын эхний үсгийг авах (S эсвэл T)
+    category_prefix = olympiad.level.name[0]
+
+    # Тухайн аймгийн тохирох ангилалын бүх багш нар
+    teachers = User.objects.filter(
+        data__province=province,
+        data__level__name__startswith=category_prefix
+    ).select_related('data', 'data__school').order_by('last_name', 'first_name')
+
+    # Аль хэдийн бүртгэлтэй багш нарын ID
+    registered_user_ids = set(group.user_set.values_list('id', flat=True))
+
+    # Өмнөх жил оролцсон багш нарыг олох
+    previous_year_ids = set()
+    current_school_year = SchoolYear.get_current()
+    if current_school_year:
+        previous_school_year = SchoolYear.objects.filter(
+            name__lt=current_school_year.name
+        ).first()
+        if previous_school_year:
+            # Өмнөх жилийн ижил level, round=2 олимпиад
+            prev_olympiads = Olympiad.objects.filter(
+                school_year=previous_school_year,
+                level=olympiad.level,
+                round=2
+            )
+            for prev_oly in prev_olympiads:
+                # Group гишүүд
+                if prev_oly.group:
+                    prev_group_ids = set(prev_oly.group.user_set.values_list('id', flat=True))
+                    previous_year_ids.update(prev_group_ids)
+                # ScoreSheet-тэй хэрэглэгчид
+                prev_ss_ids = set(ScoreSheet.objects.filter(
+                    olympiad=prev_oly
+                ).values_list('user_id', flat=True))
+                previous_year_ids.update(prev_ss_ids)
+
+    if request.method == 'POST':
+        selected_ids = request.POST.getlist('selected_users')
+        selected_ids_set = {int(uid) for uid in selected_ids if uid.isdigit()}
+
+        # Тухайн аймгийн багш нарын ID (form-д байгаа бүх багш)
+        all_teacher_ids = set(teachers.values_list('id', flat=True))
+
+        added_count = 0
+        removed_count = 0
+        with transaction.atomic():
+            # Шинээр нэмэх (сонгосон боловч бүртгэлгүй)
+            to_add = selected_ids_set - registered_user_ids
+            for user_id in to_add:
+                if user_id not in all_teacher_ids:
+                    continue
+                try:
+                    user = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    continue
+
+                Award.objects.get_or_create(
+                    olympiad=olympiad,
+                    contestant=user,
+                    defaults={'place': '2.1 эрх (сонгосон)'}
+                )
+                group.user_set.add(user)
+                added_count += 1
+
+            # Цуцлах (бүртгэлтэй байсан боловч сонгоогүй)
+            to_remove = (registered_user_ids & all_teacher_ids) - selected_ids_set
+            for user_id in to_remove:
+                group.user_set.remove(user_id)
+                Award.objects.filter(
+                    olympiad=olympiad,
+                    contestant_id=user_id
+                ).delete()
+                removed_count += 1
+
+        if added_count > 0:
+            messages.success(request, f'{added_count} багш нэмэгдлээ.')
+        if removed_count > 0:
+            messages.warning(request, f'{removed_count} багшийн бүртгэл цуцлагдлаа.')
+        if added_count == 0 and removed_count == 0:
+            messages.info(request, 'Өөрчлөлт байхгүй.')
+        return redirect('province_olympiad_view', province_id=province_id, olympiad_id=olympiad_id)
+
+    # Багш нарын жагсаалт бэлдэх
+    teachers_list = []
+    for teacher in teachers:
+        teachers_list.append({
+            'user': teacher,
+            'school': teacher.data.school if hasattr(teacher, 'data') and teacher.data else None,
+            'is_registered': teacher.id in registered_user_ids,
+            'is_previous_year': teacher.id in previous_year_ids,
+        })
+
+    context = {
+        'province': province,
+        'olympiad': olympiad,
+        'teachers_list': teachers_list,
+        'registered_count': len(registered_user_ids),
+        'previous_year_count': len(previous_year_ids),
+        'total_teachers': len(teachers_list),
+    }
+    return render(request, 'provinces/select_teachers.html', context)
+
+
+@login_required
+def merge_teacher_list(request, province_id, olympiad_id):
+    """Багш нарын жагсаалтаас нэгтгэх хэрэглэгчдийг сонгох"""
+    province = get_object_or_404(Province, id=province_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_province(request.user, province):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_provinces')
+
+    is_teacher_olympiad = olympiad.level and (olympiad.level.name.startswith('S') or olympiad.level.name.startswith('T'))
+    if not is_teacher_olympiad:
+        messages.error(request, 'Энэ олимпиад багш нарын олимпиад биш байна.')
+        return redirect('province_olympiad_view', province_id=province_id, olympiad_id=olympiad_id)
+
+    category_prefix = olympiad.level.name[0]
+
+    teachers = User.objects.filter(
+        data__province=province,
+        data__level__name__startswith=category_prefix
+    ).select_related('data', 'data__school').order_by('last_name', 'first_name')
+
+    teachers_list = []
+    for teacher in teachers:
+        teachers_list.append({
+            'user': teacher,
+            'school': teacher.data.school if hasattr(teacher, 'data') and teacher.data else None,
+            'reg_num': teacher.data.reg_num if hasattr(teacher, 'data') and teacher.data else '',
+        })
+
+    context = {
+        'province': province,
+        'olympiad': olympiad,
+        'teachers_list': teachers_list,
+        'total_teachers': len(teachers_list),
+    }
+    return render(request, 'provinces/merge_teacher_list.html', context)
+
+
+@login_required
+def request_teacher_merge(request, province_id, olympiad_id):
+    """Давхар бүртгэлтэй багш нарыг нэгтгэх хүсэлт явуулах"""
+    from accounts.models import UserMergeRequest
+
+    province = get_object_or_404(Province, id=province_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_province(request.user, province):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_provinces')
+
+    if request.method != 'POST':
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    user_ids_str = request.POST.get('user_ids', '')
+    try:
+        user_ids = sorted([int(uid.strip()) for uid in user_ids_str.split(',') if uid.strip()])
+    except ValueError:
+        messages.error(request, 'Буруу ID байна.')
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    if len(user_ids) < 2:
+        messages.error(request, 'Хамгийн багадаа 2 хэрэглэгч сонгоно уу.')
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    # Аль хэдийн хүсэлт байгаа эсэхийг шалгах
+    existing = UserMergeRequest.objects.filter(
+        user_ids=user_ids,
+        status__in=['pending', 'approved']
+    ).first()
+    if existing:
+        messages.info(request, f'Энэ бүлгийн нэгтгэх хүсэлт #{existing.id} аль хэдийн үүссэн байна.')
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    # Хэрэглэгчид байгаа эсэхийг шалгах
+    users = User.objects.filter(id__in=user_ids)
+    if users.count() != len(user_ids):
+        messages.error(request, 'Зарим хэрэглэгч олдсонгүй.')
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    # Нэгтгэх хүсэлт үүсгэх
+    merge_request = UserMergeRequest.objects.create(
+        requesting_user=request.user,
+        user_ids=user_ids,
+        reason=f'{province.name} - {olympiad.name} багш нарын бүртгэлээс давхар бүртгэл илэрсэн.',
+        status=UserMergeRequest.Status.PENDING,
+        requires_user_confirmation=False
+    )
+
+    merge_request.detect_conflicts()
+    merge_request.save()
+
+    messages.success(
+        request,
+        f'Нэгтгэх хүсэлт #{merge_request.id} амжилттай үүслээ. '
+        f'Админ хянаад нэгтгэнэ.'
+    )
+    return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+
+@login_required
+def merge_teachers(request, province_id, olympiad_id):
+    """Давхар бүртгэлтэй багш нарыг шууд нэгтгэх (шат дараатай)"""
+    from accounts.models import UserMergeRequest, UserMeta
+    from olympiad.models import Result, Award, Comment
+    import re
+
+    province = get_object_or_404(Province, id=province_id)
+    olympiad = get_object_or_404(Olympiad, id=olympiad_id)
+
+    if not user_can_manage_province(request.user, province):
+        messages.error(request, 'Хандах эрхгүй.')
+        return redirect('my_managed_provinces')
+
+    # Parse user_ids
+    user_ids_str = request.GET.get('user_ids', '') or request.POST.get('user_ids', '')
+    try:
+        user_ids = sorted([int(uid.strip()) for uid in user_ids_str.split(',') if uid.strip()])
+    except ValueError:
+        messages.error(request, 'Буруу ID байна.')
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    if len(user_ids) < 2:
+        messages.error(request, 'Хамгийн багадаа 2 хэрэглэгч сонгоно уу.')
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    users = list(User.objects.filter(id__in=user_ids).select_related('data', 'data__school', 'data__province', 'data__grade', 'data__level'))
+    if len(users) != len(user_ids):
+        messages.error(request, 'Зарим хэрэглэгч олдсонгүй.')
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    # Sort by last_login descending (most recent first)
+    from django.utils import timezone as tz
+    import datetime
+    users.sort(key=lambda u: u.last_login or tz.make_aware(datetime.datetime.min), reverse=True)
+
+    if request.method == 'POST':
+        # === STEP 3: Execute merge ===
+        primary_id = int(request.POST.get('primary_id'))
+        primary_user = get_object_or_404(User, id=primary_id)
+        duplicate_users = [u for u in users if u.id != primary_id]
+
+        # Collect selected field values from POST
+        all_field_names = ['last_name', 'first_name', 'email', 'reg_num', 'school',
+                           'province', 'grade', 'level', 'mobile', 'gender']
+        field_selections = {}
+        for fn in all_field_names:
+            val = request.POST.get(f'field_{fn}', '').strip()
+            if val:
+                field_selections[fn] = val
+
+        # Check for name differences and result conflicts
+        has_name_conflict = False
+        name_fields = ['last_name', 'first_name']
+        for nf in name_fields:
+            vals = set()
+            for u in users:
+                v = getattr(u, nf, '') or ''
+                if v:
+                    vals.add(v)
+            if len(vals) > 1:
+                has_name_conflict = True
+                break
+
+        has_result_conflict = False
+        for dup_user in duplicate_users:
+            dup_results = Result.objects.filter(contestant=dup_user).select_related('olympiad', 'problem')
+            for dup_result in dup_results:
+                primary_result = Result.objects.filter(
+                    contestant_id=primary_id,
+                    olympiad=dup_result.olympiad,
+                    problem=dup_result.problem
+                ).first()
+                if primary_result and (primary_result.answer != dup_result.answer or primary_result.score != dup_result.score):
+                    has_result_conflict = True
+                    break
+            if has_result_conflict:
+                break
+
+        needs_staff_approval = has_name_conflict or has_result_conflict
+
+        # Non-staff with conflicts → create pending merge request
+        if needs_staff_approval and not request.user.is_staff:
+            conflict_reasons = []
+            if has_name_conflict:
+                conflict_reasons.append('нэр зөрүүтэй')
+            if has_result_conflict:
+                conflict_reasons.append('дүнгийн давхцал')
+
+            merge_request = UserMergeRequest.objects.create(
+                requesting_user=request.user,
+                user_ids=user_ids,
+                primary_user=primary_user,
+                reason=f'{province.name} - {olympiad.name} багш нарын бүртгэлээс нэгтгэх хүсэлт ({", ".join(conflict_reasons)}).',
+                status=UserMergeRequest.Status.PENDING,
+                requires_user_confirmation=False,
+                conflicts_data={
+                    'field_selections': field_selections,
+                    'conflict_reasons': conflict_reasons,
+                },
+            )
+            merge_request.detect_conflicts()
+            merge_request.save()
+
+            messages.info(
+                request,
+                f'Нэгтгэх хүсэлт #{merge_request.id} үүслээ ({", ".join(conflict_reasons)}). '
+                f'Админ хянаад баталгаажуулна.'
+            )
+            return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+        # Staff or no conflicts → execute merge directly
+        primary_meta, _ = UserMeta.objects.get_or_create(user=primary_user)
+
+        with transaction.atomic():
+            # Apply selected field values
+            user_fields = ['last_name', 'first_name', 'email']
+            for field in user_fields:
+                value = field_selections.get(field, '')
+                if value:
+                    setattr(primary_user, field, value)
+            primary_user.save()
+
+            meta_fields = ['reg_num', 'mobile', 'gender']
+            meta_fk_fields = ['school', 'province', 'grade', 'level']
+
+            for field in meta_fields:
+                value = field_selections.get(field, '')
+                if value:
+                    if field == 'mobile':
+                        try:
+                            setattr(primary_meta, field, int(value))
+                        except ValueError:
+                            pass
+                    else:
+                        setattr(primary_meta, field, value)
+
+            for field in meta_fk_fields:
+                value = field_selections.get(field, '')
+                if value:
+                    try:
+                        setattr(primary_meta, f'{field}_id', int(value))
+                    except ValueError:
+                        pass
+
+            primary_meta.save()
+
+            # Migrate relationships from duplicates
+            for dup_user in duplicate_users:
+                # Add groups
+                primary_user.groups.add(*dup_user.groups.all())
+
+                # Update foreign keys
+                Result.objects.filter(contestant=dup_user).update(contestant=primary_user)
+                Award.objects.filter(contestant=dup_user).update(contestant=primary_user)
+                Comment.objects.filter(author=dup_user).update(author=primary_user)
+                ScoreSheet.objects.filter(user=dup_user).update(user=primary_user)
+                School.objects.filter(user=dup_user).update(user=primary_user)
+                School.objects.filter(manager=dup_user).update(manager=primary_user)
+
+                # Delete duplicate user
+                dup_user.delete()
+
+            # Create completed merge request record
+            UserMergeRequest.objects.create(
+                requesting_user=request.user,
+                user_ids=user_ids,
+                primary_user=primary_user,
+                reason=f'{province.name} - {olympiad.name} багш нарын бүртгэлээс шууд нэгтгэсэн.',
+                status=UserMergeRequest.Status.COMPLETED,
+                requires_user_confirmation=False,
+            )
+
+        messages.success(request, f'Амжилттай нэгтгэлээ. Үндсэн хэрэглэгч: {primary_user.last_name} {primary_user.first_name} (ID: {primary_user.id})')
+        return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+    # === GET: Step 1 or Step 2 ===
+    step = request.GET.get('step', '1')
+    primary_id = request.GET.get('primary')
+
+    if step == '2' and primary_id:
+        # STEP 2: Compare fields
+        primary_id = int(primary_id)
+        primary_user = next((u for u in users if u.id == primary_id), None)
+        if not primary_user:
+            messages.error(request, 'Үндсэн хэрэглэгч олдсонгүй.')
+            return redirect('select_teachers', province_id=province_id, olympiad_id=olympiad_id)
+
+        # Build comparison fields
+        compare_fields = []
+        field_defs = [
+            ('last_name', 'Овог', 'user'),
+            ('first_name', 'Нэр', 'user'),
+            ('email', 'Имэйл', 'user'),
+            ('reg_num', 'РД', 'meta'),
+            ('school', 'Сургууль', 'meta_fk'),
+            ('province', 'Аймаг', 'meta_fk'),
+            ('grade', 'Анги', 'meta_fk'),
+            ('level', 'Ангилал', 'meta_fk'),
+            ('mobile', 'Утас', 'meta'),
+            ('gender', 'Хүйс', 'meta'),
+        ]
+
+        for field_name, label, field_type in field_defs:
+            values = []
+            for u in users:
+                if field_type == 'user':
+                    val = getattr(u, field_name, '') or ''
+                    values.append({'user_id': u.id, 'value': str(val), 'raw_value': str(val)})
+                elif field_type == 'meta':
+                    meta = getattr(u, 'data', None)
+                    val = getattr(meta, field_name, '') if meta else ''
+                    val = val if val is not None else ''
+                    values.append({'user_id': u.id, 'value': str(val), 'raw_value': str(val)})
+                elif field_type == 'meta_fk':
+                    meta = getattr(u, 'data', None)
+                    obj = getattr(meta, field_name, None) if meta else None
+                    display = str(obj) if obj else ''
+                    raw = str(obj.id) if obj else ''
+                    values.append({'user_id': u.id, 'value': display, 'raw_value': raw})
+
+            # Determine if values differ
+            non_empty = [v['value'] for v in values if v['value']]
+            unique_values = set(non_empty)
+            is_different = len(unique_values) > 1
+
+            # Auto-select: primary's value if exists, otherwise first non-empty
+            primary_val = next((v for v in values if v['user_id'] == primary_id), None)
+            if primary_val and primary_val['raw_value']:
+                auto_selected = primary_val['raw_value']
+                auto_selected_display = primary_val['value']
+            else:
+                first_non_empty = next((v for v in values if v['raw_value']), None)
+                auto_selected = first_non_empty['raw_value'] if first_non_empty else ''
+                auto_selected_display = first_non_empty['value'] if first_non_empty else ''
+
+            compare_fields.append({
+                'name': field_name,
+                'label': label,
+                'field_type': field_type,
+                'values': values,
+                'is_different': is_different,
+                'all_empty': len(non_empty) == 0,
+                'auto_selected': auto_selected,
+                'auto_selected_display': auto_selected_display,
+            })
+
+        # Detect Result conflicts
+        result_conflicts = []
+        duplicate_users_list = [u for u in users if u.id != primary_id]
+        for dup_user in duplicate_users_list:
+            dup_results = Result.objects.filter(contestant=dup_user).select_related('olympiad', 'problem')
+            for dup_result in dup_results:
+                primary_result = Result.objects.filter(
+                    contestant_id=primary_id,
+                    olympiad=dup_result.olympiad,
+                    problem=dup_result.problem
+                ).first()
+                if primary_result and (primary_result.answer != dup_result.answer or primary_result.score != dup_result.score):
+                    result_conflicts.append({
+                        'dup_user': dup_user,
+                        'olympiad_name': dup_result.olympiad.name,
+                        'problem_order': dup_result.problem.order,
+                        'primary_score': primary_result.score,
+                        'dup_score': dup_result.score,
+                        'primary_answer': primary_result.answer,
+                        'dup_answer': dup_result.answer,
+                    })
+
+        # Check if name fields differ
+        has_name_conflict = any(
+            f['is_different'] for f in compare_fields if f['name'] in ('last_name', 'first_name')
+        )
+        needs_staff_approval = (has_name_conflict or bool(result_conflicts)) and not request.user.is_staff
+
+        # Province schools for school selector
+        province_schools = School.objects.filter(province=province).order_by('name')
+
+        context = {
+            'province': province,
+            'olympiad': olympiad,
+            'users': users,
+            'primary_user': primary_user,
+            'primary_id': primary_id,
+            'user_ids_str': ','.join(str(uid) for uid in user_ids),
+            'compare_fields': compare_fields,
+            'result_conflicts': result_conflicts,
+            'needs_staff_approval': needs_staff_approval,
+            'province_schools': province_schools,
+            'step': 2,
+        }
+        return render(request, 'provinces/merge_teachers.html', context)
+
+    else:
+        # STEP 1: Select primary user
+        user_data = []
+        for u in users:
+            meta = getattr(u, 'data', None)
+            user_data.append({
+                'user': u,
+                'school': meta.school if meta else None,
+                'reg_num': meta.reg_num if meta else '',
+                'mobile': meta.mobile if meta else '',
+                'last_login': u.last_login,
+            })
+
+        context = {
+            'province': province,
+            'olympiad': olympiad,
+            'users': users,
+            'user_data': user_data,
+            'user_ids_str': ','.join(str(uid) for uid in user_ids),
+            'default_primary_id': users[0].id if users else None,
+            'step': 1,
+        }
+        return render(request, 'provinces/merge_teachers.html', context)
+
+
+@login_required
 def generate_province_answer_sheet(request, province_id, olympiad_id):
     """Excel загвар үүсгэж татах"""
     province = get_object_or_404(Province, id=province_id)
@@ -739,29 +1273,19 @@ def import_province_answer_sheet(request, province_id, olympiad_id):
                             if olympiad.group and not olympiad.group.user_set.filter(id=user_id).exists():
                                 continue
 
-                            # Бодлого бүрээр Result үүсгэх/шинэчлэх
+                            # Бодлого бүрээр Result үүсгэх/шинэчлэх (оноог шууд оруулна)
                             for col_name, problem in problem_dict.items():
                                 if col_name in row and pd.notna(row[col_name]):
-                                    answer_value = row[col_name]
-
-                                    # Оноо бодож гаргах
-                                    score = 0
                                     try:
-                                        ans_int = int(answer_value)
-                                        if problem.numerical_answer is not None and ans_int == problem.numerical_answer:
-                                            score = problem.max_score
-                                        elif problem.numerical_answer2 is not None and ans_int == problem.numerical_answer2:
-                                            score = problem.max_score
+                                        score = float(row[col_name])
                                     except (ValueError, TypeError):
-                                        pass
+                                        score = 0
 
-                                    # Result үүсгэх/шинэчлэх
                                     result, created = Result.objects.update_or_create(
                                         contestant=user,
                                         olympiad=olympiad,
                                         problem=problem,
                                         defaults={
-                                            'answer': int(answer_value) if answer_value else 0,
                                             'score': score,
                                             'state': 2
                                         }
@@ -812,43 +1336,76 @@ def view_province_participants(request, province_id, olympiad_id):
         'data__school__name', 'last_name', 'first_name'
     )
 
-    # Сургуулиар бүлэглэх болон Round 1 мэдээлэл нэмэх
-    from collections import defaultdict
-    schools_dict = defaultdict(list)
+    # POST үйлдлүүд
+    if request.method == 'POST':
+        action = request.POST.get('action')
 
+        if action == 'remove':
+            remove_ids = request.POST.getlist('remove_users')
+            if remove_ids:
+                try:
+                    remove_ids = [int(uid) for uid in remove_ids]
+                except ValueError:
+                    remove_ids = []
+                if remove_ids:
+                    users_to_remove = User.objects.filter(id__in=remove_ids)
+                    count = users_to_remove.count()
+                    group.user_set.remove(*users_to_remove)
+                    messages.success(request, f'{count} оролцогч хасагдлаа.')
+
+        elif action == 'add_qualified':
+            qualified_awards = Award.objects.filter(
+                olympiad__in=round1_olympiads,
+                place__startswith='2.1 эрх',
+                contestant__data__province=province,
+            ).select_related('contestant')
+
+            added_count = 0
+            already_count = 0
+            for award in qualified_awards:
+                user = award.contestant
+                if group.user_set.filter(id=user.id).exists():
+                    already_count += 1
+                else:
+                    group.user_set.add(user)
+                    added_count += 1
+
+            if added_count:
+                messages.success(request, f'{added_count} сурагч нэмэгдлээ.')
+            if already_count:
+                messages.info(request, f'{already_count} сурагч аль хэдийн бүртгэлтэй байсан.')
+            if not added_count and not already_count:
+                messages.warning(request, '1-р шатнаас 2.1 эрх авсан сурагч олдсонгүй.')
+
+        return redirect('view_province_participants', province_id=province_id, olympiad_id=olympiad_id)
+
+    # Round 1 мэдээлэл нэмэх
+    participants_list = []
     for user in participants:
-        school_name = user.data.school.name if hasattr(user, 'data') and user.data.school else 'Сургуулиа бүртгээгүй'
-
-        # Round 1-ийн Award олох (эрх авсан төрөл)
         award = Award.objects.filter(
             olympiad__in=round1_olympiads,
             contestant=user
         ).first()
 
-        # Round 1-ийн ScoreSheet олох (оноо)
         scoresheet = ScoreSheet.objects.filter(
             olympiad__in=round1_olympiads,
             user=user,
             is_official=True
         ).order_by('-total').first()
 
-        # Хэрэглэгчид нэмэлт мэдээлэл хавсаргах
-        user.award_place = award.place if award else 'Тодорхойгүй'
-        user.round1_score = scoresheet.total if scoresheet else 0
-
-        schools_dict[school_name].append(user)
-
-    # Dict-ийг list болгох (template-д ашиглахад хялбар болгох)
-    schools_data = [
-        {'school_name': school_name, 'students': students}
-        for school_name, students in sorted(schools_dict.items())
-    ]
+        participants_list.append({
+            'user': user,
+            'school': user.data.school if hasattr(user, 'data') and user.data else None,
+            'grade': user.data.grade if hasattr(user, 'data') and user.data else None,
+            'award_place': award.place if award else 'Тодорхойгүй',
+            'round1_score': scoresheet.total if scoresheet else 0,
+        })
 
     context = {
         'province': province,
         'olympiad': olympiad,
-        'schools_data': schools_data,
-        'total_count': participants.count(),
+        'participants_list': participants_list,
+        'total_count': len(participants_list),
     }
     return render(request, 'provinces/province_participants.html', context)
 

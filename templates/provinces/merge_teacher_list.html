@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Багш нэгтгэх - {{ province.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_provinces' %}">Миний аймгууд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_dashboard' province.id %}">{{ province.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_olympiad_view' province.id olympiad.id %}">{{ olympiad.name }} - {{ olympiad.level.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'select_teachers' province.id olympiad.id %}">Багш сонгох</a></li>
+            <li class="breadcrumb-item active">Нэгтгэх</li>
+        </ol>
+    </nav>
+
+    <h2>Багш нарыг нэгтгэх</h2>
+    <p class="text-muted">{{ olympiad.name }} - {{ olympiad.level.name }} | {{ province.name }}</p>
+
+    <div class="alert alert-info">
+        <strong>Нийт:</strong> {{ total_teachers }} багш.
+        Нэгтгэх хэрэглэгчдийг сонгоод "Нэгтгэх" товч дарна уу (хамгийн багадаа 2).
+    </div>
+
+    {% if teachers_list %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th width="50">Сонгох</th>
+                        <th>#</th>
+                        <th>ID</th>
+                        <th>Овог</th>
+                        <th>Нэр</th>
+                        <th>Сургууль</th>
+                        <th>РД</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in teachers_list %}
+                        <tr>
+                            <td>
+                                <input type="checkbox"
+                                       value="{{ t.user.id }}"
+                                       class="form-check-input merge-checkbox">
+                            </td>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ t.user.id }}</td>
+                            <td>{{ t.user.last_name }}</td>
+                            <td>{{ t.user.first_name }}</td>
+                            <td>{% if t.school %}{{ t.school.name }}{% else %}-{% endif %}</td>
+                            <td>{{ t.reg_num|default:"-" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex gap-2 mb-4">
+            <button type="button" class="btn btn-danger" id="mergeBtn" disabled>Нэгтгэх</button>
+            <a href="{% url 'select_teachers' province.id olympiad.id %}"
+               class="btn btn-secondary">Буцах</a>
+            <span class="align-self-center text-muted" id="selectedCount">0 сонгосон</span>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            Тухайн ангилалын багш олдсонгүй.
+        </div>
+        <a href="{% url 'select_teachers' province.id olympiad.id %}"
+           class="btn btn-secondary">Буцах</a>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.merge-checkbox');
+    const mergeBtn = document.getElementById('mergeBtn');
+    const selectedCountEl = document.getElementById('selectedCount');
+    if (!mergeBtn) return;
+
+    function updateCount() {
+        const count = document.querySelectorAll('.merge-checkbox:checked').length;
+        selectedCountEl.textContent = count + ' сонгосон';
+        mergeBtn.disabled = count < 2;
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
+
+    mergeBtn.addEventListener('click', function() {
+        const checked = document.querySelectorAll('.merge-checkbox:checked');
+        if (checked.length < 2) {
+            alert('Хамгийн багадаа 2 багш сонгоно уу.');
+            return;
+        }
+        const ids = Array.from(checked).map(cb => cb.value).join(',');
+        window.location.href = '{% url "merge_teachers" province.id olympiad.id %}?user_ids=' + ids;
+    });
+
+    updateCount();
+});
+</script>
+{% endblock %}

@@ -128,6 +128,44 @@ def staff(request):
     return render(request, 'accounts/staff.html', {'users': users})
 
 
+def _apply_field_search(queryset, query, is_staff=False):
+    """
+    Таслалаар зааглагдсан key=value хайлт (AND логик).
+    Жишээ: id=123, Овог=Бат, Нэр=Дорж
+    """
+    FIELD_MAP = {
+        'id': 'id',
+        'username': 'username__icontains',
+        'овог': 'last_name__icontains',
+        'нэр': 'first_name__icontains',
+        'сургууль': 'data__school__name__icontains',
+        'аймаг': 'data__province__name__icontains',
+    }
+    STAFF_FIELD_MAP = {
+        'регистр': 'data__reg_num__icontains',
+        'утас': 'data__mobile__icontains',
+        'имэйл': 'email__icontains',
+    }
+    parts = [p.strip() for p in query.split(',') if '=' in p]
+    for part in parts:
+        key, _, value = part.partition('=')
+        key = key.strip().lower()
+        value = value.strip()
+        if not value:
+            continue
+        lookup = FIELD_MAP.get(key) or (STAFF_FIELD_MAP.get(key) if is_staff else None)
+        if not lookup:
+            continue
+        if lookup == 'id':
+            try:
+                queryset = queryset.filter(id=int(value))
+            except ValueError:
+                queryset = queryset.none()
+        else:
+            queryset = queryset.filter(**{lookup: value})
+    return queryset
+
+
 @login_required
 def participant_search(request):
     """
@@ -160,24 +198,28 @@ def participant_search(request):
         users_query = User.objects.none()
 
     # Apply search filters
+    is_staff = request.user.is_staff
     if query:
-        # Search by: last name, first name, user ID, reg_num, mobile
-        try:
-            query_int = int(query)
-            users_query = users_query.filter(
-                Q(last_name__icontains=query) |
-                Q(first_name__icontains=query) |
-                Q(id=query_int) |
-                Q(data__reg_num__icontains=query) |
-                Q(data__mobile__icontains=query)
-            )
-        except ValueError:
-            users_query = users_query.filter(
-                Q(last_name__icontains=query) |
-                Q(first_name__icontains=query) |
-                Q(data__reg_num__icontains=query) |
-                Q(data__mobile__icontains=query)
-            )
+        # key=value форматтай AND хайлт шалгах
+        if '=' in query:
+            users_query = _apply_field_search(users_query, query, is_staff=is_staff)
+        else:
+            # Энгийн хайлт: OR логик
+            try:
+                query_int = int(query)
+                q_filter = (
+                    Q(last_name__icontains=query) |
+                    Q(first_name__icontains=query) |
+                    Q(id=query_int)
+                )
+            except ValueError:
+                q_filter = (
+                    Q(last_name__icontains=query) |
+                    Q(first_name__icontains=query)
+                )
+            if is_staff:
+                q_filter = q_filter | Q(data__reg_num__icontains=query) | Q(data__mobile__icontains=query) | Q(email__icontains=query)
+            users_query = users_query.filter(q_filter)
 
     # Filter by province
     if province_id:

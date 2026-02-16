@@ -185,6 +185,20 @@ def manage_school_by_level(request, school_id, level_id):
     if level_id == 100: # 100 нь "Бүх сурагчид" гэсэн утгатай
         selected_level = {'id': 100, 'name': 'Бүх сурагчид'}
         users_in_level = group.user_set.all().select_related('data__grade')
+        # Сургуульд бүртгэлгүй боловч өөрийгөө тухайн сургууль гэж бүртгүүлсэн сурагчид
+        pending_users = User.objects.filter(
+            data__school=school
+        ).exclude(
+            groups=group
+        ).select_related('data__grade')
+        # Нэг жагсаалт болгож нэгтгэх
+        registered_ids = set(group.user_set.values_list('id', flat=True))
+        all_school_users = []
+        for u in users_in_level:
+            all_school_users.append({'user': u, 'is_registered': True})
+        for u in pending_users:
+            all_school_users.append({'user': u, 'is_registered': False})
+        all_school_users.sort(key=lambda x: (x['user'].last_name or '', x['user'].first_name or ''))
     elif level_id == 0:
         selected_level = {'id': 0, 'name': 'Ангилалгүй'}
         users_in_level = group.user_set.filter(data__level__isnull=True).select_related('data__grade')
@@ -342,6 +356,26 @@ def manage_school_by_level(request, school_id, level_id):
 
             return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
+        elif 'approve_user' in request.POST:
+            search_form = UserSearchForm()
+            add_user_form = AddUserForm()
+            user_id = request.POST.get('user_id')
+            user_to_approve = get_object_or_404(User, id=user_id)
+            if hasattr(user_to_approve, 'data') and user_to_approve.data.school == school:
+                group.user_set.add(user_to_approve)
+                messages.success(request, f"'{user_to_approve.last_name} {user_to_approve.first_name}' бүртгэл нийлүүлэгдлээ.")
+            return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+
+        elif 'approve_all_users' in request.POST:
+            search_form = UserSearchForm()
+            add_user_form = AddUserForm()
+            pending = User.objects.filter(data__school=school).exclude(groups=group)
+            count = pending.count()
+            for u in pending:
+                group.user_set.add(u)
+            messages.success(request, f"{count} сурагчийн бүртгэл нийлүүлэгдлээ.")
+            return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
+
         elif 'remove_user' in request.POST:
             search_form = UserSearchForm()
             add_user_form = AddUserForm()
@@ -363,6 +397,7 @@ def manage_school_by_level(request, school_id, level_id):
         'search_form': search_form,
         'add_user_form': add_user_form,
         'search_results': search_results,
+        'all_school_users': all_school_users if level_id == 100 else None,
     }
     return render(request, 'schools/manage_school_users_level.html', context)
 
@@ -806,7 +841,7 @@ def change_student_password_view(request, user_id):
             form.save()
             messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн нууц үгийг амжилттай солилоо.")
             # Буцах замыг зөв тодорхойлох
-            return redirect('manage_school_by_level', school_id=student_school.id, level_id=100)
+            return redirect('school_all_users', school_id=student_school.id)
     else:
         form = SchoolAdminPasswordChangeForm(user=target_user)
 
@@ -1251,3 +1286,295 @@ def school_official_levels_view(request):
     }
 
     return render(request, 'schools/official_levels.html', context)
+
+
+@login_required
+def merge_school_users(request, school_id):
+    """Сургуулийн сурагчдын давхар бүртгэлийг нэгтгэх (шат дараатай)"""
+    from accounts.models import UserMergeRequest
+    from olympiad.models import Award, Comment, ScoreSheet
+
+    school = get_object_or_404(School, id=school_id)
+    if not school.user_has_access(request.user):
+        messages.error(request, 'Та энэ сургуулийг удирдах эрхгүй.')
+        return redirect('my_managed_schools')
+
+    back_url = reverse('school_all_users', args=[school_id])
+
+    # Parse user_ids
+    user_ids_str = request.GET.get('user_ids', '') or request.POST.get('user_ids', '')
+    try:
+        user_ids = sorted([int(uid.strip()) for uid in user_ids_str.split(',') if uid.strip()])
+    except ValueError:
+        messages.error(request, 'Буруу ID байна.')
+        return redirect('school_all_users', school_id=school_id)
+
+    if len(user_ids) < 2:
+        messages.error(request, 'Хамгийн багадаа 2 хэрэглэгч сонгоно уу.')
+        return redirect('school_all_users', school_id=school_id)
+
+    users = list(User.objects.filter(id__in=user_ids).select_related(
+        'data', 'data__school', 'data__province', 'data__grade', 'data__level'))
+    if len(users) != len(user_ids):
+        messages.error(request, 'Зарим хэрэглэгч олдсонгүй.')
+        return redirect('school_all_users', school_id=school_id)
+
+    from django.utils import timezone as tz
+    import datetime
+    users.sort(key=lambda u: u.last_login or tz.make_aware(datetime.datetime.min), reverse=True)
+
+    if request.method == 'POST':
+        # === Execute merge ===
+        primary_id = int(request.POST.get('primary_id'))
+        primary_user = get_object_or_404(User, id=primary_id)
+        duplicate_users = [u for u in users if u.id != primary_id]
+
+        all_field_names = ['last_name', 'first_name', 'email', 'reg_num', 'school',
+                           'province', 'grade', 'level', 'mobile', 'gender']
+        field_selections = {}
+        for fn in all_field_names:
+            val = request.POST.get(f'field_{fn}', '').strip()
+            if val:
+                field_selections[fn] = val
+
+        # Check conflicts
+        has_name_conflict = False
+        for nf in ['last_name', 'first_name']:
+            vals = set(filter(None, [getattr(u, nf, '') or '' for u in users]))
+            if len(vals) > 1:
+                has_name_conflict = True
+                break
+
+        has_result_conflict = False
+        for dup_user in duplicate_users:
+            dup_results = Result.objects.filter(contestant=dup_user).select_related('olympiad', 'problem')
+            for dup_result in dup_results:
+                primary_result = Result.objects.filter(
+                    contestant_id=primary_id,
+                    olympiad=dup_result.olympiad,
+                    problem=dup_result.problem
+                ).first()
+                if primary_result and (primary_result.answer != dup_result.answer or primary_result.score != dup_result.score):
+                    has_result_conflict = True
+                    break
+            if has_result_conflict:
+                break
+
+        needs_staff_approval = (has_name_conflict or has_result_conflict) and not request.user.is_staff
+
+        if needs_staff_approval:
+            conflict_reasons = []
+            if has_name_conflict:
+                conflict_reasons.append('нэр зөрүүтэй')
+            if has_result_conflict:
+                conflict_reasons.append('дүнгийн давхцал')
+
+            merge_request = UserMergeRequest.objects.create(
+                requesting_user=request.user,
+                user_ids=user_ids,
+                primary_user=primary_user,
+                reason=f'{school.name} сургуулийн бүртгэлээс нэгтгэх хүсэлт ({", ".join(conflict_reasons)}).',
+                status=UserMergeRequest.Status.PENDING,
+                requires_user_confirmation=False,
+                conflicts_data={
+                    'field_selections': field_selections,
+                    'conflict_reasons': conflict_reasons,
+                },
+            )
+            merge_request.detect_conflicts()
+            merge_request.save()
+
+            messages.info(
+                request,
+                f'Нэгтгэх хүсэлт #{merge_request.id} үүслээ ({", ".join(conflict_reasons)}). '
+                f'Админ хянаад баталгаажуулна.'
+            )
+            return redirect('school_all_users', school_id=school_id)
+
+        # Staff or no conflicts → execute merge
+        primary_meta, _ = UserMeta.objects.get_or_create(user=primary_user)
+
+        with transaction.atomic():
+            user_fields = ['last_name', 'first_name', 'email']
+            for field in user_fields:
+                value = field_selections.get(field, '')
+                if value:
+                    setattr(primary_user, field, value)
+            primary_user.save()
+
+            meta_fields = ['reg_num', 'mobile', 'gender']
+            meta_fk_fields = ['school', 'province', 'grade', 'level']
+
+            for field in meta_fields:
+                value = field_selections.get(field, '')
+                if value:
+                    if field == 'mobile':
+                        try:
+                            setattr(primary_meta, field, int(value))
+                        except ValueError:
+                            pass
+                    else:
+                        setattr(primary_meta, field, value)
+
+            for field in meta_fk_fields:
+                value = field_selections.get(field, '')
+                if value:
+                    try:
+                        setattr(primary_meta, f'{field}_id', int(value))
+                    except ValueError:
+                        pass
+
+            primary_meta.save()
+
+            for dup_user in duplicate_users:
+                primary_user.groups.add(*dup_user.groups.all())
+                Result.objects.filter(contestant=dup_user).update(contestant=primary_user)
+                Award.objects.filter(contestant=dup_user).update(contestant=primary_user)
+                Comment.objects.filter(author=dup_user).update(author=primary_user)
+                ScoreSheet.objects.filter(user=dup_user).update(user=primary_user)
+                School.objects.filter(user=dup_user).update(user=primary_user)
+                School.objects.filter(manager=dup_user).update(manager=primary_user)
+                dup_user.delete()
+
+            UserMergeRequest.objects.create(
+                requesting_user=request.user,
+                user_ids=user_ids,
+                primary_user=primary_user,
+                reason=f'{school.name} сургуулийн бүртгэлээс шууд нэгтгэсэн.',
+                status=UserMergeRequest.Status.COMPLETED,
+                requires_user_confirmation=False,
+            )
+
+        messages.success(request, f'Амжилттай нэгтгэлээ. Үндсэн хэрэглэгч: {primary_user.last_name} {primary_user.first_name} (ID: {primary_user.id})')
+        return redirect('school_all_users', school_id=school_id)
+
+    # === GET: Step 1 or Step 2 ===
+    step = request.GET.get('step', '1')
+    primary_id = request.GET.get('primary')
+
+    if step == '2' and primary_id:
+        primary_id = int(primary_id)
+        primary_user = next((u for u in users if u.id == primary_id), None)
+        if not primary_user:
+            messages.error(request, 'Үндсэн хэрэглэгч олдсонгүй.')
+            return redirect('school_all_users', school_id=school_id)
+
+        compare_fields = []
+        field_defs = [
+            ('last_name', 'Овог', 'user'),
+            ('first_name', 'Нэр', 'user'),
+            ('email', 'Имэйл', 'user'),
+            ('reg_num', 'РД', 'meta'),
+            ('school', 'Сургууль', 'meta_fk'),
+            ('province', 'Аймаг', 'meta_fk'),
+            ('grade', 'Анги', 'meta_fk'),
+            ('level', 'Ангилал', 'meta_fk'),
+            ('mobile', 'Утас', 'meta'),
+            ('gender', 'Хүйс', 'meta'),
+        ]
+
+        for field_name, label, field_type in field_defs:
+            values = []
+            for u in users:
+                if field_type == 'user':
+                    val = getattr(u, field_name, '') or ''
+                    values.append({'user_id': u.id, 'value': str(val), 'raw_value': str(val)})
+                elif field_type == 'meta':
+                    meta = getattr(u, 'data', None)
+                    val = getattr(meta, field_name, '') if meta else ''
+                    val = val if val is not None else ''
+                    values.append({'user_id': u.id, 'value': str(val), 'raw_value': str(val)})
+                elif field_type == 'meta_fk':
+                    meta = getattr(u, 'data', None)
+                    obj = getattr(meta, field_name, None) if meta else None
+                    display = str(obj) if obj else ''
+                    raw = str(obj.id) if obj else ''
+                    values.append({'user_id': u.id, 'value': display, 'raw_value': raw})
+
+            non_empty = [v['value'] for v in values if v['value']]
+            unique_values = set(non_empty)
+            is_different = len(unique_values) > 1
+
+            primary_val = next((v for v in values if v['user_id'] == primary_id), None)
+            if primary_val and primary_val['raw_value']:
+                auto_selected = primary_val['raw_value']
+                auto_selected_display = primary_val['value']
+            else:
+                first_non_empty = next((v for v in values if v['raw_value']), None)
+                auto_selected = first_non_empty['raw_value'] if first_non_empty else ''
+                auto_selected_display = first_non_empty['value'] if first_non_empty else ''
+
+            compare_fields.append({
+                'name': field_name,
+                'label': label,
+                'field_type': field_type,
+                'values': values,
+                'is_different': is_different,
+                'all_empty': len(non_empty) == 0,
+                'auto_selected': auto_selected,
+                'auto_selected_display': auto_selected_display,
+            })
+
+        result_conflicts = []
+        duplicate_users_list = [u for u in users if u.id != primary_id]
+        for dup_user in duplicate_users_list:
+            dup_results = Result.objects.filter(contestant=dup_user).select_related('olympiad', 'problem')
+            for dup_result in dup_results:
+                primary_result = Result.objects.filter(
+                    contestant_id=primary_id,
+                    olympiad=dup_result.olympiad,
+                    problem=dup_result.problem
+                ).first()
+                if primary_result and (primary_result.answer != dup_result.answer or primary_result.score != dup_result.score):
+                    result_conflicts.append({
+                        'dup_user': dup_user,
+                        'olympiad_name': dup_result.olympiad.name,
+                        'problem_order': dup_result.problem.order,
+                        'primary_score': primary_result.score,
+                        'dup_score': dup_result.score,
+                        'primary_answer': primary_result.answer,
+                        'dup_answer': dup_result.answer,
+                    })
+
+        has_name_conflict = any(
+            f['is_different'] for f in compare_fields if f['name'] in ('last_name', 'first_name')
+        )
+        needs_staff_approval = (has_name_conflict or bool(result_conflicts)) and not request.user.is_staff
+
+        province_schools = School.objects.filter(province=school.province).order_by('name')
+
+        context = {
+            'school': school,
+            'users': users,
+            'primary_user': primary_user,
+            'primary_id': primary_id,
+            'user_ids_str': ','.join(str(uid) for uid in user_ids),
+            'compare_fields': compare_fields,
+            'result_conflicts': result_conflicts,
+            'needs_staff_approval': needs_staff_approval,
+            'province_schools': province_schools,
+            'step': 2,
+        }
+        return render(request, 'schools/merge_school_users.html', context)
+
+    else:
+        user_data = []
+        for u in users:
+            meta = getattr(u, 'data', None)
+            user_data.append({
+                'user': u,
+                'school': meta.school if meta else None,
+                'reg_num': meta.reg_num if meta else '',
+                'mobile': meta.mobile if meta else '',
+                'last_login': u.last_login,
+            })
+
+        context = {
+            'school': school,
+            'users': users,
+            'user_data': user_data,
+            'user_ids_str': ','.join(str(uid) for uid in user_ids),
+            'default_primary_id': users[0].id if users else None,
+            'step': 1,
+        }
+        return render(request, 'schools/merge_school_users.html', context)

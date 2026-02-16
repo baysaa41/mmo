@@ -56,11 +56,13 @@
                 <h6 class="fw-bold">1. Бүртгэл (олимпиадаас өмнө)</h6>
                 {% if is_teacher_olympiad %}
                     <ol>
-                        <li>Багш нарыг хэрэглэгчийн <strong>"ID-гаар нэмэх"</strong> товчоор бүртгэнэ.</li>
+                        <li><strong>"Жагсаалтаас сонгох"</strong> хэсгээр тухайн аймгийн багш нарыг шууд сонгож бүртгэнэ. Өмнөх жил оролцсон бүгдийг нэг товчоор сонгох боломжтой.</li>
+                        <li>Тодорхой хүнийг хэрэглэгчийн ID-аар нэмэх бол <strong>"ID-гаар нэмэх"</strong>-ийг ашиглана.</li>
                         <li><strong>"Оролцогчдын жагсаалт"</strong>-аас бүртгэлтэй багш нарыг шалгаж, шаардлагатай бол хасна.</li>
                     </ol>
                 {% else %}
                     <ol>
+                        <li><strong>"Эрх авсан сурагчдыг нэмэх"</strong> — 1-р давааны жагсаалтаас эрх авсан бүх сурагчдыг автоматаар бүртгэнэ.</li>
                         <li><strong>"Босгоор нэмэх"</strong> — 1-р давааны онооны босго тогтоож, босгоос дээш оноотой бүх сурагчдыг автоматаар бүртгэнэ.</li>
                         <li><strong>"Гараар сонгох"</strong> — сургууль тус бүрийн топ сурагчдаас гараар сонгож бүртгэнэ.</li>
                         <li>Тодорхой хүнийг хэрэглэгчийн ID-аар нэмэх бол <strong>"ID-гаар нэмэх"</strong>-ийг ашиглана.</li>
@@ -72,7 +74,7 @@
                 <ol>
                     <li><strong>"Загвар татах"</strong> товч дарж бүртгэлтэй оролцогчдын нэрс бүхий Excel файл татна.</li>
                     <li>Excel файлын бодлого тус бүрийн баганад оролцогч бүрийн <strong>оноог</strong> бичнэ.</li>
-                    <li><strong>"Файл оруулах"</strong> товч дарж бөглөсөн Excel файлыг системд оруулна.</li>
+                    <li><strong>"Оноо хуулах"</strong> товч дарж бөглөсөн Excel файлыг системд оруулна.</li>
                 </ol>
 
                 <h6 class="fw-bold mt-3">3. Үр дүн</h6>
@@ -89,17 +91,27 @@
     </div>
 
     <div class="row">
-        <!-- Card 1: Нэмэлт бүртгэл -->
+        <!-- Card 1: Бүртгэл -->
         <div class="col-md-4 mb-3">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">1. Нэмэлт бүртгэл</h5>
+                    <h5 class="mb-0">1. Бүртгэл</h5>
                 </div>
                 <div class="card-body">
                     {% if is_teacher_olympiad %}
+                        <a href="{% url 'select_teachers' province.id olympiad.id %}"
+                           class="btn btn-primary btn-sm d-block mb-2">Жагсаалтаас сонгох</a>
                         <a href="{% url 'add_students_by_id' province.id olympiad.id %}"
-                           class="btn btn-primary btn-sm d-block">ID-гаар нэмэх</a>
+                           class="btn btn-outline-primary btn-sm d-block">ID-гаар нэмэх</a>
                     {% else %}
+                        <form method="post" action="{% url 'view_province_participants' province.id olympiad.id %}" class="d-block mb-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_qualified">
+                            <button type="submit" class="btn btn-success btn-sm d-block w-100"
+                                    onclick="return confirm('Эрх авсан бүх сурагчдыг нэмэх үү?')">
+                                Эрх авсан сурагчдыг нэмэх
+                            </button>
+                        </form>
                         <a href="{% url 'add_students_by_threshold' province.id olympiad.id %}"
                            class="btn btn-primary btn-sm d-block mb-2">Босгоор нэмэх</a>
                         <a href="{% url 'select_top_students_by_school' province.id olympiad.id %}"
@@ -123,7 +135,7 @@
                        class="btn btn-success btn-sm d-block mb-2">Загвар татах</a>
                     <button type="button" class="btn btn-outline-success btn-sm d-block"
                             data-bs-toggle="modal" data-bs-target="#uploadModal">
-                        Файл оруулах
+                        Оноо хуулах
                     </button>
                 </div>
             </div>

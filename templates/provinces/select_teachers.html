@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}Багш сонгох - {{ province.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'my_managed_provinces' %}">Миний аймгууд</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_dashboard' province.id %}">{{ province.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'province_olympiad_view' province.id olympiad.id %}">{{ olympiad.name }} - {{ olympiad.level.name }}</a></li>
+            <li class="breadcrumb-item active">Жагсаалтаас сонгох</li>
+        </ol>
+    </nav>
+
+    <h2>Багш нарыг жагсаалтаас сонгох</h2>
+    <p class="text-muted">{{ olympiad.name }} - {{ olympiad.level.name }} | {{ province.name }}</p>
+
+    <div class="alert alert-info">
+        <strong>Нийт:</strong> {{ total_teachers }} багш |
+        <strong>Бүртгэлтэй:</strong> {{ registered_count }} |
+        <strong>Өмнөх жил оролцсон:</strong> {{ previous_year_count }}
+    </div>
+
+    {% if teachers_list %}
+        <form method="post" id="selectTeachersForm">
+            {% csrf_token %}
+
+            <div class="d-flex gap-2 mb-3 flex-wrap">
+                <button type="button" class="btn btn-warning btn-sm" id="selectPreviousYear">
+                    Өмнөх жил оролцсон бүгдийг сонгох
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="selectAll">
+                    Бүгдийг сонгох
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="deselectAll">
+                    Бүгдийг болих
+                </button>
+                <a href="{% url 'merge_teacher_list' province.id olympiad.id %}"
+                   class="btn btn-outline-danger btn-sm ms-auto">Давхар бүртгэл нэгтгэх</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="50">Сонгох</th>
+                            <th>#</th>
+                            <th>ID</th>
+                            <th>Овог</th>
+                            <th>Нэр</th>
+                            <th>Сургууль</th>
+                            <th>Бүртгэл</th>
+                            <th>Өмнөх жил</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in teachers_list %}
+                            <tr class="{% if t.is_registered %}table-success{% endif %}">
+                                <td>
+                                    <input type="checkbox"
+                                           name="selected_users"
+                                           value="{{ t.user.id }}"
+                                           class="form-check-input teacher-checkbox"
+                                           {% if t.is_registered %}checked data-registered="1"{% endif %}
+                                           {% if t.is_previous_year %}data-previous-year="1"{% endif %}>
+                                </td>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ t.user.id }}</td>
+                                <td>{{ t.user.last_name }}</td>
+                                <td>{{ t.user.first_name }}</td>
+                                <td>{% if t.school %}{{ t.school.name }}{% else %}-{% endif %}</td>
+                                <td>
+                                    {% if t.is_registered %}
+                                        <span class="badge bg-success">Бүртгэлтэй</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if t.is_previous_year %}
+                                        <span class="badge bg-warning text-dark" title="Өмнөх жил оролцсон">Тийм</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex gap-2 mb-4">
+                <button type="submit" class="btn btn-primary" id="submitBtn">Хадгалах</button>
+                <a href="{% url 'province_olympiad_view' province.id olympiad.id %}"
+                   class="btn btn-secondary">Буцах</a>
+                <span class="align-self-center text-muted" id="selectedCount">0 сонгосон</span>
+            </div>
+        </form>
+    {% else %}
+        <div class="alert alert-warning">
+            Тухайн ангилалын багш олдсонгүй.
+        </div>
+        <a href="{% url 'province_olympiad_view' province.id olympiad.id %}"
+           class="btn btn-secondary">Буцах</a>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('selectTeachersForm');
+    if (!form) return;
+
+    const checkboxes = document.querySelectorAll('.teacher-checkbox');
+    const selectedCountEl = document.getElementById('selectedCount');
+
+    function updateCount() {
+        const checked = document.querySelectorAll('.teacher-checkbox:checked').length;
+        const toRemove = document.querySelectorAll('.teacher-checkbox[data-registered="1"]:not(:checked)').length;
+        let text = checked + ' сонгосон';
+        if (toRemove > 0) {
+            text += ', ' + toRemove + ' цуцлагдах';
+        }
+        selectedCountEl.textContent = text;
+
+        // Бүртгэл цуцлагдах мөрийг өнгөөр тэмдэглэх
+        checkboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            if (cb.dataset.registered === '1' && !cb.checked) {
+                row.className = 'table-danger';
+            } else if (cb.dataset.registered === '1' && cb.checked) {
+                row.className = 'table-success';
+            } else {
+                row.className = '';
+            }
+        });
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
+
+    // Өмнөх жил оролцсон бүгдийг сонгох
+    document.getElementById('selectPreviousYear').addEventListener('click', function() {
+        checkboxes.forEach(cb => {
+            if (cb.dataset.previousYear === '1') {
+                cb.checked = true;
+            }
+        });
+        updateCount();
+    });
+
+    // Бүгдийг сонгох
+    document.getElementById('selectAll').addEventListener('click', function() {
+        checkboxes.forEach(cb => { cb.checked = true; });
+        updateCount();
+    });
+
+    // Бүгдийг болих
+    document.getElementById('deselectAll').addEventListener('click', function() {
+        checkboxes.forEach(cb => { cb.checked = false; });
+        updateCount();
+    });
+
+    // Submit confirm
+    form.addEventListener('submit', function(e) {
+        const toRemove = document.querySelectorAll('.teacher-checkbox[data-registered="1"]:not(:checked)').length;
+        const toAdd = document.querySelectorAll('.teacher-checkbox:not([data-registered="1"]):checked').length;
+
+        if (toAdd === 0 && toRemove === 0) {
+            e.preventDefault();
+            alert('Өөрчлөлт байхгүй байна.');
+            return false;
+        }
+
+        let msg = '';
+        if (toAdd > 0) msg += toAdd + ' багш нэмэгдэнэ. ';
+        if (toRemove > 0) msg += toRemove + ' багшийн бүртгэл цуцлагдана. ';
+        msg += 'Үргэлжлүүлэх үү?';
+
+        if (!confirm(msg)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    updateCount();
+});
+</script>
+{% endblock %}

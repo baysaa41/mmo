@@ -19,10 +19,8 @@
     <div class="alert alert-info">
         <strong>Анхаар:</strong>
         <ul class="mb-0">
-            <li>Жагсаалт болон нэмэлт эрхээр эрх аваагүй эхний 3 сурагчийг харуулна.</li>
-            <li>Хэрэв 3-5 байр ижил оноотой бол бүх тэдгээрийг харуулна.</li>
-            <li>Сургууль бүрээс дээд тал нь 3 сурагч сонгох боломжтой.</li>
-            <li>Өмнө гараар сонгосон сурагчид автоматаар тэмдэглэгдсэн байна.</li>
+            <li>Эрх авсан сурагчид болон тэдний ард ижил оноотой сурагчдыг харуулна.</li>
+            <li>Ижил оноотой сурагчдаас гараар сонгож бүртгэх боломжтой.</li>
         </ul>
     </div>
 
@@ -35,9 +33,11 @@
                     <div class="card-header">
                         <h5 class="mb-0">
                             {{ school_data.school.name }}
-                            <small class="text-muted">({{ school_data.students|length }} сурагч)</small>
+                            <small class="text-muted">
+                                (эрх авсан: {{ school_data.qualified_count }}{% if school_data.tie_count %},
+                                ижил оноотой: {{ school_data.tie_count }}{% endif %})
+                            </small>
                         </h5>
-                        <small class="text-muted">3-р оноо: {{ school_data.third_score|floatformat:1 }}</small>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -53,43 +53,34 @@
                                 </thead>
                                 <tbody>
                                     {% for student in school_data.students %}
-                                        <tr {% if student.is_manually_selected %}class="table-success"{% elif student.total == school_data.third_score %}class="table-warning"{% endif %}>
+                                        <tr class="{% if student.is_qualified %}table-success{% else %}table-warning{% endif %}">
                                             <td>
-                                                <input type="checkbox"
-                                                       name="selected_users"
-                                                       value="{{ student.user.id }}"
-                                                       class="form-check-input student-checkbox"
-                                                       data-school-id="{{ school_data.school.id }}"
-                                                       {% if student.is_manually_selected %}checked{% endif %}>
+                                                {% if student.is_qualified %}
+                                                    <input type="checkbox" class="form-check-input" disabled checked>
+                                                {% else %}
+                                                    <input type="checkbox"
+                                                           name="selected_users"
+                                                           value="{{ student.user.id }}"
+                                                           class="form-check-input student-checkbox"
+                                                           data-school-id="{{ school_data.school.id }}">
+                                                {% endif %}
                                             </td>
                                             <td>{{ forloop.counter }}</td>
-                                            <td>
-                                                {{ student.user.last_name }} {{ student.user.first_name }}
-                                                {% if student.is_manually_selected %}
-                                                    <span class="badge bg-success">✓</span>
-                                                {% endif %}
-                                            </td>
+                                            <td>{{ student.user.last_name }} {{ student.user.first_name }}</td>
                                             <td>
                                                 <span class="badge bg-info">{{ student.total|floatformat:1 }}</span>
-                                                {% if student.total == school_data.third_score and forloop.counter > 3 %}
-                                                    <span class="badge bg-warning text-dark" title="3-р сурагчтай ижил оноо">Ижил</span>
-                                                {% endif %}
                                             </td>
                                             <td>
-                                                {% if student.is_manually_selected %}
-                                                    <span class="badge bg-success">Өмнө сонгосон</span>
+                                                {% if student.is_qualified %}
+                                                    <span class="badge bg-success">{{ student.award_place }}</span>
                                                 {% else %}
-                                                    <span class="badge bg-secondary">Шинэ</span>
+                                                    <span class="badge bg-warning text-dark">Ижил оноотой</span>
                                                 {% endif %}
                                             </td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
-                        </div>
-                        <div class="school-count-warning alert alert-danger d-none"
-                             data-school-id="{{ school_data.school.id }}">
-                            <strong>Анхаар:</strong> Энэ сургуулиас 3-аас илүү сурагч сонгосон байна!
                         </div>
                     </div>
                 </div>
@@ -103,7 +94,7 @@
         </form>
     {% else %}
         <div class="alert alert-info">
-            Эрх аваагүй сурагч байхгүй байна.
+            Эрх авсан сурагч байхгүй байна.
         </div>
         <a href="{% url 'province_olympiad_view' province.id olympiad.id %}"
            class="btn btn-secondary">Буцах</a>
@@ -115,51 +106,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('selectStudentsForm');
     if (!form) return;
 
-    const checkboxes = document.querySelectorAll('.student-checkbox');
     const submitBtn = document.getElementById('submitBtn');
+    const checkboxes = document.querySelectorAll('.student-checkbox');
 
-    function validateSchoolCounts() {
-        const schoolCounts = {};
-
-        // Сонгогдсон checkbox-уудыг тоолох
-        checkboxes.forEach(checkbox => {
-            if (checkbox.checked) {
-                const schoolId = checkbox.dataset.schoolId;
-                schoolCounts[schoolId] = (schoolCounts[schoolId] || 0) + 1;
-            }
-        });
-
-        let hasError = false;
-
-        // Сургууль бүрийн анхааруулгыг шинэчлэх
-        document.querySelectorAll('.school-count-warning').forEach(warning => {
-            const schoolId = warning.dataset.schoolId;
-            const count = schoolCounts[schoolId] || 0;
-
-            if (count > 3) {
-                warning.classList.remove('d-none');
-                hasError = true;
-            } else {
-                warning.classList.add('d-none');
-            }
-        });
-
-        // Submit товчийг идэвхжүүлэх/идэвхгүй болгох
-        submitBtn.disabled = hasError;
-
-        return !hasError;
+    function updateBtn() {
+        submitBtn.disabled = document.querySelectorAll('.student-checkbox:checked').length === 0;
     }
 
-    // Checkbox өөрчлөгдөх үед шалгалт хийх
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', validateSchoolCounts);
-    });
+    checkboxes.forEach(cb => cb.addEventListener('change', updateBtn));
+    updateBtn();
 
-    // Form submit хийхдээ дахин шалгах
     form.addEventListener('submit', function(e) {
-        if (!validateSchoolCounts()) {
+        if (document.querySelectorAll('.student-checkbox:checked').length === 0) {
             e.preventDefault();
-            alert('Сургууль бүрээс дээд тал нь 3 сурагч сонгоно уу!');
+            alert('Сурагч сонгоно уу.');
             return false;
         }
     });

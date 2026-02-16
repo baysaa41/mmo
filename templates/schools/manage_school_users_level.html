@@ -9,10 +9,10 @@
     <hr>
 
     {# ---------------------------------------------------- #}
-    {#         СУРАГЧ УДИРДАХ ХЭСЭГ (ӨӨРЧЛӨГДСӨН)             #}
+    {#         СУРАГЧ УДИРДАХ ХЭСЭГ                           #}
     {# ---------------------------------------------------- #}
     <div class="row mb-4">
-        {# Бүртгэлтэй сурагч хайх хэсэг (Одоо ил харагдана) #}
+        {# Бүртгэлтэй сурагч хайх хэсэг #}
         <div class="col-md-6">
             <h4>Бүртгэлтэй сурагч хайх</h4>
             <form method="post" class="mb-3">
@@ -40,7 +40,7 @@
             {% endif %}
         </div>
 
-        {# Шинээр хэрэглэгч нэмэх хэсэг (Одоо нуугдмал-дэлгэгддэг болсон) #}
+        {# Шинээр хэрэглэгч нэмэх хэсэг #}
         <div class="col-md-6">
             <p>
                 <a class="btn btn-success w-100" data-bs-toggle="collapse" href="#addNewUserCollapse" role="button" aria-expanded="false" aria-controls="addNewUserCollapse">
@@ -59,43 +59,171 @@
         </div>
     </div>
 
-    {# Тухайн ангилалд хамаарах сурагчдын жагсаалт #}
-    <h4>Энэ ангиллын сурагчид</h4>
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Хэрэглэгч</th>
-                <th>Овог</th>
-                <th>Нэр</th>
-                <th>Анги, үүрэг</th>
-                <th>Үйлдэл</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users_in_level %}
-            <tr>
-                <td>{{ user.id }}</td>
-                <td>{{ user.username }}</td>
-                <td>{{ user.last_name }}</td>
-                <td>{{ user.first_name }}</td>
-                <td>{{ user.data.grade.name|default:"Тодорхойгүй" }}</td>
-                <td>
-                    <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-sm btn-outline-secondary">Засах</a>
-                    <a href="{% url 'change_student_password' user.id %}" class="btn btn-sm btn-outline-secondary">Нууц үг солих</a>
-                    <form method="post" style="display: inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="user_id" value="{{ user.id }}">
-                        <button type="submit" name="remove_user" class="btn btn-sm btn-outline-danger">Хасах</button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="6" class="text-center">Энэ ангилалд сурагч бүртгэгдээгүй байна.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {# Сурагчдын жагсаалт #}
+    {% if all_school_users %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">Сурагчдын жагсаалт</h4>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-warning btn-sm" id="mergeBtn" disabled>
+                    Бүртгэл нэгтгэх
+                </button>
+                <span class="align-self-center text-muted small" id="mergeCount"></span>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" name="approve_all_users" class="btn btn-success btn-sm"
+                            onclick="return confirm('Бүртгэлгүй бүх сурагчдыг бүртгэх үү?')">
+                        Бүгдийг бүртгэх
+                    </button>
+                </form>
+            </div>
+        </div>
+        <table class="table table-sm table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th width="30">
+                        <input type="checkbox" class="form-check-input" id="selectAllMerge" title="Бүгдийг сонгох">
+                    </th>
+                    <th>ID</th>
+                    <th>Овог</th>
+                    <th>Нэр</th>
+                    <th>Анги</th>
+                    <th>Статус</th>
+                    <th>Үйлдэл</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in all_school_users %}
+                <tr>
+                    <td>
+                        <input type="checkbox" value="{{ item.user.id }}" class="form-check-input merge-checkbox">
+                    </td>
+                    <td>{{ item.user.id }}</td>
+                    <td>{{ item.user.last_name }}</td>
+                    <td>{{ item.user.first_name }}</td>
+                    <td>{{ item.user.data.grade.name|default:"Тодорхойгүй" }}</td>
+                    <td>
+                        {% if item.is_registered %}
+                            <span class="badge bg-success">Бүртгэлтэй</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Бүртгэлгүй</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.is_registered %}
+                            <a href="{% url 'edit_user_in_group' item.user.id %}" class="btn btn-sm btn-outline-secondary">Засах</a>
+                            <a href="{% url 'change_student_password' item.user.id %}" class="btn btn-sm btn-outline-secondary">Нууц үг солих</a>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                                <button type="submit" name="remove_user" class="btn btn-sm btn-outline-danger">Хасах</button>
+                            </form>
+                        {% else %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                                <button type="submit" name="approve_user" class="btn btn-sm btn-success">Бүртгэх</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% elif users_in_level %}
+        <h4>Энэ ангиллын сурагчид</h4>
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Хэрэглэгч</th>
+                    <th>Овог</th>
+                    <th>Нэр</th>
+                    <th>Анги, үүрэг</th>
+                    <th>Үйлдэл</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users_in_level %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.last_name }}</td>
+                    <td>{{ user.first_name }}</td>
+                    <td>{{ user.data.grade.name|default:"Тодорхойгүй" }}</td>
+                    <td>
+                        <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-sm btn-outline-secondary">Засах</a>
+                        <a href="{% url 'change_student_password' user.id %}" class="btn btn-sm btn-outline-secondary">Нууц үг солих</a>
+                        <form method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                            <button type="submit" name="remove_user" class="btn btn-sm btn-outline-danger">Хасах</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Энэ ангилалд сурагч бүртгэгдээгүй байна.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <h4>Энэ ангиллын сурагчид</h4>
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Хэрэглэгч</th>
+                    <th>Овог</th>
+                    <th>Нэр</th>
+                    <th>Анги, үүрэг</th>
+                    <th>Үйлдэл</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="6" class="text-center">Энэ ангилалд сурагч бүртгэгдээгүй байна.</td>
+                </tr>
+            </tbody>
+        </table>
+    {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var mergeBtn = document.getElementById('mergeBtn');
+    var selectAll = document.getElementById('selectAllMerge');
+    var mergeCount = document.getElementById('mergeCount');
+    if (!mergeBtn) return;
+
+    var checkboxes = document.querySelectorAll('.merge-checkbox');
+
+    function updateMerge() {
+        var count = document.querySelectorAll('.merge-checkbox:checked').length;
+        mergeBtn.disabled = count < 2;
+        mergeCount.textContent = count > 0 ? count + ' сонгосон' : '';
+    }
+
+    checkboxes.forEach(function(cb) { cb.addEventListener('change', updateMerge); });
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(function(cb) { cb.checked = selectAll.checked; });
+            updateMerge();
+        });
+    }
+
+    mergeBtn.addEventListener('click', function() {
+        var checked = document.querySelectorAll('.merge-checkbox:checked');
+        if (checked.length < 2) {
+            alert('Хамгийн багадаа 2 хэрэглэгч сонгоно уу.');
+            return;
+        }
+        var ids = Array.from(checked).map(function(cb) { return cb.value; }).join(',');
+        window.location.href = '{% url "merge_school_users" school.id %}?user_ids=' + ids;
+    });
+
+    updateMerge();
+});
+</script>
 {% endblock %}

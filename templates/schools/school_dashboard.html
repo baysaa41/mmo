@@ -54,7 +54,7 @@
     <p>Дэлгэрэнгүй мэдээлэл харахын тулд ангиллын нэр дээр дарна уу.</p>
     <div class="list-group mb-4">
             {# --- ШИНЭ ХОЛБООС --- #}
-        <a href="{% url 'manage_school_by_level' school.id 100 %}" class="list-group-item list-group-item-action list-group-item-primary d-flex justify-content-between align-items-center">
+        <a href="{% url 'school_all_users' school.id %}" class="list-group-item list-group-item-action list-group-item-primary d-flex justify-content-between align-items-center">
             <strong>Бүх сурагчид</strong>
             {# Нийт сурагчдын тоог group-ийн гишүүдээр тооцоолох #}
             <span class="badge bg-primary rounded-pill">{{ school.group.user_set.count }}</span>
