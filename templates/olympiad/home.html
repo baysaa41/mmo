@@ -29,7 +29,13 @@
                     <td>{{ olympiad.level.name }}</td>
                     <td>{{ olympiad.start_time | date:'Y-m-d H:i' }}</td>
                     <td>{{ olympiad.end_time | date:'Y-m-d H:i' }}</td>
-                    <td>{{ olympiad.group.name }}</td>
+                    <td>
+                        {% if olympiad.group %}
+                            <a href="{% url 'group_users' group_id=olympiad.group.id %}">{{ olympiad.group.name }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td>
                         {% if olympiad.type == 0 %}
                             {% if olympiad.active %}

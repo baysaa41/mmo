@@ -108,18 +108,60 @@ def users(request):
 
 def group_users(request, group_id):
     group = get_object_or_404(Group, pk=group_id)
+
+    if request.method == 'POST' and request.user.is_staff:
+        action = request.POST.get('action')
+        if action == 'remove_bulk':
+            user_ids = request.POST.getlist('user_ids')
+            removed = list(User.objects.filter(pk__in=user_ids))
+            group.user_set.remove(*removed)
+            messages.success(request, f'{len(removed)} хэрэглэгч бүлгээс хасагдлаа.')
+        else:
+            user = get_object_or_404(User, pk=request.POST.get('user_id'))
+            if action == 'remove':
+                group.user_set.remove(user)
+                messages.success(request, f'{user.last_name} {user.first_name} бүлгээс хасагдлаа.')
+            elif action == 'add':
+                group.user_set.add(user)
+                messages.success(request, f'{user.last_name} {user.first_name} бүлэгт нэмэгдлээ.')
+        return redirect('group_users', group_id=group_id)
+
     users = group.user_set.all().order_by('data__province', 'data__school__name', 'first_name', 'last_name')
 
-    # Filtering logic can also be moved to a service if it gets more complex
-    # ...
+    try:
+        province_id = int(request.GET.get('p') or 0)
+        zone_id = int(request.GET.get('z') or 0)
+    except (ValueError, TypeError):
+        province_id = zone_id = 0
 
-    # Call the service to generate the HTML table
-    html_table = services.generate_styled_user_dataframe_html(users, is_staff=request.user.is_staff)
+    if province_id:
+        users = users.filter(data__province_id=province_id)
+    elif zone_id:
+        users = users.filter(data__province__zone_id=zone_id)
 
-    context = {
-        'title': group.name,
-        'pivot': html_table,
-    }
+    search_results = None
+    search_query = request.GET.get('search', '').strip()
+    if request.user.is_staff and search_query:
+        search_results = User.objects.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(username__icontains=search_query)
+        ).exclude(pk__in=users).order_by('last_name', 'first_name')[:20]
+
+    if request.user.is_staff:
+        context = {
+            'title': group.name,
+            'group': group,
+            'users': users,
+            'search_results': search_results,
+            'search_query': search_query,
+        }
+    else:
+        html_table = services.generate_styled_user_dataframe_html(users, is_staff=False)
+        context = {
+            'title': group.name,
+            'pivot': html_table,
+        }
     return render(request, 'accounts/group-users.html', context)
 
 @staff_member_required
