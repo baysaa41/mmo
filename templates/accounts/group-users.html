@@ -37,6 +37,81 @@
 
     {% if group %}
         {# Staff: засварлах боломжтой хүснэгт #}
+
+        {# Хэрэглэгч нэмэх товч - жагсаалтын дээр #}
+        <div class="mb-3">
+            <button class="btn btn-success btn-sm"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#add-user-section"
+                    aria-expanded="{% if search_query %}true{% else %}false{% endif %}"
+                    aria-controls="add-user-section">
+                ＋ Хэрэглэгч нэмэх
+            </button>
+        </div>
+
+        {# Хайлтын хэсэг - collapse #}
+        <div class="collapse {% if search_query %}show{% endif %} mb-4" id="add-user-section">
+            <div class="card card-body">
+                <h5 class="mb-3">Хэрэглэгч хайх</h5>
+                <form method="get" class="row g-2 mb-3">
+                    <div class="col-auto">
+                        <input type="text" name="search" class="form-control"
+                               placeholder="Нэр, овог, хэрэглэгчийн нэр..."
+                               value="{{ search_query }}"
+                               autofocus>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-secondary">Хайх</button>
+                    </div>
+                    {% if search_query %}
+                    <div class="col-auto">
+                        <a href="?#add-user-section" class="btn btn-outline-secondary">Цэвэрлэх</a>
+                    </div>
+                    {% endif %}
+                </form>
+
+                {% if search_results is not None %}
+                    {% if search_results %}
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Хэрэглэгчийн нэр</th>
+                                    <th>Овог Нэр</th>
+                                    <th>Аймаг/Дүүрэг</th>
+                                    <th>Сургууль</th>
+                                    <th>Анги</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in search_results %}
+                                    <tr>
+                                        <td>{{ u.username }}</td>
+                                        <td>{{ u.last_name }} {{ u.first_name }}</td>
+                                        <td>{{ u.data.province.name|default:"-" }}</td>
+                                        <td>{{ u.data.school.name|default:"-" }}</td>
+                                        <td>{{ u.data.grade.name|default:"-" }}</td>
+                                        <td>
+                                            <form method="post" style="margin:0">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="add">
+                                                <input type="hidden" name="user_id" value="{{ u.pk }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-success">Нэмэх</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted">Хайлтад тохирох хэрэглэгч олдсонгүй.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        {# Бүлгийн гишүүдийн жагсаалт #}
         {% if users %}
             <form method="post" id="bulk-remove-form">
                 {% csrf_token %}
@@ -87,52 +162,6 @@
             <p class="text-muted">Бүлэгт гишүүн байхгүй байна.</p>
         {% endif %}
 
-        <hr>
-        <h5>Хэрэглэгч нэмэх</h5>
-        <form method="get" class="row g-2 mb-3">
-            <div class="col-auto">
-                <input type="text" name="search" class="form-control" placeholder="Нэр, овог, хэрэглэгчийн нэр..."
-                       value="{{ search_query }}">
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-secondary">Хайх</button>
-            </div>
-        </form>
-
-        {% if search_results is not None %}
-            {% if search_results %}
-                <table class="table table-sm table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Хэрэглэгчийн нэр</th>
-                            <th>Овог Нэр</th>
-                            <th>Сургууль</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for u in search_results %}
-                            <tr>
-                                <td>{{ u.username }}</td>
-                                <td>{{ u.last_name }} {{ u.first_name }}</td>
-                                <td>{{ u.data.school.name|default:"-" }}</td>
-                                <td>
-                                    <form method="post" style="margin:0">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="add">
-                                        <input type="hidden" name="user_id" value="{{ u.pk }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-success">Нэмэх</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p class="text-muted">Хайлтад тохирох хэрэглэгч олдсонгүй.</p>
-            {% endif %}
-        {% endif %}
-
     {% else %}
         {# Энгийн хэрэглэгч: pandas хүснэгт #}
         <div class="justify-content-center">
@@ -168,5 +197,15 @@
         if (n === 0) { alert('Хасах хэрэглэгчээ сонгоно уу.'); return false; }
         return confirm(n + ' хэрэглэгчийг бүлгээс хасах уу?');
     }
+
+    // Хайлт хийсний дараа collapse хэсгийг нээлттэй байлгах
+    {% if search_query %}
+    document.addEventListener('DOMContentLoaded', function() {
+        const section = document.getElementById('add-user-section');
+        if (section) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+    {% endif %}
 </script>
 {% endblock %}

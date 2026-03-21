@@ -146,7 +146,9 @@ def group_users(request, group_id):
             Q(first_name__icontains=search_query) |
             Q(last_name__icontains=search_query) |
             Q(username__icontains=search_query)
-        ).exclude(pk__in=users).order_by('last_name', 'first_name')[:20]
+        ).exclude(pk__in=users).select_related(
+            'data__school', 'data__province', 'data__grade'
+        ).order_by('last_name', 'first_name')[:20]
 
     if request.user.is_staff:
         context = {
