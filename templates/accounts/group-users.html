@@ -76,6 +76,7 @@
                         <table class="table table-sm table-bordered">
                             <thead class="table-light">
                                 <tr>
+                                    <th>ID</th>
                                     <th>Хэрэглэгчийн нэр</th>
                                     <th>Овог Нэр</th>
                                     <th>Аймаг/Дүүрэг</th>
@@ -87,6 +88,7 @@
                             <tbody>
                                 {% for u in search_results %}
                                     <tr>
+                                        <td>{{ u.pk }}</td>
                                         <td>{{ u.username }}</td>
                                         <td>{{ u.last_name }} {{ u.first_name }}</td>
                                         <td>{{ u.data.province.name|default:"-" }}</td>
@@ -128,6 +130,7 @@
                         <tr>
                             <th><input type="checkbox" id="select-all" title="Бүгдийг сонгох"></th>
                             <th>№</th>
+                            <th>ID</th>
                             <th>Хэрэглэгчийн нэр</th>
                             <th>Овог</th>
                             <th>Нэр</th>
@@ -144,6 +147,7 @@
                             <tr>
                                 <td><input type="checkbox" name="user_ids" value="{{ user.pk }}" class="row-check"></td>
                                 <td>{{ forloop.counter }}</td>
+                                <td>{{ user.pk }}</td>
                                 <td>{{ user.username }}</td>
                                 <td>{{ user.last_name }}</td>
                                 <td>{{ user.first_name }}</td>
