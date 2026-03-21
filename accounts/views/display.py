@@ -142,13 +142,18 @@ def group_users(request, group_id):
     search_results = None
     search_query = request.GET.get('search', '').strip()
     if request.user.is_staff and search_query:
-        search_results = User.objects.filter(
-            Q(first_name__icontains=search_query) |
-            Q(last_name__icontains=search_query) |
-            Q(username__icontains=search_query)
-        ).exclude(pk__in=users).select_related(
-            'data__school', 'data__province', 'data__grade'
-        ).order_by('last_name', 'first_name')[:20]
+        base_qs = User.objects.all().select_related('data__school', 'data__province', 'data__grade')
+        if '=' in search_query:
+            search_results = _apply_field_search(base_qs, search_query, is_staff=True)
+        else:
+            try:
+                query_int = int(search_query)
+                q_filter = Q(first_name__icontains=search_query) | Q(last_name__icontains=search_query) | Q(id=query_int)
+            except ValueError:
+                q_filter = Q(first_name__icontains=search_query) | Q(last_name__icontains=search_query) | Q(username__icontains=search_query)
+            q_filter |= Q(data__reg_num__icontains=search_query) | Q(data__mobile__icontains=search_query) | Q(email__icontains=search_query)
+            search_results = base_qs.filter(q_filter)
+        search_results = search_results.exclude(pk__in=users).order_by('last_name', 'first_name')[:20]
 
     if request.user.is_staff:
         context = {
