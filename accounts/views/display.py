@@ -7,6 +7,7 @@ from django.contrib.auth.models import Group, User
 from django.contrib import messages
 from django.db.models import Q
 from django.core.mail import send_mail
+from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.conf import settings
@@ -170,6 +171,80 @@ def group_users(request, group_id):
             'pivot': html_table,
         }
     return render(request, 'accounts/group-users.html', context)
+
+
+@staff_member_required
+def group_users_excel(request, group_id):
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, Border, Side
+    from io import BytesIO
+
+    group = get_object_or_404(Group, pk=group_id)
+    users = group.user_set.all().order_by('data__province', 'data__school__name', 'first_name', 'last_name')
+
+    try:
+        province_id = int(request.GET.get('p') or 0)
+        zone_id = int(request.GET.get('z') or 0)
+    except (ValueError, TypeError):
+        province_id = zone_id = 0
+
+    if province_id:
+        users = users.filter(data__province_id=province_id)
+    elif zone_id:
+        users = users.filter(data__province__zone_id=zone_id)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = group.name[:31]
+
+    headers = ['№', 'ID', 'Хэрэглэгчийн нэр', 'Овог', 'Нэр', 'Аймаг/Дүүрэг', 'Сургууль', 'Анги', 'Регистр', 'Утас', 'И-мэйл']
+    header_font = Font(bold=True)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'),
+    )
+
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+
+    for i, user in enumerate(users, 1):
+        data = getattr(user, 'data', None)
+        row = [
+            i,
+            user.pk,
+            user.username,
+            user.last_name,
+            user.first_name,
+            getattr(getattr(data, 'province', None), 'name', '-') if data else '-',
+            getattr(getattr(data, 'school', None), 'name', '-') if data else '-',
+            getattr(getattr(data, 'grade', None), 'name', '-') if data else '-',
+            getattr(data, 'reg_num', '-') if data else '-',
+            getattr(data, 'mobile', '-') if data else '-',
+            user.email or '-',
+        ]
+        for col, value in enumerate(row, 1):
+            cell = ws.cell(row=i + 1, column=col, value=value)
+            cell.border = thin_border
+
+    for col_cells in ws.columns:
+        max_length = max((len(str(c.value or '')) for c in col_cells), default=0)
+        ws.column_dimensions[col_cells[0].column_letter].width = min(max_length + 2, 40)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"group_{group.id}_users.xlsx"
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
 
 @staff_member_required
 def staff(request):

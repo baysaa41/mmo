@@ -11,6 +11,7 @@ urlpatterns = [
     # Display Views
     path('users/', display.users, name='account_users'),
     path('users/<int:group_id>/', display.group_users, name='group_users'),
+    path('users/<int:group_id>/excel/', display.group_users_excel, name='group_users_excel'),
     path('staff/', display.staff, name='account_staff'),
 
     # Participant Search & Merge Requests

@@ -123,6 +123,10 @@
                             onclick="return confirmBulkRemove()">
                         Сонгосныг хасах
                     </button>
+                    <a href="{% url 'group_users_excel' group.id %}{% if request.GET.p %}?p={{ request.GET.p }}{% elif request.GET.z %}?z={{ request.GET.z }}{% endif %}"
+                       class="btn btn-sm btn-outline-success">
+                        Excel татах
+                    </a>
                     <span id="selected-count" class="text-muted small"></span>
                 </div>
                 <table class="table table-bordered table-hover">
