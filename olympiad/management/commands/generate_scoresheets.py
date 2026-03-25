@@ -1,6 +1,7 @@
 # olympiad/management/commands/generate_scoresheets.py
 
 from datetime import datetime
+from django.core.cache import cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Case, When, Value, IntegerField, OuterRef, Subquery, BooleanField
 from olympiad.models import ScoreSheet, Award, Olympiad
@@ -27,11 +28,17 @@ class Command(BaseCommand):
             help='Шинээр үүсгэхийн өмнө хуучин онооны хуудсыг баталгаажуулалтгүйгээр устгана.',
         )
         parser.add_argument('--log-file', type=str, default='generate_scoresheets_log.txt', help='Log файлын нэр')
+        parser.add_argument(
+            '--no-clear-cache',
+            action='store_true',
+            help='Cache устгахгүй байх (анхдагчаар cache устгана).',
+        )
 
     def handle(self, *args, **options):
         olympiad_ids = options['olympiad_ids']
         force_delete = options['force_delete']
         log_file = options['log_file']
+        clear_cache = not options['no_clear_cache']
 
         self.stdout.write(f'Олимпиадууд: {olympiad_ids}')
         self.stdout.write(f'Нийт: {len(olympiad_ids)} олимпиад')
@@ -61,6 +68,8 @@ class Command(BaseCommand):
 
             try:
                 self.process_olympiad(olympiad_id, force_delete, total_stats, olympiad_detail)
+                if clear_cache:
+                    self.clear_olympiad_cache(olympiad_id)
                 total_stats['processed'] += 1
                 olympiad_detail['success'] = True
                 self.stdout.write(self.style.SUCCESS(f'✅ Олимпиад ID={olympiad_id} амжилттай боловсруулагдлаа.'))
@@ -223,6 +232,27 @@ class Command(BaseCommand):
 
         olympiad_detail['awards_count'] = len(updates)
         self.stdout.write(self.style.SUCCESS(f'  {len(updates)} хүнд шагналын мэдээлэл нэмэгдлээ.'))
+
+    def clear_olympiad_cache(self, olympiad_id):
+        """Олимпиадтай холбоотой бүх cache-г устгах"""
+        cache_keys = [
+            f'olympiad_stats_{olympiad_id}',
+            f'cheating_analysis_{olympiad_id}',
+            f'cheating_analysis_pro_{olympiad_id}',
+        ]
+
+        # scores_ prefix-тэй cache key-үүдийг устгах
+        # scores_{olympiad_id}_{province_id}_{zone_id}_{page}_{show_all}_{official}_{show_zero}
+        # LocMemCache нь key pattern-аар устгах боломжгүй тул бүх cache-г устгана
+        cache.delete_many(cache_keys)
+
+        # scores_ cache нь олон parameter-тэй учир бүгдийг нь тодорхойлох боломжгүй
+        # Тиймээс бүх cache-г цэвэрлэнэ
+        try:
+            cache.clear()
+            self.stdout.write(self.style.SUCCESS(f'  🗑️ Олимпиад ID={olympiad_id}-ийн cache амжилттай устгагдлаа.'))
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'  ⚠️ Cache устгахад алдаа: {e}'))
 
     def write_log_file(self, log_file, olympiad_ids, total_stats, force_delete):
         """Log файл бичих"""
