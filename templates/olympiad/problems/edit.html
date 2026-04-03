@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}Бодлого засах — {{ problem }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'olympiad_problems_view' problem.olympiad.id %}">{{ problem.olympiad.name }}</a></li>
+            <li class="breadcrumb-item active">{{ problem.order }}-р бодлого засах</li>
+        </ol>
+    </nav>
+
+    <h3 class="mb-4">{{ problem.olympiad.name }} — {{ problem.order }}-р бодлого засах</h3>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <!-- Бодлого засах форм -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-edit"></i> Бодлогын мэдээлэл</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label fw-bold">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                            <div class="text-danger small">{{ field.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Хадгалах
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Координаторууд -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-users"></i> Координаторууд</h5>
+                </div>
+                <div class="card-body">
+                    {% if coordinators %}
+                    <ul class="list-group list-group-flush mb-3">
+                        {% for c in coordinators %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ c.last_name }} {{ c.first_name }}</strong>
+                                <br><small class="text-muted">ID: {{ c.id }}{% if c.data and c.data.school %} — {{ c.data.school.name }}{% endif %}</small>
+                            </div>
+                            {% if request.user.is_staff %}
+                            <form method="post" action="{% url 'problem_remove_coordinator' problem.id c.id %}"
+                                  class="d-inline" onsubmit="return confirm('Координаторыг хасах уу?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Хасах">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-3">Координатор байхгүй.</p>
+                    {% endif %}
+
+                    {% if request.user.is_staff %}
+                    <hr>
+                    <h6>Координатор нэмэх</h6>
+                    <form method="post" action="{% url 'problem_add_coordinator' problem.id %}">
+                        {% csrf_token %}
+                        <div class="input-group mb-2">
+                            <input type="number" name="user_id" class="form-control"
+                                   placeholder="Хэрэглэгчийн ID" required>
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-plus"></i> Нэмэх
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- AJAX хайлтаар координатор нэмэх -->
+                    <div class="mt-2">
+                        <div class="input-group">
+                            <input type="text" id="coordSearchInput" class="form-control"
+                                   placeholder="Нэр, овог, имэйл...">
+                            <button type="button" id="coordSearchBtn" class="btn btn-outline-secondary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div id="coordSearchResults" class="list-group mt-1" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if request.user.is_staff %}
+<script>
+function doCoordSearch() {
+    const query = document.getElementById('coordSearchInput').value.trim();
+    const resultsDiv = document.getElementById('coordSearchResults');
+
+    if (query.length < 2) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+
+    fetch(`/accounts/ajax/search-users/?q=${encodeURIComponent(query)}`)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => {
+            resultsDiv.innerHTML = '';
+            if (!data.results || data.results.length === 0) {
+                resultsDiv.innerHTML = '<div class="list-group-item text-muted small">Олдсонгүй</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+            data.results.forEach(user => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1';
+                item.innerHTML = `
+                    <small><strong>${user.last_name} ${user.first_name}</strong> (ID: ${user.id})<br>${user.school}</small>
+                    <form method="post" action="{% url 'problem_add_coordinator' problem.id %}" class="d-inline">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="${document.querySelector('[name=csrfmiddlewaretoken]').value}">
+                        <input type="hidden" name="user_id" value="${user.id}">
+                        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-plus"></i></button>
+                    </form>
+                `;
+                resultsDiv.appendChild(item);
+            });
+            resultsDiv.style.display = 'block';
+        })
+        .catch(() => { resultsDiv.style.display = 'none'; });
+}
+
+document.getElementById('coordSearchBtn').addEventListener('click', doCoordSearch);
+document.getElementById('coordSearchInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); doCoordSearch(); }
+});
+</script>
+{% endif %}
+{% endblock %}
