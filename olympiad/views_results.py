@@ -234,8 +234,11 @@ def student_result_view(request, olympiad_id, contestant_id):
     contestant = User.objects.get(pk=contestant_id)
     olympiad = Olympiad.objects.get(pk=olympiad_id)
     username = contestant.last_name + ', ' + contestant.first_name
-    return render(request, 'olympiad/results/student_result.html',
+    if request.user.id == contestant_id or not olympiad.is_grading:
+        return render(request, 'olympiad/results/student_result.html',
                   {'results': results, 'username': username, 'olympiad': olympiad})
+    else:
+        return render(request, 'error.html', {'message': ' Олимпиадын дүн эцэслэгдээгүй байна. Зөвхөн өөрийн дүнг харж болно.'})
 
 @login_required
 def problem_stats_view(request, problem_id):

@@ -148,6 +148,10 @@
             </ul>
         </div>
 
+        {% if user.is_authenticated %}
+        <div class="my-2"><a class="btn btn-success btn-block" href="{% url 'olympiad_student_result' olympiad_id=olympiad.id contestant_id=user.id %}" >Өөрийн дүнг харах</a></div>
+        {% endif %}
+
         {% if user_score_data %}
             <div class="alert alert-primary text-center">
                 <strong>Таны авсан оноо: {{ user_score_data.total }}</strong> |
