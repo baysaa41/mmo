@@ -1,14 +1,14 @@
 from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Count, Avg, Max, Min
+from django.db.models import Count, Avg, Max, Min, Q
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.core.cache import cache
 from django.contrib.auth.models import User
 
 from .models import Olympiad, ScoreSheet, Result, SchoolYear, Upload, Problem, Topic
-from .forms import ChangeScoreSheetSchoolForm, ResultsGraderForm, UploadForm
+from .forms import ChangeScoreSheetSchoolForm, ResultsGraderForm, UploadForm, ProblemEditForm
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -325,31 +325,50 @@ def view_result(request):
     else:
         return HttpResponse("Ийм хариулт олдсонгүй.")
 
-@staff_member_required
+@login_required
 def grading_home(request):
     olympiads = Olympiad.objects.filter(is_grading=True).order_by('id')
 
-    return render(request, 'olympiad/grading_home.html', {'olympiads': olympiads})
+    if not request.user.is_staff:
+        # Координатор бол зөвхөн өөрийн хариуцсан бодлого бүхий олимпиадуудыг харуулна
+        coordinated_olympiad_ids = Problem.objects.filter(
+            coordinators=request.user
+        ).values_list('olympiad_id', flat=True).distinct()
+        if not coordinated_olympiad_ids:
+            return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
+        olympiads = olympiads.filter(id__in=coordinated_olympiad_ids)
 
-@staff_member_required
+    return render(request, 'olympiad/grading_home.html', {
+        'olympiads': olympiads,
+        'is_coordinator': not request.user.is_staff,
+    })
+
+@login_required
 def exam_grading_view(request, problem_id):
-    problem = Problem.objects.filter(pk=problem_id).first()
+    problem = get_object_or_404(Problem, pk=problem_id)
+
+    if not _can_edit_problem(request.user, problem):
+        return render(request, 'error.html', {'message': 'Хандах эрхгүй. Зөвхөн staff эсвэл координатор хандах боломжтой.'})
 
     results = Result.objects.filter(problem_id=problem_id, contestant__data__province__isnull=False).order_by(
         'score').reverse
 
     return render(request, 'olympiad/exam_grading.html', {'results': results, 'problem': problem})
 
-@staff_member_required
+@login_required
 def grade(request):
     result_id = int(request.GET.get('result_id', 0))
     if result_id > 0:
         result = Result.objects.get(pk=result_id)
+
+        if not _can_edit_problem(request.user, result.problem):
+            return HttpResponse("Хандах эрхгүй.")
+
         if not result.olympiad.is_grading or result.state == 5:
             return HttpResponse("Энэ бодлогын үнэлгээг өөрчлөх боломжгүй.")
         if request.method == 'POST':
             form = ResultsGraderForm(request.POST, instance=result)
-            if form.is_valid() and request.user.is_staff:
+            if form.is_valid():
                 form.save()
                 result.coordinator = request.user
                 result.state = 2
@@ -433,6 +452,124 @@ def quiz_staff_view(request, olympiad_id, contestant_id):
                                                    'contestant': contestant,
                                                    'olympiad': olympiad,
                                                    'results': results})
+
+@login_required
+def problem_past_graders(request, problem_id):
+    """Тухайн олимпиад болон өмнөх хичээлийн жилд засалт хийсэн хүмүүсийн жагсаалт (AJAX, staff only)."""
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Зөвшөөрөлгүй.'}, status=403)
+
+    problem = get_object_or_404(Problem, pk=problem_id)
+    current_coord_ids = set(problem.coordinators.values_list('id', flat=True))
+
+    # Тухайн олимпиадын бүх бодлого + өмнөх хичээлийн жилийн олимпиадуудын засагчид
+    olympiad = problem.olympiad
+    school_year = olympiad.school_year if olympiad else None
+
+    olympiad_filter = Q(problem__olympiad=olympiad)
+    if school_year:
+        prev_year = SchoolYear.objects.filter(id__lt=school_year.id).order_by('-id').first()
+        if prev_year:
+            olympiad_filter = olympiad_filter | Q(problem__olympiad__school_year=prev_year)
+
+    grader_ids = (
+        Result.objects.filter(olympiad_filter, coordinator__isnull=False)
+        .values_list('coordinator_id', flat=True)
+        .distinct()
+    )
+    graders = (
+        User.objects.filter(id__in=grader_ids)
+        .exclude(id__in=current_coord_ids)
+        .order_by('last_name', 'first_name')
+    )
+
+    data = []
+    for u in graders:
+        data.append({
+            'id': u.id,
+            'name': f'{u.last_name} {u.first_name}'.strip() or u.username,
+        })
+    return JsonResponse({'graders': data})
+
+
+def _can_edit_problem(user, problem):
+    """Staff эсвэл тухайн бодлогын координатор эсэхийг шалгах."""
+    if user.is_staff:
+        return True
+    return problem.coordinators.filter(pk=user.pk).exists()
+
+
+@login_required
+def problem_edit_view(request, problem_id):
+    """Бодлого засах хуудас — staff болон координатор хандана."""
+    problem = get_object_or_404(Problem, pk=problem_id)
+
+    if not _can_edit_problem(request.user, problem):
+        return render(request, 'error.html', {'message': 'Хандах эрхгүй. Зөвхөн staff эсвэл координатор засах боломжтой.'})
+
+    if request.method == 'POST':
+        form = ProblemEditForm(request.POST, instance=problem)
+        if form.is_valid():
+            form.save()
+            from django.contrib import messages
+            messages.success(request, 'Бодлого амжилттай хадгалагдлаа.')
+            return redirect('problem_edit', problem_id=problem.id)
+    else:
+        form = ProblemEditForm(instance=problem)
+
+    coordinators = problem.coordinators.all().select_related('data__school')
+
+    context = {
+        'problem': problem,
+        'form': form,
+        'coordinators': coordinators,
+    }
+    return render(request, 'olympiad/problems/edit.html', context)
+
+
+@login_required
+def problem_add_coordinator(request, problem_id):
+    """Бодлогод координатор нэмэх (staff only)."""
+    problem = get_object_or_404(Problem, pk=problem_id)
+
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Зөвхөн staff координатор нэмэх боломжтой.'}, status=403)
+
+    next_url = request.POST.get('next', '') or request.GET.get('next', '')
+
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id', '').strip()
+        try:
+            user = User.objects.get(pk=int(user_id))
+        except (User.DoesNotExist, ValueError):
+            from django.contrib import messages
+            messages.error(request, f'ID {user_id} хэрэглэгч олдсонгүй.')
+            return redirect(next_url or reverse('problem_edit', kwargs={'problem_id': problem.id}))
+
+        problem.coordinators.add(user)
+        from django.contrib import messages
+        messages.success(request, f'{user.last_name} {user.first_name} (ID: {user.id}) координатораар нэмэгдлээ.')
+
+    return redirect(next_url or reverse('problem_edit', kwargs={'problem_id': problem.id}))
+
+
+@login_required
+def problem_remove_coordinator(request, problem_id, user_id):
+    """Бодлогоос координатор хасах (staff only)."""
+    problem = get_object_or_404(Problem, pk=problem_id)
+
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Зөвхөн staff координатор хасах боломжтой.'}, status=403)
+
+    next_url = request.POST.get('next', '') or request.GET.get('next', '')
+
+    if request.method == 'POST':
+        problem.coordinators.remove(user_id)
+        from django.contrib import messages
+        messages.success(request, 'Координатор хасагдлаа.')
+
+    return redirect(next_url or reverse('problem_edit', kwargs={'problem_id': problem.id}))
+
 
 def createCertificate(request, quiz_id, contestant_id):
     if quiz_id == 102:

@@ -20,10 +20,10 @@
                                 {% endautoescape %}
                             </div>
 
-                            {# --- 1. БОДЛОГО ЗАСАХ ЛИНК (зөвхөн staff-д) --- #}
-                            {% if request.user.is_staff %}
-                                <a href="{% url 'admin:olympiad_problem_change' p.id %}"
-                                   class="btn btn-sm btn-outline-secondary ms-3" target="_blank" title="Бодлого засах">
+                            {# --- 1. БОДЛОГО ЗАСАХ ЛИНК (staff болон координатор) --- #}
+                            {% if request.user.is_staff or request.user in p.coordinators.all %}
+                                <a href="{% url 'problem_edit' problem_id=p.id %}"
+                                   class="btn btn-sm btn-outline-secondary ms-3" title="Бодлого засах">
                                     <i class="fas fa-edit"></i>
                                 </a>
                             {% endif %}
@@ -39,7 +39,7 @@
                                 <div class="mt-2 ps-3">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <p class="mb-0"><b>Бодолт {{ forloop.counter }}.</b></p>
-                                        {# --- 2. БОДОЛТ ЗАСАХ ЛИНК (зөвхөн staff-д) --- #}
+                                        {# --- 2. БОДОЛТ ЗАСАХ ЛИНК (staff болон координатор) --- #}
                                         {% if request.user.is_staff %}
                                             <a href="{% url 'admin:olympiad_solution_change' s.id %}"
                                                class="btn btn-sm btn-outline-secondary" target="_blank"

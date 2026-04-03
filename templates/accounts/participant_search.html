@@ -91,13 +91,13 @@
                     <th width="100"><span class="text-danger" title="Зөвхөн админ харна">Регистр *</span></th>
                     <th width="90"><span class="text-danger" title="Зөвхөн админ харна">Утас *</span></th>
                     <th><span class="text-danger" title="Зөвхөн админ харна">Имэйл *</span></th>
-                    <th width="90">Үйлдэл</th>
+                    <th width="130">Үйлдэл</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for user in users %}
-                <tr>
+                <tr id="user-row-{{ user.id }}">
                     <td>{{ forloop.counter }}</td>
                     <td>{{ user.id }}</td>
                     <td>{{ user.last_name }}</td>
@@ -112,6 +112,12 @@
                     <td>
                         <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-sm btn-outline-secondary" title="Засах"><i class="fas fa-edit"></i></a>
                         <a href="{% url 'change_student_password' user.id %}" class="btn btn-sm btn-outline-secondary" title="Нууц үг солих"><i class="fas fa-key"></i></a>
+                        <button type="button" class="btn btn-sm btn-outline-warning merge-select-btn"
+                                data-user-id="{{ user.id }}"
+                                data-user-name="{{ user.last_name }} {{ user.first_name }}"
+                                title="Нэгтгэх">
+                            <i class="fas fa-object-group"></i>
+                        </button>
                     </td>
                     {% endif %}
                 </tr>
@@ -129,6 +135,95 @@
             </tbody>
         </table>
     </div>
+
+    {% if request.user.is_staff %}
+    <!-- Merge Panel -->
+    <div id="mergePanel" class="card border-warning mt-3" style="display: none;">
+        <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-object-group"></i> Хэрэглэгч нэгтгэх</h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="mergePanelClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <!-- Selected user info -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">Сонгосон хэрэглэгч:</label>
+                <div id="selectedUserInfo" class="d-flex flex-wrap gap-2"></div>
+            </div>
+
+            <hr>
+
+            <!-- Search for merge target -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">Нэгтгэх хэрэглэгч хайх:</label>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" id="mergeSearchInput" class="form-control"
+                                   placeholder="Нэр, овог, регистр, утас, имэйл ...">
+                            <button type="button" id="mergeSearchBtn" class="btn btn-outline-primary">
+                                <i class="fas fa-search"></i> Хайх
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <input type="number" id="mergeIdInput" class="form-control"
+                                   placeholder="ID-гаар шууд нэмэх">
+                            <button type="button" id="mergeIdBtn" class="btn btn-outline-secondary">
+                                <i class="fas fa-plus"></i> Нэмэх
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="mergeSearchError" class="text-danger small mt-1" style="display: none;"></div>
+
+                <!-- Search results -->
+                <div id="mergeSearchResults" class="mt-2" style="display: none;">
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-hover table-sm table-bordered mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th width="50">ID</th>
+                                    <th>Овог</th>
+                                    <th>Нэр</th>
+                                    <th>Аймаг</th>
+                                    <th>Сургууль</th>
+                                    <th>Анги</th>
+                                    <th>Регистр</th>
+                                    <th width="60"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="mergeSearchResultsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Merge targets list -->
+            <div id="mergeTargetsSection" class="mb-3" style="display: none;">
+                <label class="form-label fw-bold">Нэгтгэх хэрэглэгчид:</label>
+                <div id="mergeTargetsList" class="d-flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- Merge form -->
+            <form method="post" action="{% url 'create_merge_request' %}" id="mergeForm">
+                {% csrf_token %}
+                <input type="hidden" name="user_ids" id="mergeUserIds" value="">
+                <div class="mb-3">
+                    <label for="mergeReason" class="form-label fw-bold">Шалтгаан:</label>
+                    <textarea name="reason" id="mergeReason" class="form-control" rows="2"
+                              placeholder="Нэгтгэх шалтгаанаа бичнэ үү..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-warning" id="mergeSubmitBtn" disabled>
+                    <i class="fas fa-object-group"></i> Нэгтгэх хүсэлт үүсгэх
+                </button>
+                <span class="text-muted small ms-2" id="mergeCountInfo"></span>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Pagination -->
     {% if users.has_other_pages %}
@@ -177,5 +272,266 @@ document.getElementById('id_province').addEventListener('change', function() {
             .catch(error => console.error('Error loading schools:', error));
     }
 });
+
+{% if request.user.is_staff %}
+// ===== Merge functionality =====
+let selectedUser = null;           // {id, name} - the user selected from main results
+const mergeTargets = new Map();    // id -> {id, name} - users to merge with
+
+function userBadge(user, onRemove) {
+    const badge = document.createElement('span');
+    badge.className = 'badge bg-primary d-flex align-items-center gap-1 fs-6 py-2 px-3';
+    let html = `<span>ID: ${user.id} — ${user.name}</span>`;
+    if (onRemove) {
+        html += `<button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6rem;" data-remove-id="${user.id}"></button>`;
+    }
+    badge.innerHTML = html;
+    if (onRemove) {
+        badge.querySelector('[data-remove-id]').addEventListener('click', () => onRemove(user.id));
+    }
+    return badge;
+}
+
+function updateMergePanel() {
+    const panel = document.getElementById('mergePanel');
+
+    if (!selectedUser) {
+        panel.style.display = 'none';
+        // Reset active state on all buttons
+        document.querySelectorAll('.merge-select-btn').forEach(b => b.classList.remove('active', 'btn-warning'));
+        return;
+    }
+
+    panel.style.display = 'block';
+
+    // Show selected user
+    const infoDiv = document.getElementById('selectedUserInfo');
+    infoDiv.innerHTML = '';
+    infoDiv.appendChild(userBadge(selectedUser, null));
+
+    // Show merge targets
+    const targetsSection = document.getElementById('mergeTargetsSection');
+    const targetsList = document.getElementById('mergeTargetsList');
+    targetsList.innerHTML = '';
+
+    if (mergeTargets.size > 0) {
+        targetsSection.style.display = 'block';
+        mergeTargets.forEach((user, id) => {
+            targetsList.appendChild(userBadge(user, (removeId) => {
+                mergeTargets.delete(removeId);
+                updateMergePanel();
+            }));
+        });
+    } else {
+        targetsSection.style.display = 'none';
+    }
+
+    // Update hidden input and submit button
+    const allIds = [selectedUser.id, ...mergeTargets.keys()];
+    document.getElementById('mergeUserIds').value = allIds.join(',');
+
+    const submitBtn = document.getElementById('mergeSubmitBtn');
+    const countInfo = document.getElementById('mergeCountInfo');
+    const total = allIds.length;
+    submitBtn.disabled = total < 2;
+    countInfo.textContent = total < 2
+        ? '(Нэгтгэх хэрэглэгч нэмнэ үү)'
+        : `(${total} хэрэглэгч нэгтгэнэ)`;
+
+    // Scroll to panel
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function selectUser(id, name) {
+    // Toggle: if same user clicked again, deselect
+    if (selectedUser && selectedUser.id === id) {
+        selectedUser = null;
+        mergeTargets.clear();
+        document.getElementById('mergeSearchResults').style.display = 'none';
+        updateMergePanel();
+        return;
+    }
+
+    selectedUser = { id, name };
+    mergeTargets.clear();
+    document.getElementById('mergeSearchResults').style.display = 'none';
+    document.getElementById('mergeSearchInput').value = '';
+
+    // Highlight active button
+    document.querySelectorAll('.merge-select-btn').forEach(b => {
+        b.classList.remove('active', 'btn-warning');
+        b.classList.add('btn-outline-warning');
+    });
+    const activeBtn = document.querySelector(`.merge-select-btn[data-user-id="${id}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active', 'btn-warning');
+        activeBtn.classList.remove('btn-outline-warning');
+    }
+
+    updateMergePanel();
+}
+
+function addMergeTarget(user) {
+    if (user.id === selectedUser.id) return;
+    if (mergeTargets.has(user.id)) return;
+    mergeTargets.set(user.id, user);
+    updateMergePanel();
+}
+
+// Select button handlers on main search results
+document.querySelectorAll('.merge-select-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        selectUser(parseInt(this.dataset.userId), this.dataset.userName);
+    });
+});
+
+// Close panel
+document.getElementById('mergePanelClose').addEventListener('click', function() {
+    selectedUser = null;
+    mergeTargets.clear();
+    document.getElementById('mergeSearchResults').style.display = 'none';
+    updateMergePanel();
+});
+
+// Search for merge target
+function doMergeSearch() {
+    const query = document.getElementById('mergeSearchInput').value.trim();
+    const errorDiv = document.getElementById('mergeSearchError');
+    const resultsDiv = document.getElementById('mergeSearchResults');
+    const resultsBody = document.getElementById('mergeSearchResultsBody');
+
+    errorDiv.style.display = 'none';
+
+    if (query.length < 2) {
+        errorDiv.textContent = 'Хамгийн багадаа 2 тэмдэгт оруулна уу.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    resultsBody.innerHTML = '<tr><td colspan="8" class="text-center py-2"><i class="fas fa-spinner fa-spin"></i> Хайж байна...</td></tr>';
+    resultsDiv.style.display = 'block';
+
+    fetch(`/accounts/ajax/search-users/?q=${encodeURIComponent(query)}`)
+        .then(response => {
+            if (!response.ok) throw new Error(response.status);
+            return response.json();
+        })
+        .then(data => {
+            resultsBody.innerHTML = '';
+
+            if (!data.results || data.results.length === 0) {
+                resultsBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-2">Олдсонгүй</td></tr>';
+                return;
+            }
+
+            data.results.forEach(user => {
+                // Skip the selected user
+                if (selectedUser && user.id === selectedUser.id) return;
+
+                const tr = document.createElement('tr');
+                const isAdded = mergeTargets.has(user.id);
+                tr.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.last_name}</td>
+                    <td>${user.first_name}</td>
+                    <td>${user.province}</td>
+                    <td>${user.school}</td>
+                    <td>${user.grade}</td>
+                    <td>${user.reg_num}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm ${isAdded ? 'btn-success disabled' : 'btn-outline-warning'} merge-add-btn"
+                                data-uid="${user.id}" data-uname="${user.last_name} ${user.first_name}">
+                            <i class="fas ${isAdded ? 'fa-check' : 'fa-plus'}"></i>
+                        </button>
+                    </td>
+                `;
+                resultsBody.appendChild(tr);
+
+                if (!isAdded) {
+                    tr.querySelector('.merge-add-btn').addEventListener('click', function() {
+                        addMergeTarget({
+                            id: parseInt(this.dataset.uid),
+                            name: this.dataset.uname
+                        });
+                        this.classList.remove('btn-outline-warning');
+                        this.classList.add('btn-success', 'disabled');
+                        this.innerHTML = '<i class="fas fa-check"></i>';
+                    });
+                }
+            });
+        })
+        .catch(() => {
+            errorDiv.textContent = 'Хайхад алдаа гарлаа.';
+            errorDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+        });
+}
+
+document.getElementById('mergeSearchBtn').addEventListener('click', doMergeSearch);
+document.getElementById('mergeSearchInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); doMergeSearch(); }
+});
+
+// Add merge target by ID
+document.getElementById('mergeIdBtn').addEventListener('click', function() {
+    const input = document.getElementById('mergeIdInput');
+    const errorDiv = document.getElementById('mergeSearchError');
+    const userId = parseInt(input.value);
+
+    errorDiv.style.display = 'none';
+
+    if (!userId || userId <= 0) {
+        errorDiv.textContent = 'Зөв ID оруулна уу.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (selectedUser && userId === selectedUser.id) {
+        errorDiv.textContent = 'Сонгосон хэрэглэгчтэй ижил ID байна.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    if (mergeTargets.has(userId)) {
+        errorDiv.textContent = 'Энэ хэрэглэгч аль хэдийн нэмэгдсэн байна.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    fetch(`/accounts/ajax/lookup-user/?user_id=${userId}`)
+        .then(response => {
+            if (!response.ok) throw new Error(response.status);
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                errorDiv.textContent = data.error;
+                errorDiv.style.display = 'block';
+                return;
+            }
+            addMergeTarget({
+                id: data.id,
+                name: `${data.last_name || ''} ${data.first_name || ''}`.trim() || data.username
+            });
+            input.value = '';
+        })
+        .catch(() => {
+            errorDiv.textContent = 'Хэрэглэгч хайхад алдаа гарлаа.';
+            errorDiv.style.display = 'block';
+        });
+});
+
+document.getElementById('mergeIdInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('mergeIdBtn').click(); }
+});
+
+// Confirm before submit
+document.getElementById('mergeForm').addEventListener('submit', function(e) {
+    const total = 1 + mergeTargets.size;
+    if (!confirm(`${total} хэрэглэгчийг нэгтгэх хүсэлт үүсгэх үү?`)) {
+        e.preventDefault();
+    }
+});
+{% endif %}
 </script>
 {% endblock %}

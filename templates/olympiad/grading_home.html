@@ -13,12 +13,108 @@
         max-width: 450px;
         overflow: hidden;
     }
+    .coord-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #e0e7ff;
+        color: #3730a3;
+        border-radius: 12px;
+        padding: 2px 10px;
+        font-size: 0.8rem;
+        margin: 2px;
+    }
+    .coord-badge .remove-coord {
+        background: none;
+        border: none;
+        color: #6366f1;
+        cursor: pointer;
+        padding: 0 2px;
+        font-size: 1rem;
+        line-height: 1;
+    }
+    .coord-badge .remove-coord:hover {
+        color: #dc2626;
+    }
+    .add-coord-input {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .add-coord-input input {
+        width: 70px;
+        padding: 1px 6px;
+        font-size: 0.8rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+    }
+    .add-coord-input button {
+        padding: 1px 8px;
+        font-size: 0.8rem;
+        border: 1px solid #6366f1;
+        background: white;
+        color: #6366f1;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .add-coord-input button:hover {
+        background: #6366f1;
+        color: white;
+    }
+    .past-graders-btn {
+        padding: 1px 8px;
+        font-size: 0.8rem;
+        border: 1px solid #9ca3af;
+        background: white;
+        color: #6b7280;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .past-graders-btn:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    .past-graders-dropdown {
+        margin-top: 4px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: white;
+        max-height: 150px;
+        overflow-y: auto;
+        font-size: 0.8rem;
+    }
+    .past-grader-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 8px;
+        border-bottom: 1px solid #f3f4f6;
+        cursor: pointer;
+    }
+    .past-grader-item:last-child { border-bottom: none; }
+    .past-grader-item:hover { background: #eef2ff; }
+    .past-grader-item button {
+        background: #6366f1;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 1px 8px;
+        font-size: 0.75rem;
+        cursor: pointer;
+    }
+    .past-grader-item button:hover { background: #4f46e5; }
+    .past-graders-empty {
+        padding: 6px 8px;
+        color: #9ca3af;
+        text-align: center;
+    }
     </style>
     <table class="table table-bordered">
         <tr>
             <th>№</th>
             <th>Олимпиад</th>
             <th>Бодлого</th>
+            <th>Координаторууд</th>
             <th>Засагдаагүй</th>
             <th>Зассан</th>
             <th>Маргаантай</th>
@@ -26,17 +122,117 @@
         </tr>
         {% for olympiad in olympiads %}
             {% for problem in olympiad.problem_set.all|dictsort:"order" %}
+                {% if not is_coordinator or request.user in problem.coordinators.all %}
                 <tr>
                     <td>{{ forloop.parentloop.counter }}.{{ forloop.counter }}</td>
                     <td>{{ problem.olympiad.name }}, {{ problem.olympiad.level.name }}</td>
                     <td>Бодлого №{{ problem.order }} ({{ problem.id }})<br>{% autoescape off %}{{ problem.statement|latex|linebreaksbr }}{% endautoescape %}</td>
+                    <td>
+                        {% for c in problem.coordinators.all %}
+                            <span class="coord-badge">
+                                {{ c.last_name }} {{ c.first_name }}
+                                {% if request.user.is_staff %}
+                                <form method="post" action="{% url 'problem_remove_coordinator' problem.id c.id %}" class="d-inline" onsubmit="return confirm('{{ c.last_name }} {{ c.first_name }} координаторыг хасах уу?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{% url 'olympiad_grading_home' %}">
+                                    <button type="submit" class="remove-coord" title="Хасах">&times;</button>
+                                </form>
+                                {% endif %}
+                            </span>
+                        {% empty %}
+                            <span class="text-muted" style="font-size:0.8rem;">—</span>
+                        {% endfor %}
+                        {% if request.user.is_staff %}
+                        <div class="add-coord-input mt-1">
+                            <input type="number" placeholder="ID" id="coord-id-{{ problem.id }}"
+                                   onkeydown="if(event.key==='Enter'){event.preventDefault();addCoord({{ problem.id }})}">
+                            <button type="button" onclick="addCoord({{ problem.id }})" title="Координатор нэмэх">+</button>
+                            <button type="button" class="past-graders-btn" onclick="showPastGraders({{ problem.id }})" title="Өмнөх засагчдаас сонгох">
+                                <i class="fas fa-history"></i>
+                            </button>
+                        </div>
+                        <div id="past-graders-{{ problem.id }}" class="past-graders-dropdown" style="display:none;"></div>
+                        {% endif %}
+                    </td>
                     <td>{{ problem.get_nongraded }}</td>
                     <td>{{ problem.get_graded }}</td>
                     <td>{{ problem.get_disputed }}</td>
                     <td><a href="{% url 'olympiad_exam_grading' problem_id=problem.id %}"
                            class="btn btn-sm {% if problem.is_active %}btn-warning{% else %}btn-secondary{% endif %}">засах</a></td>
                 </tr>
+                {% endif %}
             {% endfor %}
         {% endfor %}
     </table>
+{% endblock %}
+
+{% block extra_js %}
+{% if request.user.is_staff %}
+<script>
+function showPastGraders(problemId) {
+    const container = document.getElementById('past-graders-' + problemId);
+
+    // Toggle: хэрэв нээлттэй бол хаах
+    if (container.style.display !== 'none') {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.innerHTML = '<div class="past-graders-empty">Уншиж байна...</div>';
+    container.style.display = 'block';
+
+    fetch(`/olympiads/problems/${problemId}/past-graders/`)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => {
+            container.innerHTML = '';
+            if (!data.graders || data.graders.length === 0) {
+                container.innerHTML = '<div class="past-graders-empty">Өмнөх засагч байхгүй</div>';
+                return;
+            }
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            data.graders.forEach(g => {
+                const item = document.createElement('div');
+                item.className = 'past-grader-item';
+                item.innerHTML = `
+                    <span>${g.name} (ID: ${g.id})</span>
+                    <button type="button" onclick="addCoordDirect(${problemId}, ${g.id})">+ нэмэх</button>
+                `;
+                container.appendChild(item);
+            });
+        })
+        .catch(() => {
+            container.innerHTML = '<div class="past-graders-empty">Алдаа гарлаа</div>';
+        });
+}
+
+function addCoordDirect(problemId, userId) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/olympiads/problems/${problemId}/coordinator/add/`;
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${csrf}">
+                      <input type="hidden" name="user_id" value="${userId}">
+                      <input type="hidden" name="next" value="{% url 'olympiad_grading_home' %}">`;
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function addCoord(problemId) {
+    const input = document.getElementById('coord-id-' + problemId);
+    const userId = input.value.trim();
+    if (!userId) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/olympiads/problems/${problemId}/coordinator/add/`;
+
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${csrf}">
+                      <input type="hidden" name="user_id" value="${userId}">
+                      <input type="hidden" name="next" value="{% url 'olympiad_grading_home' %}">`;
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endif %}
 {% endblock %}

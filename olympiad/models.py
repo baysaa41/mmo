@@ -196,6 +196,10 @@ class Problem(models.Model):
     numerical_answer2 = models.BigIntegerField(null=True, blank=True)
     comments = models.TextField(null=True, blank=True)
     topics = models.ManyToManyField("Topic", blank=True)
+    coordinators = models.ManyToManyField(
+        "auth.User", blank=True, related_name="coordinated_problems",
+        verbose_name="Координаторууд"
+    )
 
     class Meta:
         permissions = [

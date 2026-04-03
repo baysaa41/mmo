@@ -1,6 +1,6 @@
 from django.forms import ModelForm
 from django import forms
-from .models import Result, Upload, ScoreSheet
+from .models import Result, Upload, ScoreSheet, Problem
 from .widgets import MultiFileInput
 from accounts.models import Province
 from schools.models import School
@@ -78,3 +78,25 @@ class ChangeScoreSheetSchoolForm(forms.Form):
                 pass
         elif self.initial.get("province"):
             self.fields["school"].queryset = School.objects.filter(province=self.initial["province"]).order_by("name")
+
+
+class ProblemEditForm(ModelForm):
+    class Meta:
+        model = Problem
+        fields = ('statement', 'max_score', 'type', 'numerical_answer', 'numerical_answer2', 'comments')
+        labels = {
+            'statement': 'Бодлогын нөхцөл',
+            'max_score': 'Дээд оноо',
+            'type': 'Төрөл',
+            'numerical_answer': 'Тоон хариу',
+            'numerical_answer2': 'Тоон хариу 2',
+            'comments': 'Тайлбар',
+        }
+        widgets = {
+            'statement': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
+            'max_score': forms.NumberInput(attrs={'class': 'form-control'}),
+            'type': forms.Select(attrs={'class': 'form-select'}),
+            'numerical_answer': forms.NumberInput(attrs={'class': 'form-control'}),
+            'numerical_answer2': forms.NumberInput(attrs={'class': 'form-control'}),
+            'comments': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }

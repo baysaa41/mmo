@@ -67,6 +67,10 @@ urlpatterns = [
     # === IV. Бодлого ба агуулга ===
     path('problems/<int:olympiad_id>/', views_public.problems_view, name='olympiad_problems_view'),
     path('problems/topics/', views_public.problem_list_with_topics, name='problem_list_with_topics'),
+    path('problems/<int:problem_id>/edit/', views_admin.problem_edit_view, name='problem_edit'),
+    path('problems/<int:problem_id>/coordinator/add/', views_admin.problem_add_coordinator, name='problem_add_coordinator'),
+    path('problems/<int:problem_id>/coordinator/<int:user_id>/remove/', views_admin.problem_remove_coordinator, name='problem_remove_coordinator'),
+    path('problems/<int:problem_id>/past-graders/', views_admin.problem_past_graders, name='problem_past_graders'),
 
     # === V. Засалт ба админ (Admin/Grading Views) ===
     path('quiz/staff/<int:olympiad_id>/<int:contestant_id>/', views_admin.quiz_staff_view, name='olympiad_quiz_staff'),

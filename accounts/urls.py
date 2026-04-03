@@ -33,7 +33,9 @@ urlpatterns = [
     path('login/', auth.login_view, name='user_login'),
     path('logout/', auth.logout_view, name='user_logout'),
     # profile-d surguuli songoh
-    path('ajax/load-schools/', ajax.load_schools, name='ajax_load_schools'), # Шинэ URL нэмэх
+    path('ajax/load-schools/', ajax.load_schools, name='ajax_load_schools'),
+    path('ajax/lookup-user/', ajax.lookup_user, name='ajax_lookup_user'),
+    path('ajax/search-users/', ajax.search_users, name='ajax_search_users'),
     path('bulk-add-users/', auth.bulk_add_users_to_school_view, name='bulk_add_users_to_school'),
 
     # Email Views

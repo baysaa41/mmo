@@ -75,7 +75,7 @@ def problems_view(request, olympiad_id):
     Олимпиадын бүх бодлогын жагсаалтыг харуулна.
     """
     olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
-    problems = olympiad.problem_set.order_by('order')
+    problems = olympiad.problem_set.prefetch_related('coordinators').order_by('order')
 
     context = {
         "olympiad": olympiad,
