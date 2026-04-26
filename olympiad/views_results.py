@@ -294,6 +294,7 @@ def problem_stats_view(request, problem_id):
     return render(request, 'olympiad/stats/problem_stats.html', context)
 
 
+@staff_member_required
 def olympiad_group_result_view(request, group_id):
     try:
         olympiad_group = OlympiadGroup.objects.get(pk=group_id)
