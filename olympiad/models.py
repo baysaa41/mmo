@@ -54,6 +54,7 @@ class Olympiad(models.Model):
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True)
     is_open = models.BooleanField(default=True)
     is_grading = models.BooleanField(default=False)
+    is_problems_confidential = models.BooleanField(default=False)
     rounds = [
         (0, 'Бусад олимпиад'),
         (1, 'Сургуулийн олимпиад'),

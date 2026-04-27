@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden
 from datetime import datetime, timezone, timedelta
 from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic
 from django.db.models import Q, Count
@@ -36,6 +37,19 @@ def problems_home(request):
     next = SchoolYear.objects.filter(pk=year.id + 1).first() if year else None
 
     olympiads = Olympiad.objects.filter(is_open=True)
+
+    # Нууц бодлоготой олимпиадыг зөвхөн эрх бүхий хэрэглэгчдэд харуулах
+    user = request.user
+    if user.is_authenticated and user.is_staff:
+        pass  # staff бүгдийг харна
+    elif user.is_authenticated:
+        user_group_ids = user.groups.values_list('id', flat=True)
+        olympiads = olympiads.filter(
+            Q(is_problems_confidential=False) |
+            Q(is_problems_confidential=True, group__in=user_group_ids)
+        )
+    else:
+        olympiads = olympiads.filter(is_problems_confidential=False)
 
     # --- Бусад шүүлтүүрүүдийг шалгах ---
     name_query = request.GET.get('name', '').strip()
@@ -75,6 +89,17 @@ def problems_view(request, olympiad_id):
     Олимпиадын бүх бодлогын жагсаалтыг харуулна.
     """
     olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
+
+    if olympiad.is_problems_confidential:
+        user = request.user
+        is_in_group = (
+            user.is_authenticated
+            and olympiad.group
+            and user.groups.filter(pk=olympiad.group.pk).exists()
+        )
+        if not (user.is_authenticated and (user.is_staff or is_in_group)):
+            return HttpResponseForbidden("Энэ олимпиадын бодлогыг харах эрх байхгүй байна.")
+
     problems = olympiad.problem_set.prefetch_related('coordinators').order_by('order')
 
     context = {
@@ -89,6 +114,18 @@ def problem_list_with_topics(request):
 
     # Анхдагч queryset-г тодорхойлох
     problems = Problem.objects.all().prefetch_related("topics")
+
+    # Нууц бодлоготой олимпиадын бодлогыг шүүх
+    user = request.user
+    if not (user.is_authenticated and user.is_staff):
+        if user.is_authenticated:
+            user_group_ids = user.groups.values_list('id', flat=True)
+            problems = problems.filter(
+                Q(olympiad__is_problems_confidential=False) |
+                Q(olympiad__is_problems_confidential=True, olympiad__group__in=user_group_ids)
+            )
+        else:
+            problems = problems.filter(olympiad__is_problems_confidential=False)
 
     # Хэрэв хайлтын үг орж ирсэн бол queryset-г шүүх
     if query:

@@ -15,7 +15,7 @@ admin.site.register(Tag)
 
 
 class OlympiadAdmin(admin.ModelAdmin):
-    list_display = ("name", "school_year", "level", "description")
+    list_display = ("name", "school_year", "level", "is_problems_confidential", "description")
     list_filter = ("level","school_year")
     search_fields = ["name", "description"]
 
