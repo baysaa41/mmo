@@ -294,15 +294,18 @@ def problem_stats_view(request, problem_id):
     return render(request, 'olympiad/stats/problem_stats.html', context)
 
 
-@staff_member_required
+@login_required
 def olympiad_group_result_view(request, group_id):
     try:
         olympiad_group = OlympiadGroup.objects.get(pk=group_id)
     except OlympiadGroup.DoesNotExist:
         return render(request, 'olympiad/results/no_olympiad.html')
     except Exception as e:
-        return render(request, 'messages/../templates/schools/error.html', {'message': str(e)})
+        return render(request, 'error.html', {'message': str(e)})
     olympiads = olympiad_group.olympiads.all().order_by('id')
+    if not request.user.is_staff and olympiads.filter(is_grading=True).exists():
+        return render(request, 'error.html', {'message': 'Олимпиадын засалт явагдаж байгаа тул дүн \
+                                                         харах боломжгүй.'})
     answers = Result.objects.filter(olympiad__in=olympiads)
     title = 'Нэгдсэн дүн'
 
