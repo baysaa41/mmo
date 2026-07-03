@@ -14,7 +14,7 @@
 
 #### А) Үндсэн ангиллалуудтай (C, D, E, F):
 ```bash
-source /home/deploy/django/mmo/.venv/bin/activate
+source /home/deploy/django/venv/bin/activate
 cd /home/deploy/django/mmo
 python create_additional_quota_template.py
 ```
@@ -87,7 +87,7 @@ python create_additional_quota_template.py -o quota_2024.xlsx
 ### Үндсэн команд:
 
 ```bash
-source /home/deploy/django/mmo/.venv/bin/activate
+source /home/deploy/django/venv/bin/activate
 cd /home/deploy/django/mmo
 
 # Эхлээд dry-run хийж шалгах

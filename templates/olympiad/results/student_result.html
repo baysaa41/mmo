@@ -42,14 +42,14 @@
                             {% else %}
                                 <td>
                                     {% for upload in result.get_uploads %}
-                                        <div><a href="http://www.mmo.mn/media/{{ upload.file }}"
+                                        <div><a href="{{ upload.file.url }}"
                                                 target="_blank">{{ upload.file }}</a></div>
                                     {% endfor %}
                                     {% if result.get_supplements_num > 0 %}
                                         <strong>Нэмэлт материал:</strong><br>
                                     {% endif %}
                                     {% for upload in result.get_supplements %}
-                                        <div><a href="http://www.mmo.mn/media/{{ upload.file }}"
+                                        <div><a href="{{ upload.file.url }}"
                                                 target="_blank">{{ upload.file }}</a></div>
                                     {% endfor %}
                                 </td>

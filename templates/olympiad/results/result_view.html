@@ -6,7 +6,7 @@
     <div id="viewer-container" class="my-3" style="width: 100%; min-height: 600px; border: 1px solid #ccc;">
         <ul id="images" class="list-inline d-inline">
             {% for upload in result.upload_set.all %}
-                <li class="list-inline-item"><img src="/media/{{ upload.file }}" style="height: 200px"></li>
+                <li class="list-inline-item"><img src="{{ upload.file.url }}" style="height: 200px"></li>
             {% endfor %}
         </ul></div>
     <button class="btn btn-sm btn-primary" onclick="loadViewer()">Зургийг тодруулж харах</button>

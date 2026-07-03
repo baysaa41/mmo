@@ -6,14 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **MMO (Math Minds Olympiad)** Django application - a comprehensive platform for managing mathematics olympiads in Mongolia. The system handles user registration, school management, olympiad administration, problem sets, scoring, and certificate generation.
 
-**Key Language Note**: This codebase uses Mongolian (Cyrillic) for UI text, comments, and variable names. Database schema uses `octagon` schema alongside `public`.
+**Key Language Note**: This codebase uses Mongolian (Cyrillic) for UI text, comments, and variable names.
 
 ## Development Commands
 
 ### Environment Setup
 ```bash
 # Activate virtual environment
-source /home/deploy/django/mmo/.venv/bin/activate
+source /home/deploy/django/venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -37,9 +37,9 @@ python manage.py makemigrations
 # Apply migrations
 python manage.py migrate
 
-# Access database schema (uses 'octagon' schema)
-# Database: PostgreSQL on localhost:5432, database name: 'mmo'
-# Schema search path: octagon,public (configured in settings.py)
+# Database: PostgreSQL on localhost, database name 'mmo' (see DATABASES['default'] in settings.py)
+# Note: settings.py also defines an unused 'mysql' entry in DATABASES left over from a prior backend;
+# Django only ever connects to 'default' (postgresql_psycopg2).
 ```
 
 ### Celery Task Queue
@@ -145,13 +145,14 @@ See `QUICK_START.md` and `ADDITIONAL_QUOTA_GUIDE.md` for detailed quota manageme
 - School association logic: when a user's school changes, they're automatically removed from the old school's group
 
 **`olympiad/`** - Core olympiad functionality
-- Models: `Olympiad`, `SchoolYear`, `Problem`, `Topic`, `ScoreSheet`, `Answer`
+- Models: `Olympiad`, `SchoolYear`, `Problem`, `Topic`, `AnswerChoice`, `Solution`, `Result`, `ScoreSheet`, `Award`, `Team`/`TeamMember`, `Threshold`
 - Manages olympiad lifecycle: creation, problem sets, submissions, scoring, results
-- Round system: School → Province/District → Capital/Region → National → International
+- Round system: School → Province/District → Capital/Region → National → International, chained via `Olympiad.next_round`
 - Two olympiad types: Traditional (hand-graded) and Test (auto-graded)
 - Certificate generation using LaTeX templates (via `django-tex`)
-- Cheating analysis utilities (`cheating_analysis.py`)
-- API endpoints for external access (OAuth2 protected)
+- Cheating analysis utilities (`cheating_analysis.py`, `cheating_analysis_pro.py`)
+- View logic is split by audience rather than one `views.py`: `views_public.py` (public results/stats), `views_contest.py` / `views_contest_cbv.py` (taking the exam), `views_api.py` (session-authenticated `SaveAnswerAPIView`/`BulkSaveAnswersAPIView` for saving answers during a contest), `views_admin.py` (grading/admin), `result_views.py`, `api_views.py` (external machine-to-machine API, see below)
+- Round-advancement business logic lives in management commands (`first_to_second_by_ranking`, `second_to_third_fourth_by_ranking`, `third_to_fourth_by_ranking`), not in views/models
 
 **`schools/`** - School management
 - Models: `School` with relationships to `User` (moderator), `User` (manager), `Group`, `Province`
@@ -169,21 +170,23 @@ See `QUICK_START.md` and `ADDITIONAL_QUOTA_GUIDE.md` for detailed quota manageme
 
 **`file_management/`** - File upload and management utilities
 
+**`provinces/`** - Province-level views/URLs (`/provinces/`); the `Province`/`Zone` models themselves live in `accounts/models.py`, not here.
+
 ### Key Architectural Patterns
 
 **Multi-App Django Structure**: Each domain (users, schools, olympiads) is a separate Django app with its own models, views, URLs, and templates.
 
 **Group-Based Permissions**: Schools are associated with Django `Group` objects. Users inherit permissions through group membership. When a user changes schools, they're automatically moved between groups.
 
-**OAuth2 Integration**: External access via `django-oauth-toolkit`. OAuth endpoints at `/o/`. API endpoints require valid OAuth2 tokens.
+**Two separate external-access mechanisms — don't confuse them**:
+- `/api/olympiads/...` (`olympiad/api_views.py`) is a plain machine-to-machine API guarded by a shared-secret header (`X-API-Key`, checked against `settings.MMO_API_KEY`), not by OAuth2.
+- `/o/...` (`django-oauth-toolkit`) issues real OAuth2 tokens, used by the CORS-allowed external client at mathminds.club (see `CORS_ALLOWED_ORIGINS` in `settings.py`). `olympiad/views_api.py`'s `SaveAnswerAPIView`/`BulkSaveAnswersAPIView` are session/login-authenticated (`LoginRequiredMixin`), not OAuth2-protected either.
 
-**Celery for Async Tasks**: Email campaigns, quota calculations, and bulk operations run asynchronously. Tasks defined in each app's `tasks.py`.
+**Celery for Async Tasks**: Email campaigns, quota calculations, and bulk operations run asynchronously. Tasks defined in each app's `tasks.py` (`accounts`, `schools`, `emails`).
 
 **LaTeX Certificate Generation**: Certificates generated from `.tex` templates in `templates/olympiad/`. Uses ImageMagick for PNG conversion. Requires system LaTeX installation.
 
 **Maintenance Mode**: `MAINTENANCE_MODE` setting restricts access to staff and school moderators during system maintenance (see `mmo/middleware.py`).
-
-**Database Schema**: Uses PostgreSQL with custom schema `octagon` as primary, `public` as fallback. Search path configured in `DATABASES` settings.
 
 ### Important Model Relationships
 
@@ -196,18 +199,20 @@ See `QUICK_START.md` and `ADDITIONAL_QUOTA_GUIDE.md` for detailed quota manageme
 
 ### Templates and Frontend
 
-Templates use Django template language with `crispy_forms` (Bootstrap 5) and `widget_tweaks`. CKEditor for rich text editing. Static files in `/static/`, media uploads in `/media/`.
+Templates use Django template language with `crispy_forms` (Bootstrap 4, per `CRISPY_TEMPLATE_PACK`) and `widget_tweaks`. CKEditor/TinyMCE for rich text editing, `django-select2` for search widgets.
 
 ### External Services
 
-- **Amazon SES**: Email sending (configured with AWS credentials in settings)
+- **Amazon SES**: Email sending via `django-anymail` (configured with AWS credentials in settings)
+- **AWS S3**: `DEFAULT_FILE_STORAGE` is `storages.backends.s3boto3.S3Boto3Storage` — media uploads go to S3 (`AWS_STORAGE_BUCKET_NAME`), not the local `MEDIA_ROOT`/`media/` folder, even though those settings are also defined
 - **Redis**: Celery broker and result backend (localhost:6379)
 - **PostgreSQL**: Primary database (localhost:5432)
+- **WhiteNoise**: Serves static files in production (`STATICFILES_STORAGE`), fronted by `corsheaders`/`SecurityMiddleware`
 
 ## Configuration Notes
 
 **Development vs Production**:
-- `DEBUG = True` for development
+- `settings.py` currently has `DEBUG = False` and a real `ALLOWED_HOSTS` list checked in — this is the file used for the live site, not a dev template. Flip `DEBUG` locally as needed; don't assume the checked-in value is dev-safe.
 - Development settings hardcoded in `settings.py` (should use env vars in production)
 - Static files served by Django in DEBUG mode, otherwise use separate static file server
 
@@ -225,11 +230,13 @@ These should be moved to environment variables for production deployment.
 
 ## Testing Approach
 
-Tests are minimal (stub files in each app). When adding tests:
+Tests are minimal (stub `tests.py` files in each app). When adding tests:
 - Use Django's `TestCase` for database-dependent tests
 - Use `Client` for view/integration tests
 - Mock external services (SES, S3) in tests
 - Test quota calculation logic thoroughly (complex business rules)
+
+Note: the repo root also has several `test_*.py` and `check_*.py` files (e.g. `test_quota.log`-adjacent scripts). These are ad hoc one-off debugging scripts run directly with `python`, not part of the Django test suite — `python manage.py test` does not discover or run them.
 
 ## Common Workflows
 

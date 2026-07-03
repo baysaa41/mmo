@@ -4,7 +4,7 @@
 
 ### 1. Template үүсгэх
 ```bash
-source /home/deploy/django/mmo/.venv/bin/activate
+source /home/deploy/django/venv/bin/activate
 cd /home/deploy/django/mmo
 python create_additional_quota_template.py
 ```

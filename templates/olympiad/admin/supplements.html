@@ -46,8 +46,8 @@
                         {{ upload.result.problem.statement|latex }}{% endautoescape %}
                     </td>
                     <td>
-                        <a href="/media/{{ upload.file }}" target="_blank">
-                            <img src="/media/{{ upload.file }}" style="height: 50px">
+                        <a href="{{ upload.file.url }}" target="_blank">
+                            <img src="{{ upload.file.url }}" style="height: 50px">
                         </a><br>
                         <span class="text-muted">{{ upload.upload_time|date:'Y-m-d H:i' }}</span>
                     </td>
