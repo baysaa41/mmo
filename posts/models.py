@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from olympiad.models import SchoolYear
 from ckeditor_uploader.fields import RichTextUploadingField
 from accounts.models import Author
+from file_management.models import FileUpload
 from django.utils import timezone
 from datetime import date # date-г ашиглахын тулд нэмнэ
 
@@ -36,6 +37,7 @@ class Post(models.Model):
     embedcode = models.TextField(null=True, blank=True)
     pictures = models.TextField(null=True, blank=True)
     files = models.TextField(null=True, blank=True)
+    attachments = models.ManyToManyField(FileUpload, blank=True, related_name='posts')
     tags = models.TextField(null=True, blank=True)
     sawcount = models.IntegerField(null=True, blank=True)
     isshow = models.BooleanField(default=True)
