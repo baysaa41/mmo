@@ -1,2 +1,6 @@
 mmo/settings.py
 mmo/settings.remote.py
+.env
+staticfiles/
+media/
+*.sql

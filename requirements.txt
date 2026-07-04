@@ -43,9 +43,10 @@ pycparser==2.23
 django-anymail==13.1
 
 # ==============================================================================
-# Task Queue (Celery, broker: RabbitMQ/amqp - see mmo/celery.py)
+# Task Queue (Celery, broker: Redis - see mmo/celery.py)
 # ==============================================================================
 celery==5.5.3
+redis==5.2.1
 amqp==5.3.1
 billiard==4.2.1
 kombu==5.5.4
