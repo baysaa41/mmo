@@ -4,3 +4,7 @@ mmo/settings.remote.py
 staticfiles/
 media/
 *.sql
+celerybeat-schedule*
+logs/
+__pycache__/
+django_cache/
