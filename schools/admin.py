@@ -6,5 +6,6 @@ class SchoolAdmin(admin.ModelAdmin):
     fields = ('name','province','group', 'user', 'manager')
     list_display = ('name','province', 'user', 'manager')
     list_select_related = ('province', 'user', 'manager')
+    autocomplete_fields = ['user', 'manager']
 
 admin.site.register(School, SchoolAdmin)

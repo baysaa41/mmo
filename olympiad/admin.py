@@ -7,10 +7,17 @@ from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, R
 admin.site.register(SchoolYear)
 admin.site.register(Topic)
 admin.site.register(AnswerChoice)
-admin.site.register(Award)
 admin.site.register(Team)
 admin.site.register(Upload)
 admin.site.register(Tag)
+
+
+class AwardAdmin(admin.ModelAdmin):
+    list_display = ("contestant", "olympiad", "grade", "place")
+    list_select_related = ("contestant", "olympiad", "grade")
+    autocomplete_fields = ['contestant', 'confirmed_by']
+
+admin.site.register(Award, AwardAdmin)
 
 
 class OlympiadAdmin(admin.ModelAdmin):
@@ -56,5 +63,6 @@ admin.site.register(Solution,SolutionAdmin)
 class ResultAdmin(admin.ModelAdmin):
     list_display = ("contestant", "olympiad", "problem", "score")
     list_select_related = ("contestant", "olympiad", "problem__olympiad__school_year")
+    autocomplete_fields = ['contestant', 'coordinator', 'confirmed_by', 'olympiad', 'problem']
 
 admin.site.register(Result, ResultAdmin)

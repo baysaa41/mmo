@@ -25,13 +25,15 @@ class EmailCampaignAdmin(admin.ModelAdmin):
         'created_at'
     ]
     search_fields = ['name', 'subject']
+    autocomplete_fields = ['created_by']
     readonly_fields = [
         'created_at',
         'sent_at',
         'sent_count',
         'failed_count',
         'emails_sent_today',
-        'total_recipients'
+        'total_recipients',
+        'last_reset_date'
     ]
 
     fieldsets = (
@@ -98,6 +100,7 @@ class EmailRecipientAdmin(admin.ModelAdmin):
     list_select_related = ['campaign']
     list_filter = ['status', 'campaign', 'sent_at']
     search_fields = ['email', 'name', 'campaign__name']
+    autocomplete_fields = ['user']
     readonly_fields = ['sent_at', 'message_id']
 
     fieldsets = (
@@ -114,6 +117,7 @@ class EmailUnsubscribeAdmin(admin.ModelAdmin):
     list_display = ['email', 'user', 'unsubscribed_at', 'reason']
     search_fields = ['email', 'user__username']
     list_filter = ['unsubscribed_at']
+    autocomplete_fields = ['user']
     readonly_fields = ['unsubscribed_at']
 
 

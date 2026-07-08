@@ -9,6 +9,7 @@ class FileUploadAdmin(admin.ModelAdmin):
     list_select_related = ['school_year', 'uploader']
     list_filter = ['school_year', 'uploaded_at']
     search_fields = ['description', 'file', 'uploader__username']
+    autocomplete_fields = ['uploader']
     readonly_fields = ['uploaded_at', 'download_count']
     ordering = ['-uploaded_at']
 

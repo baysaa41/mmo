@@ -25,13 +25,31 @@ admin.site.register(Grade)
 
 class UserMetaAdmin(admin.ModelAdmin):
     list_select_related = ('user',)
+    autocomplete_fields = ['user']
 
 admin.site.register(UserMeta, UserMetaAdmin)
-admin.site.register(Zone)
-admin.site.register(TeacherStudent)
-admin.site.register(Author)
+
+
+class ZoneAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['contact_person']
+
+admin.site.register(Zone, ZoneAdmin)
+
+
+class TeacherStudentAdmin(admin.ModelAdmin):
+    list_select_related = ('teacher', 'student')
+    autocomplete_fields = ['teacher', 'student']
+
+admin.site.register(TeacherStudent, TeacherStudentAdmin)
+
+
+class AuthorAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['user']
+
+admin.site.register(Author, AuthorAdmin)
 
 class ProvinceAdmin(admin.ModelAdmin):
     list_display = ('name','zone')
+    autocomplete_fields = ['contact_person']
 
 admin.site.register(Province,ProvinceAdmin)
