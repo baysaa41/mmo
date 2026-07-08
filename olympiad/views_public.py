@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
+from django.core.paginator import Paginator
 from datetime import datetime, timezone, timedelta
 from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic
 from django.db.models import Q, Count
@@ -137,8 +138,12 @@ def problem_list_with_topics(request):
 
     all_topics = Topic.objects.all()
 
+    paginator = Paginator(problems, 50)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
     return render(request, "olympiad/problems/problem_list_with_topics.html", {
-        "problems": problems,
+        "problems": page_obj,
         "all_topics": all_topics,
         "query": query, # Хайлтын үгийг темплэйт рүү буцааж дамжуулах
     })
