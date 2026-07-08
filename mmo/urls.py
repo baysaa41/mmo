@@ -17,7 +17,6 @@ urlpatterns = ([
     path('emails/', include('emails.urls')),
     path('admin/clearcache/', include('clearcache.urls')),
     path('admin/', admin.site.urls),
-    path('tinymce/', include('tinymce.urls')),
     path('ckeditor/', include('ckeditor_uploader.urls')),
     path('accounts/', include('accounts.urls')),
     path('accounts/', include('django_registration.backends.activation.urls')),

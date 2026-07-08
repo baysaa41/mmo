@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .models import Post
 from olympiad.models import SchoolYear
 from datetime import date
@@ -49,3 +49,4 @@ def post_view(request):
             'post': post,
             'mode': mode
         })
+    return redirect('posts:home')

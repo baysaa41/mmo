@@ -2,6 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.urls import reverse
 from django.core.mail import get_connection, EmailMultiAlternatives, EmailMessage
 
@@ -68,6 +69,7 @@ def send_email_to_schools(request):
         form = EmailForm()
     return render(request, 'accounts/send_email.html', {'form': form})
 
+@staff_member_required
 def send_mass_html_mail(request):
     connection = get_connection(fail_silently=False)
     messages = []
@@ -92,37 +94,6 @@ def track_email_open(request, token):
     uemail.is_opened = True
     uemail.save()
     return HttpResponse("Thank you for confirming this email.")
-
-def create_mails(request):
-    num = 0
-    users = User.objects.all()
-    subject = 'I шатны шалгаруулалт'
-    text = '''
-Та бүхэнд 2021-2022 оны хичээлийн жилийн мэндийг хүргэе!
-
-2021-2022 оны хичээлийн жилээс эхлэн ММОХ I шатны сонгон шалгаруулалт хийхээр болж байна.
-
-Шалгаруулалтын талаарх мэдээллийг www.mmo.mn сайтын мэдээллийн хэсгээс харж болно.
-
-Шалгаруулалтад оролцохын тулд өөрийн бүртгэлийн мэдээллийг шинэчилсэн байх шаардлагатай.
-
-Таны нэвтрэх нэр: {}
-
-Хэрвээ та нууц үгээ мартсан бол нэвтрэх хуудасны Нууц үгээ сэргээх линк ашиглаарай.
-
-Хэрвээ танд ямар нэг асуулт байвал baysa.edu@gmail.com хаягаар холбогдож асуугаарай 
-(Ажлын ачааллаас шалтгаалж хариулт саатаж очихыг анхаарна уу!)
-
-ММОХ
-    '''
-    from_email = 'Монголын Математикийн Олимпиадын Хороо <no-reply@mmo.mn>'
-
-    for user in users:
-        if user.is_active:
-            UserMails.objects.create(subject=subject, text=text.format(user.username), from_email=from_email,
-                                     to_email=user.email)
-            num = num + 1
-    return HttpResponse(num)
 
 @login_required(login_url='/accounts/login/')
 def send_email_with_attachments(request):

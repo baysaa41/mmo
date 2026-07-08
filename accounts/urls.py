@@ -39,7 +39,6 @@ urlpatterns = [
     path('bulk-add-users/', auth.bulk_add_users_to_school_view, name='bulk_add_users_to_school'),
 
     # Email Views
-    path('createmails/', email.create_mails, name='user_createmails'),
     path('sendmails/', email.send_mass_html_mail, name='user_sendmails'),
     path('track-email/<uuid:token>/', email.track_email_open, name='track_email_open'),
     path('send-to-schools/', email.send_email_to_schools, name='send_email_to_schools'),
