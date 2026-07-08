@@ -21,7 +21,12 @@ admin.site.register(User, UserAdmin)
 # Register your models here.
 
 admin.site.register(Grade)
-admin.site.register(UserMeta)
+
+
+class UserMetaAdmin(admin.ModelAdmin):
+    list_select_related = ('user',)
+
+admin.site.register(UserMeta, UserMetaAdmin)
 admin.site.register(Zone)
 admin.site.register(TeacherStudent)
 admin.site.register(Author)

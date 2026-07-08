@@ -95,6 +95,7 @@ class EmailCampaignAdmin(admin.ModelAdmin):
 @admin.register(EmailRecipient)
 class EmailRecipientAdmin(admin.ModelAdmin):
     list_display = ['email', 'name', 'campaign', 'status', 'sent_at']
+    list_select_related = ['campaign']
     list_filter = ['status', 'campaign', 'sent_at']
     search_fields = ['email', 'name', 'campaign__name']
     readonly_fields = ['sent_at', 'message_id']
