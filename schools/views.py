@@ -1101,7 +1101,7 @@ def school_list_view(request):
     emails = [email for email in re.split(r'[\s,;]+', query_string) if email]
 
     # Үндсэн шүүлт хийгээгүй үеийн бүх сургуулийн жагсаалт
-    schools = School.objects.select_related('user', 'province').order_by('name')
+    schools = School.objects.select_related('user', 'user__data', 'province').order_by('name')
 
     # Хэрэв имэйл хаягууд орж ирсэн бол шүүлт хийх
     if emails:
