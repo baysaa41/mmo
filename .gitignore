@@ -1,5 +1,6 @@
 mmo/settings.py
 mmo/settings.remote.py
+maintenance/ON
 .env
 staticfiles/
 media/

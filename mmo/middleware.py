@@ -4,11 +4,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+MAINTENANCE_FLAG_FILE = settings.BASE_DIR / 'maintenance' / 'ON'
+
 
 class MaintenanceModeMiddleware:
     """
     Maintenance mode middleware - зөвхөн staff болон school moderator-д хандалт олгоно.
     Бусад хэрэглэгчдэд maintenance page харуулна.
+
+    Асаах/унтраах: BASE_DIR/maintenance/ON файлыг үүсгэх/устгах замаар хийнэ
+    (settings.py засварлах, серверийг restart хийх шаардлагагүй).
     """
 
     def __init__(self, get_response):
@@ -16,7 +21,7 @@ class MaintenanceModeMiddleware:
 
     def __call__(self, request):
         # Maintenance mode асаалттай эсэхийг шалгах
-        maintenance_mode = getattr(settings, 'MAINTENANCE_MODE', False)
+        maintenance_mode = MAINTENANCE_FLAG_FILE.is_file()
 
         if maintenance_mode:
             # Admin, нэвтрэх хуудас эсвэл static файл руу хандалт бол зөвшөөрнө
