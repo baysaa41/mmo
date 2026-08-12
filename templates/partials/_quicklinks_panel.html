@@ -59,7 +59,7 @@
                 <li class="home-schedule-item">
                     <div class="home-schedule-date">{{ o.start_time|date:'Y-m-d' }}</div>
                     <div class="home-schedule-name">{{ o.name }}</div>
-                    <div class="home-schedule-round">{{ o.get_round_display }}</div>
+                    <span class="home-schedule-badge home-schedule-badge-{{ o.round }}">{{ o.get_round_display }}</span>
                 </li>
             {% endfor %}
         {% else %}

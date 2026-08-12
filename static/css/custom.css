@@ -73,10 +73,25 @@ a.home-panel-title:hover {
     font-size: .9rem;
     color: #333;
 }
-.home-schedule-round {
-    font-size: .75rem;
-    color: #888;
+.home-schedule-badge {
+    display: inline-block;
+    margin-top: .25rem;
+    padding: .15rem .55rem;
+    border-radius: 1rem;
+    font-size: .72rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #fff;
+    background-color: #9ca3af;
 }
+.home-schedule-badge-0 { background-color: #9ca3af; }
+.home-schedule-badge-1 { background-color: #1b6fcd; }
+.home-schedule-badge-2 { background-color: #0f9d58; }
+.home-schedule-badge-3 { background-color: #f4a300; }
+.home-schedule-badge-4 { background-color: #d93025; }
+.home-schedule-badge-5 { background-color: #8e24aa; }
+.home-schedule-badge-6 { background-color: #6d4c41; }
+.home-schedule-badge-7 { background-color: #00838f; }
 
 /* Түргэн холбоос товчнууд */
 .home-quicklinks {
