@@ -1,30 +1,53 @@
-{% extends 'base.html' %}
-{% load crispy_forms_tags %}
+<!DOCTYPE html>
+<html lang="mn">
 {% load static %}
+{% load crispy_forms_tags %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нэвтрэх - ММО</title>
 
-{% block content %}
-    <div class="d-flex justify-content-center align-items-center" style="min-height: 75vh;">
-        <div class="card shadow-lg border-0" style="max-width: 400px; width: 100%; border-radius: 1rem;">
-            <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <img src="{% static 'logo.png' %}" alt="logo" style="width: 72px;" class="img-fluid my-2">
-                    <h4 class="fw-bold mb-0">Монголын Математикийн Олимпиад</h4>
-                    <small class="text-muted">Нэвтрэх</small>
-                </div>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="{% static 'logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+{% csrf_token %}
 
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    {{ form|crispy }}
-                    <div class="d-grid mt-3">
-                        <button type="submit" class="btn btn-primary btn-lg">Нэвтрэх</button>
+<main class="flex-grow-1 d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card shadow-lg border-0 m-3" style="max-width: 400px; width: 100%; border-radius: 1rem;">
+        <div class="card-body p-4">
+            <div class="text-center mb-4">
+                <a href="{% url 'posts:home' %}"><img src="{% static 'logo.png' %}" alt="logo" style="width: 72px;" class="img-fluid my-2"></a>
+                <h4 class="fw-bold mb-0">Монголын Математикийн Олимпиад</h4>
+                <small class="text-muted">Нэвтрэх</small>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
-                </form>
+                {% endfor %}
+            {% endif %}
 
-                <hr class="my-4">
-                <div class="text-center">
-                    <a href="{% url 'password_reset' %}" class="text-decoration-none">Нууц үгээ мартсан уу?</a>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {{ form|crispy }}
+                <div class="d-grid mt-3">
+                    <button type="submit" class="btn btn-primary btn-lg">Нэвтрэх</button>
                 </div>
+            </form>
+
+            <hr class="my-4">
+            <div class="text-center">
+                <a href="{% url 'password_reset' %}" class="text-decoration-none">Нууц үгээ мартсан уу?</a>
             </div>
         </div>
     </div>
-{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

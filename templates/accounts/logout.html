@@ -1,21 +1,36 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="mn">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Амжилттай гарлаа - ММО</title>
 
-{% block title %}Амжилттай гарлаа{% endblock %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"
+          xintegrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
+    <link rel="shortcut icon" href="{% static 'logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+{% csrf_token %}
 
-{% block content %}
-    <div class="d-flex justify-content-center align-items-center" style="min-height: 75vh;">
-        <div class="card shadow border-0 text-center p-5" style="max-width: 480px;">
-            <div class="card-body">
-                <div class="mb-3 text-success">
-                    <i class="bi bi-check-circle-fill" style="font-size: 3rem;"></i>
-                </div>
-                <h3 class="fw-bold mb-3">Та системээс амжилттай гарлаа</h3>
-                <p class="text-muted mb-4">Дараа дахин нэвтрэхдээ хэрэглэгчийн нэр, нууц үгээ оруулна уу.</p>
-                <div class="d-grid gap-2">
-                    <a href="{% url 'login' %}" class="btn btn-primary mt-2">Дахин нэвтрэх</a>
-                    <a href="/" class="btn btn-outline-secondary mt-2">Нүүр хуудас руу буцах</a>
-                </div>
+<main class="flex-grow-1 d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+    <div class="card shadow border-0 text-center p-5 m-3" style="max-width: 480px;">
+        <div class="card-body">
+            <div class="mb-3 text-success">
+                <i class="fas fa-check-circle" style="font-size: 3rem;"></i>
+            </div>
+            <h3 class="fw-bold mb-3">Та системээс амжилттай гарлаа</h3>
+            <p class="text-muted mb-4">Дараа дахин нэвтрэхдээ хэрэглэгчийн нэр, нууц үгээ оруулна уу.</p>
+            <div class="d-grid gap-2">
+                <a href="{% url 'user_login' %}" class="btn btn-primary mt-2">Дахин нэвтрэх</a>
+                <a href="{% url 'posts:home' %}" class="btn btn-outline-secondary mt-2">Нүүр хуудас руу буцах</a>
             </div>
         </div>
     </div>
-{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

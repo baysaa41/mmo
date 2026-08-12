@@ -2,9 +2,17 @@ from django.contrib import admin
 
 # Register your models here.
 
-from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, Result, Solution, Team, Upload, Tag
+from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, Result, Solution, Team, Upload, Tag, RoundGuideline
 
 admin.site.register(SchoolYear)
+
+
+class RoundGuidelineAdmin(admin.ModelAdmin):
+    list_display = ("round", "school_year", "title", "updatedate")
+    list_filter = ("school_year", "round")
+
+admin.site.register(RoundGuideline, RoundGuidelineAdmin)
+
 admin.site.register(Topic)
 admin.site.register(AnswerChoice)
 admin.site.register(Team)

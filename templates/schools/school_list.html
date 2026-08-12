@@ -27,6 +27,7 @@
                         <th>Админы нэр</th>
                         <th>Админы имэйл</th>
                         <th>Админы утас</th>
+                        {% if request.user.is_staff %}<th>Засах</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -38,10 +39,13 @@
                             <td>{{ school.user.first_name }} {{ school.user.last_name }}</td>
                             <td>{{ school.user.email }}</td>
                             <td>{{ school.user.data.mobile }}</td>
+                            {% if request.user.is_staff %}
+                                <td><a href="{% url 'admin:schools_school_change' school.id %}" target="_blank"><i class="fas fa-edit text-secondary"></i></a></td>
+                            {% endif %}
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center">Илэрц олдсонгүй.</td>
+                            <td colspan="6" class="text-center">Илэрц олдсонгүй.</td>
                         </tr>
                     {% endfor %}
                 </tbody>

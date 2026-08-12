@@ -27,6 +27,7 @@ urlpatterns = [
 
     # Auth Views
     path('profile/', auth.profile, name='user_profile'),
+    path('profile/edit/', auth.profile_edit, name='profile_edit'),
     path('profile/<int:user_id>/', auth.user_profile_edit, name='user_profile_edit'),
     path('profile/done/', auth.profile_ready, name='user_profile_done'),
     path('password/<int:user_id>/', change_student_password_view, name='user_password'),

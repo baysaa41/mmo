@@ -1,0 +1,7 @@
+<li class="home-notice-row{% if post.isspec %} home-notice-row--pinned{% endif %}">
+    <a href="{% url 'posts:post_view' %}?id={{ post.id }}" class="home-notice-title">
+        {% if post.isspec %}<i class="fas fa-thumbtack home-notice-pin" title="Онцлох мэдээ"></i>{% endif %}
+        {{ post.title }}
+    </a>
+    <span class="home-notice-date">{{ post.startdate|date:'Y-m-d' }}</span>
+</li>

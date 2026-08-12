@@ -2,7 +2,11 @@
 
 {% block content %}
     <div class="container">
-        <h2 class="mb-1">{{ olympiad.name }}</h2>
+        <h2 class="mb-1">{{ olympiad.name }}
+            {% if request.user.is_staff %}
+                <a href="{% url 'admin:olympiad_olympiad_change' olympiad.id %}" target="_blank"><i class="fas fa-edit text-secondary fs-6"></i></a>
+            {% endif %}
+        </h2>
         <p class="lead text-muted">{{ school.name }} | {{ selected_level.name }} ангилал</p>
         <a href="{% url 'school_dashboard' school.id %}" class="btn btn-secondary btn-sm mb-4">&larr; Удирдлагын самбар
             луу буцах</a>

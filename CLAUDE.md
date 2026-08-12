@@ -38,8 +38,6 @@ python manage.py makemigrations
 python manage.py migrate
 
 # Database: PostgreSQL on localhost, database name 'mmo' (see DATABASES['default'] in settings.py)
-# Note: settings.py also defines an unused 'mysql' entry in DATABASES left over from a prior backend;
-# Django only ever connects to 'default' (postgresql_psycopg2).
 ```
 
 ### Celery Task Queue
@@ -54,7 +52,7 @@ celery -A mmo beat -l info
 celery -A mmo worker -B -l info
 ```
 
-Celery is configured to use Redis (localhost:6379/0) as broker and result backend.
+Celery is configured to use Redis (localhost:6379/1) as broker and result backend.
 
 ### Testing
 ```bash
@@ -199,15 +197,15 @@ See `QUICK_START.md` and `ADDITIONAL_QUOTA_GUIDE.md` for detailed quota manageme
 
 ### Templates and Frontend
 
-Templates use Django template language with `crispy_forms` (Bootstrap 4, per `CRISPY_TEMPLATE_PACK`) and `widget_tweaks`. CKEditor/TinyMCE for rich text editing, `django-select2` for search widgets.
+Templates use Django template language with `crispy_forms` (Bootstrap 4, per `CRISPY_TEMPLATE_PACK`) and `widget_tweaks`. CKEditor for rich text editing, `django-select2` for search widgets.
 
 ### External Services
 
 - **Amazon SES**: Email sending via `django-anymail` (configured with AWS credentials in settings)
-- **AWS S3**: `DEFAULT_FILE_STORAGE` is `storages.backends.s3boto3.S3Boto3Storage` — media uploads go to S3 (`AWS_STORAGE_BUCKET_NAME`), not the local `MEDIA_ROOT`/`media/` folder, even though those settings are also defined
-- **Redis**: Celery broker and result backend (localhost:6379)
+- **AWS S3**: Configured via the `STORAGES['default']` dict (Django 4.2+ style — `DEFAULT_FILE_STORAGE`/`STATICFILES_STORAGE` are defined too but no longer read by Django 5.x) as `storages.backends.s3boto3.S3Boto3Storage` — media uploads go to S3 (`AWS_STORAGE_BUCKET_NAME`), not the local `MEDIA_ROOT`/`media/` folder
+- **Redis**: Celery broker and result backend (localhost:6379/1)
 - **PostgreSQL**: Primary database (localhost:5432)
-- **WhiteNoise**: Serves static files in production (`STATICFILES_STORAGE`), fronted by `corsheaders`/`SecurityMiddleware`
+- **WhiteNoise**: Serves static files in production (`STORAGES['staticfiles']`), fronted by `corsheaders`/`SecurityMiddleware`
 
 ## Configuration Notes
 

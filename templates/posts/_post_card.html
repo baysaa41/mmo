@@ -1,4 +1,4 @@
-<div class="article card p-3 mt-2 bg-light text-dark">
+<div class="article home-panel text-dark">
     <h4 class="my-3">
         {# Хэрэв is_link хувьсагч True байвал гарчгийг холбоос болгоно #}
         {% if is_link %}
@@ -22,7 +22,7 @@
     {% endif %}
 
     <p>Сүүлийн засвар: {{ post.updatedate | date:'Y-m-d' }}, Нийтэлсэн: {{ post.startdate | date:'Y-m-d' }}
-        {% if request.user.is_staff and mode %}
+        {% if request.user.is_staff %}
             &nbsp;&nbsp;<a href="{% url 'admin:posts_post_change' post.id %}" target="_blank"><i class="fas fa-edit text-secondary"></i></a>
         {% endif %}
     </p>

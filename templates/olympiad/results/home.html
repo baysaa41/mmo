@@ -54,7 +54,7 @@
                                 </button>
                                 {% if request.user.is_staff %}
                                     <a class="btn btn-sm btn-outline-dark w-100 w-md-auto d-flex flex-column align-items-center"
-                                       href="/admin/olympiad/olympiad/{{ olympiad.id }}/change/" target="_blank">
+                                       href="{% url 'admin:olympiad_olympiad_change' olympiad.id %}" target="_blank">
                                         <i class="fas fa-edit fa-lg mb-1"></i>
                                         Засах
                                     </a>

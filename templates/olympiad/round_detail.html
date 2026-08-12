@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ round_name }} - Удирдамж{% endblock %}
+
+{% block content %}
+    <div class="home-panel">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h3 class="mb-0">
+                {{ round_name }}
+                {% if request.user.is_staff and guideline %}
+                    <a href="{% url 'admin:olympiad_roundguideline_change' guideline.id %}" target="_blank"><i class="fas fa-edit text-secondary fs-6"></i></a>
+                {% endif %}
+            </h3>
+            <div class="d-flex align-items-center gap-1">
+                {% if prev is not None %}
+                    <a class="btn btn-light btn-sm" href="?year={{ prev.id }}">&larr; {{ prev.name }}</a>
+                {% endif %}
+                {% if year %}<span class="btn btn-secondary btn-sm disabled">{{ year.name }}</span>{% endif %}
+                {% if next is not None %}
+                    <a class="btn btn-light btn-sm" href="?year={{ next.id }}">{{ next.name }} &rarr;</a>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if round == 1 and request.user.moderating.exists or round == 1 and request.user.managing.exists %}
+            <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="fas fa-school me-1"></i> Та сургуулийн модератор/менежер эрхтэй байна.</span>
+                <a href="{% url 'my_managed_schools' %}" class="btn btn-sm btn-primary">Сургуулиа удирдах</a>
+            </div>
+        {% elif round == 2 and request.user.province_set.exists %}
+            <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="fas fa-map-marked-alt me-1"></i> Та аймаг/дүүргийн админ эрхтэй байна.</span>
+                <a href="{% url 'my_managed_provinces' %}" class="btn btn-sm btn-primary">Аймаг/Дүүргээ удирдах</a>
+            </div>
+        {% elif round == 3 and request.user.managed_zones.exists %}
+            <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="fas fa-globe-asia me-1"></i> Та бүс/нийслэлийн админ эрхтэй байна.</span>
+                <a href="{% url 'my_managed_zones' %}" class="btn btn-sm btn-primary">Бүс/Нийслэлээ удирдах</a>
+            </div>
+        {% endif %}
+
+        {% if guideline %}
+            {% if guideline.school_year_id != year.id %}
+                <div class="alert alert-warning small">
+                    {{ year.name }} хичээлийн жилд удирдамж оруулаагүй тул {{ guideline.school_year.name }} оны удирдамжийг харуулж байна.
+                </div>
+            {% endif %}
+            <div class="article">
+                {% autoescape off %}{{ guideline.content }}{% endautoescape %}
+            </div>
+        {% else %}
+            <div class="card p-3 bg-light text-dark">Энэ шатлалын удирдамж оруулаагүй байна.</div>
+        {% endif %}
+    </div>
+
+    {% if olympiads %}
+        <div class="home-panel mt-3">
+            <div class="home-panel-title mb-0 border-0 pb-0"><i class="fas fa-poll me-1"></i> {{ year.name }} оны олимпиадууд</div>
+            <table class="table table-hover mt-2">
+                <tr>
+                    <th>Нэр</th>
+                    <th>Ангилал</th>
+                    <th>Эхлэх</th>
+                    <th>Дуусах</th>
+                    <th></th>
+                </tr>
+                {% for olympiad in olympiads %}
+                    <tr>
+                        <td>{{ olympiad.name }}</td>
+                        <td>{{ olympiad.level.name }}</td>
+                        <td>{{ olympiad.start_time|date:'Y-m-d' }}</td>
+                        <td>{{ olympiad.end_time|date:'Y-m-d' }}</td>
+                        <td>
+                            {% if olympiad.finished %}
+                                <a class="btn btn-sm btn-outline-primary" href="{% url 'olympiad_result_view' olympiad_id=olympiad.id %}">Дүн харах</a>
+                            {% endif %}
+                            {% if request.user.is_staff %}
+                                <a href="{% url 'admin:olympiad_olympiad_change' olympiad.id %}" target="_blank"><i class="fas fa-edit text-secondary"></i></a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

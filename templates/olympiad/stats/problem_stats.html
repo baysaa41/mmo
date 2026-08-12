@@ -8,7 +8,11 @@
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 class="mb-0">Бодлогын статистик</h4>
+                        <h4 class="mb-0">Бодлогын статистик
+                            {% if request.user.is_staff %}
+                                <a href="{% url 'problem_edit' problem_id=problem.id %}" target="_blank"><i class="fas fa-edit text-secondary fs-6"></i></a>
+                            {% endif %}
+                        </h4>
                         <small class="text-muted">{{ problem.olympiad.name }}, {{ problem.olympiad.level.name }}
                             ангилал, Бодлого №{{ problem.order }}</small>
                     </div>

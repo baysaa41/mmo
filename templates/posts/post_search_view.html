@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Хайлт: {{ query }}{% endblock %}
+
+{% block content %}
+    <div class="home-panel">
+        <div class="home-panel-title mb-0 border-0 pb-0"><i class="fas fa-search me-1"></i> Мэдээний хайлт</div>
+
+        <form method="GET" action="{% url 'posts:post_search' %}" class="d-flex gap-2 mt-3 mb-3">
+            <input type="text" name="q" class="form-control" placeholder="Хайх үг оруулна уу..." value="{{ query }}">
+            <button type="submit" class="btn btn-primary flex-shrink-0">Хайх</button>
+        </form>
+
+        {% if query %}
+            {% if posts %}
+                <p class="text-muted small">"{{ query }}" гэсэн хайлтад {{ posts|length }} мэдээ олдлоо.</p>
+                <ul class="home-notice-list">
+                    {% for post in posts %}
+                        {% include 'posts/_notice_row.html' with post=post %}
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="card p-2 mt-3 bg-light text-dark">"{{ query }}" гэсэн хайлтад мэдээ олдсонгүй.</div>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endblock %}

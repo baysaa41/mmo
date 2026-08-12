@@ -8,3 +8,4 @@ celerybeat-schedule*
 logs/
 __pycache__/
 django_cache/
+.venv/

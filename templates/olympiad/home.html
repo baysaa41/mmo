@@ -9,7 +9,12 @@
 
 {% block content %}
     <div class="justify-content-center">
-        <h3>Олимпиадын жагсаалт</h3>
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <h3>Олимпиадын жагсаалт</h3>
+            <button type="button" class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#calendarModal">
+                <i class="fas fa-calendar me-1"></i> Календар
+            </button>
+        </div>
         <p class="lead text-muted">Зөвхөн онлайнаар зохиогдож байгаа олимпиадад оролцох боломжтой бөгөөд IMO, EGMO
             сорилын материалыг сурагчид системд оруулах үед ашиглана.</p>
         <div id="time">Улаанбаатарын цаг: {{ now | date:'Y-m-d H:i' }}</div>
@@ -22,6 +27,7 @@
                 <th>Дуусах</th>
                 <th>Бүлэг</th>
                 <th>Оролцох</th>
+                {% if request.user.is_staff %}<th>Засах</th>{% endif %}
             </tr>
             {% for olympiad in olympiads %}
                 <tr>
@@ -53,6 +59,9 @@
                             {% endif %}
                         {% endif %}
                     </td>
+                    {% if request.user.is_staff %}
+                        <td><a href="{% url 'admin:olympiad_olympiad_change' olympiad.id %}" target="_blank"><i class="fas fa-edit text-secondary"></i></a></td>
+                    {% endif %}
                 </tr>
             {% endfor %}
         </table>

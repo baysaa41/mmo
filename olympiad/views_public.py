@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from datetime import datetime, timezone, timedelta
-from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic
+from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, RoundGuideline
 from django.db.models import Q, Count
 
 
@@ -27,6 +27,48 @@ def olympiads_home(request):
         olympiads = Olympiad.objects.none()
 
     return render(request, 'olympiad/home.html', {'olympiads': olympiads, 'now': now})
+
+
+def round_guideline_view(request, round):
+    now = datetime.now(timezone.utc).date()
+    active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
+    year_id = request.GET.get('year', active_year.id if active_year else None)
+    selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
+
+    guideline = None
+    if selected_year:
+        guideline = RoundGuideline.objects.filter(round=round, school_year=selected_year).first()
+    if not guideline:
+        # Тухайн жилд удирдамж оруулаагүй бол хамгийн сүүлд оруулсныг харуулна
+        guideline = RoundGuideline.objects.filter(round=round).order_by('-school_year_id').first()
+
+    # round 5/6/7 (IMO/EGMO/APMO) нь Olympiad.round талбартай шууд нийцдэггүй
+    # (өгөгдлийн санд round=0/4/6/7-д тархсан байдаг тул нэрээр нь шүүнэ)
+    name_filter_map = {5: 'IMO', 6: 'EGMO', 7: 'APMO'}
+    olympiads = []
+    if selected_year:
+        if round in name_filter_map:
+            olympiads = Olympiad.objects.filter(
+                is_open=True, name__icontains=name_filter_map[round], school_year=selected_year
+            ).order_by('start_time')
+        else:
+            olympiads = Olympiad.objects.filter(
+                is_open=True, round=round, school_year=selected_year
+            ).order_by('level_id')
+
+    prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first() if selected_year else None
+    next_year = SchoolYear.objects.filter(pk=selected_year.id + 1).first() if selected_year else None
+
+    context = {
+        'round': round,
+        'round_name': dict(RoundGuideline.ROUND_CHOICES).get(round, ''),
+        'guideline': guideline,
+        'olympiads': olympiads,
+        'year': selected_year,
+        'prev': prev_year,
+        'next': next_year,
+    }
+    return render(request, 'olympiad/round_detail.html', context)
 
 def problems_home(request):
     now = datetime.now(timezone.utc)

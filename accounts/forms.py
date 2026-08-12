@@ -11,6 +11,14 @@ from django.core.mail import EmailMultiAlternatives
 from django.template import loader
 from django_select2.forms import ModelSelect2MultipleWidget
 from schools.models import School
+from django_registration.forms import RegistrationForm
+from django_recaptcha.fields import ReCaptchaField
+from django_recaptcha.widgets import ReCaptchaV3
+
+
+class RegistrationFormWithCaptcha(RegistrationForm):
+    """Spam бүртгэлээс сэргийлэх зорилгоор reCAPTCHA v3 нэмсэн бүртгэлийн форм."""
+    captcha = ReCaptchaField(widget=ReCaptchaV3(action='register'), label='')
 
 class AddRemoveUsersToGroupForm(forms.Form):
     users = forms.ModelMultipleChoiceField(

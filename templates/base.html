@@ -26,12 +26,20 @@
 <body class="d-flex flex-column min-vh-100">
 {% csrf_token %}
 
-<header>
-    {% include "main_nav_bar.html" %}
-</header>
-
 <!-- Main Content Area -->
 <main class="container-fluid">
+    <!-- Дээд хэсэг (1 багана) -->
+    <div class="row g-3">
+        <div class="col-12">
+            {% block top %}
+                {% include 'partials/_category_tabs.html' %}
+                <div class="mt-3">
+                    {% include 'partials/_hero.html' %}
+                </div>
+            {% endblock %}
+        </div>
+    </div>
+
     {% if messages %}
         <div class="container mt-3">
             {% for message in messages %}
@@ -43,20 +51,23 @@
             {% endfor %}
         </div>
     {% endif %}
-    <div class="row">
-        <div class="col-12 d-lg-none text-center">
-            <button class="btn btn-outline-dark mb-2 d-none-lg-block" data-bs-toggle="modal"
-                    data-bs-target="#calendarModal">
-                📅 Календар
-            </button>
+
+    <!-- Дунд хэсэг (left / right) -->
+    <div class="row mt-3 g-3">
+        <div class="col-lg-3">
+            {% include 'partials/_quicklinks_panel.html' %}
         </div>
-        <div class="col-12 d-lg-none text-center">
-            <img src="{% static 'banner.gif' %}" class="img-fluid banner" style="max-height: 50px;">
-        </div>
-        <div class="col-12">
+        <div class="col-lg-9">
             {% block content %}
                 {% autoescape off %}{{ text_content }}{% endautoescape %}
             {% endblock %}
+        </div>
+    </div>
+
+    <!-- Доод хэсэг -->
+    <div class="row mt-3 g-3">
+        <div class="col-12">
+            {% block bottom %}{% endblock %}
         </div>
     </div>
 </main>
@@ -66,8 +77,7 @@
     <div class="container">
         <div class="text-secondary small">
             E-mail: <a href="mailto:baysa@mmo.mn" class="text-secondary">baysa@mmo.mn</a> &bullet;
-            ММОХ &copy; 2025 он &nbsp;&nbsp;
-            <a href="http://old.mmo.mn" class="text-secondary">Өмнөх хувилбар</a>
+            ММОХ &copy; 2025 он
         </div>
     </div>
 </footer>
@@ -116,14 +126,6 @@
 </script>
 <script type="text/javascript" id="MathJax-script" async
         src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
-<!-- Custom Scripts -->
-<script>
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebarMenu');
-        sidebar.classList.toggle('active');
-    }
-</script>
 
 {% block extra_js %}{% endblock %}
 <script src="{% static 'js/supplement_upload.js' %}"></script>

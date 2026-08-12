@@ -4,6 +4,7 @@ from accounts.models import Author, Province, Zone, Grade, Level
 from django.utils import timezone
 from datetime import datetime, timedelta
 from schools.models import School
+from ckeditor_uploader.fields import RichTextUploadingField
 
 
 class SchoolYear(models.Model):
@@ -146,6 +147,34 @@ class Olympiad(models.Model):
 
     class Meta:
         ordering = ['-school_year_id','-id']
+
+
+class RoundGuideline(models.Model):
+    """
+    Шатлал (round) тус бүрийн "хэрхэн оролцох, хэрхэн шалгарах" удирдамж.
+    Жил бүр өөрчлөгдөж болох тул хичээлийн жил тус бүрд тусад нь хадгална.
+    """
+    ROUND_CHOICES = [
+        (1, 'Сургуулийн олимпиад'),
+        (2, 'Аймаг/Дүүргийн олимпиад'),
+        (3, 'Бүс/УБ хотын олимпиад'),
+        (4, 'Улсын олимпиад'),
+        (5, 'IMO сонгон шалгаруулалт'),
+        (6, 'EGMO сонгон шалгаруулалт'),
+        (7, 'APMO'),
+    ]
+    round = models.IntegerField(choices=ROUND_CHOICES)
+    school_year = models.ForeignKey(SchoolYear, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    content = RichTextUploadingField()
+    updatedate = models.DateField(auto_now=True, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('round', 'school_year')
+        ordering = ['round']
+
+    def __str__(self):
+        return '{} - {}'.format(self.get_round_display(), self.school_year)
 
 
 class Topic(models.Model):

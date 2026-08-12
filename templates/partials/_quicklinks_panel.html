@@ -1,0 +1,98 @@
+<div class="home-panel">
+    <form method="GET" action="{% url 'posts:post_search' %}" class="d-flex gap-1 mb-2">
+        <input type="text" name="q" class="form-control form-control-sm" placeholder="Мэдээ хайх..." aria-label="Мэдээ хайх">
+        <button type="submit" class="btn btn-primary btn-sm flex-shrink-0"><i class="fas fa-search"></i></button>
+    </form>
+
+    <ul class="home-quicklinks">
+        <li class="home-quicklinks-section">ЦЭС</li>
+        <li><a class="home-quicklink" href="{% url 'posts:home' %}">
+            <i class="fas fa-home"></i> Нүүр хуудас <i class="fas fa-chevron-right"></i>
+        </a></li>
+        <li><a class="home-quicklink" href="{% url 'posts:post_view' %}?id=450">
+            <i class="fas fa-file-alt"></i> Олимпиадын удирдамж <i class="fas fa-chevron-right"></i>
+        </a></li>
+        <li><a class="home-quicklink" href="{% url 'olympiad_results_home' %}">
+            <i class="fas fa-poll"></i> Олимпиадын дүн <i class="fas fa-chevron-right"></i>
+        </a></li>
+        <li><a class="home-quicklink" href="{% url 'olympiad_problems_home' %}">
+            <i class="fas fa-book"></i> Олимпиадын бодлогууд <i class="fas fa-chevron-right"></i>
+        </a></li>
+        <li><a class="home-quicklink" href="{% url 'posts:post_view' %}?id=435">
+            <i class="fas fa-stream"></i> Олимпиадын цувралууд <i class="fas fa-chevron-right"></i>
+        </a></li>
+        {% if user.is_authenticated %}
+            <li><a class="home-quicklink" href="{% url 'olympiad_supplement_home' %}">
+                <i class="fas fa-upload"></i> Материал нэмж оруулах <i class="fas fa-chevron-right"></i>
+            </a></li>
+        {% endif %}
+        <li><a class="home-quicklink" href="{% url 'posts:post_view' %}?id=492">
+            <i class="fas fa-gavel"></i> Баримтлах дүрэм <i class="fas fa-chevron-right"></i>
+        </a></li>
+        <li><a class="home-quicklink" href="{% url 'posts:post_view' %}?id=491">
+            <i class="fas fa-question-circle"></i> Түгээмэл асуулт <i class="fas fa-chevron-right"></i>
+        </a></li>
+        {% if user.is_staff or user.moderating.exists or user.managing.exists or user.province_set.exists or user.managed_zones.exists %}
+            <li class="home-quicklinks-section">БҮРТГЭЛ</li>
+            <li><a class="home-quicklink" href="{% url 'my_managed_schools' %}">
+                <i class="fas fa-school"></i> Сургууль <i class="fas fa-chevron-right"></i>
+            </a></li>
+            <li><a class="home-quicklink" href="{% url 'my_managed_provinces' %}">
+                <i class="fas fa-map-marked-alt"></i> Аймаг, Дүүрэг <i class="fas fa-chevron-right"></i>
+            </a></li>
+            <li><a class="home-quicklink" href="{% url 'my_managed_zones' %}">
+                <i class="fas fa-globe-asia"></i> Улаанбаатар, Бүс <i class="fas fa-chevron-right"></i>
+            </a></li>
+            {% if user.is_authenticated %}
+                <li><a class="home-quicklink" href="{% url 'participant_search' %}">
+                    <i class="fas fa-users"></i> Оролцогчид <i class="fas fa-chevron-right"></i>
+                </a></li>
+            {% endif %}
+        {% endif %}
+
+        <li><a class="home-quicklink" href="{% url 'olympiad_home' %}">
+            <i class="fas fa-calendar-alt"></i> Олимпиадын хуваарь <i class="fas fa-chevron-right"></i>
+        </a></li>
+        <li class="home-quicklinks-section">ДАРААГИЙН ОЛИМПИАД</li>
+        {% if upcoming_olympiads %}
+            {% for o in upcoming_olympiads %}
+                <li class="home-schedule-item">
+                    <div class="home-schedule-date">{{ o.start_time|date:'Y-m-d' }}</div>
+                    <div class="home-schedule-name">{{ o.name }}</div>
+                    <div class="home-schedule-round">{{ o.get_round_display }}</div>
+                </li>
+            {% endfor %}
+        {% else %}
+            <li class="text-secondary small">Ойрын хуваарь одоогоор алга байна.</li>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+            <li class="home-quicklinks-section">{{ user.first_name|default:user.username }}</li>
+            <li><a class="home-quicklink" href="{% url 'user_profile' %}">
+                <i class="fas fa-id-card"></i> Миний профайл <i class="fas fa-chevron-right"></i>
+            </a></li>
+            <li><a class="home-quicklink" href="{% url 'student_achievements' %}">
+                <i class="fas fa-trophy"></i> Миний амжилтууд <i class="fas fa-chevron-right"></i>
+            </a></li>
+            {% if user.is_staff %}
+                <li><a class="home-quicklink" href="{% url 'admin_dashboard' %}">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard <i class="fas fa-chevron-right"></i>
+                </a></li>
+            {% endif %}
+            <li><a class="home-quicklink text-danger" href="{% url 'user_logout' %}">
+                <i class="fas fa-sign-out-alt"></i> Гарах <i class="fas fa-chevron-right"></i>
+            </a></li>
+        {% endif %}
+    </ul>
+
+    {% if not user.is_authenticated %}
+        <div class="d-flex gap-2 mt-2">
+            <a href="{% url 'django_registration_register' %}" class="home-quicklink justify-content-center flex-fill">
+                <i class="fas fa-user-plus"></i> Бүртгүүлэх
+            </a>
+            <a href="{% url 'user_login' %}" class="home-quicklink justify-content-center flex-fill">
+                <i class="fas fa-sign-in-alt"></i> Нэвтрэх
+            </a>
+        </div>
+    {% endif %}
+</div>

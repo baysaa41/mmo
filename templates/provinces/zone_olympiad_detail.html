@@ -13,7 +13,11 @@
         </ol>
     </nav>
 
-    <h2>{{ olympiad.name }} - {{ olympiad.level.name }}</h2>
+    <h2>{{ olympiad.name }} - {{ olympiad.level.name }}
+        {% if request.user.is_staff %}
+            <a href="{% url 'admin:olympiad_olympiad_change' olympiad.id %}" target="_blank"><i class="fas fa-edit text-secondary fs-6"></i></a>
+        {% endif %}
+    </h2>
     <p class="text-muted">{{ zone.name }}</p>
 
     <div class="alert alert-info">

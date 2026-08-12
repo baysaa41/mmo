@@ -5,6 +5,9 @@
 <div class="container my-4">
     <h3 class="mb-3">
         {{ problem.olympiad.name }}, {{ problem.olympiad.level.name }} ангилал, Бодлого №{{ problem.order }}
+        {% if request.user.is_staff %}
+            <a href="{% url 'problem_edit' problem_id=problem.id %}" target="_blank"><i class="fas fa-edit text-secondary fs-6"></i></a>
+        {% endif %}
     </h3>
 <div class="d-flex justify-content-between my-2">
     {% if prev_problem %}

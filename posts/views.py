@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.db.models import Q
 from .models import Post
 from olympiad.models import SchoolYear
 from datetime import date
@@ -9,7 +10,6 @@ def post_list_view(request):
     This logic was moved from the old `accounts.views.index`.
     """
     now = date.today()
-    mode = int(request.GET.get('mode', 0))
 
     # Determine the active and selected school years
     active_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
@@ -35,18 +35,30 @@ def post_list_view(request):
         'year': selected_year,
         'prev': prev_year,
         'next': next_year,
-        'mode': mode,
     }
 
     return render(request, 'posts/post_list_view.html', context)
 
+def post_search_view(request):
+    query = request.GET.get('q', '').strip()
+    posts = []
+    if query:
+        posts = Post.objects.filter(
+            Q(title__icontains=query) | Q(descr__icontains=query),
+            isshow=True,
+        ).order_by('-startdate')
+
+    context = {
+        'posts': posts,
+        'query': query,
+    }
+    return render(request, 'posts/post_search_view.html', context)
+
 def post_view(request):
     id = int(request.GET.get('id', 0))
-    mode = int(request.GET.get('mode', 0))
     if id > 0:
         post = Post.objects.filter(pk=id).first()
         return render(request, 'posts/post_view.html', {
             'post': post,
-            'mode': mode
         })
     return redirect('posts:home')

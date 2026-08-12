@@ -9,13 +9,27 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_protect
 from django.utils.decorators import method_decorator
 
-from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, BulkAddUsersToSchoolForm
+from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, BulkAddUsersToSchoolForm, RegistrationFormWithCaptcha
 from ..models import UserMeta
 import re
 
 from oauth2_provider.decorators import protected_resource
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+
+from django_ratelimit.decorators import ratelimit
+from django_registration.backends.activation.views import RegistrationView
+
+
+@method_decorator(ratelimit(key='ip', rate='5/h', method='POST', block=True), name='post')
+class RegistrationViewWithCaptcha(RegistrationView):
+    """
+    Стандарт django-registration view дээр нэмэлт хамгаалалт:
+    - reCAPTCHA v3 (form_class-аар)
+    - IP хаягаар цагт 5 бүртгэлээр хязгаарласан rate-limit
+    Spam бүртгэлийн урсгалаас сэргийлэх зорилготой.
+    """
+    form_class = RegistrationFormWithCaptcha
 
 @protected_resource(scopes=['profile'])
 @require_http_methods(["GET"])
@@ -57,6 +71,12 @@ def user_full_profile(request):
 
 @login_required(login_url='/accounts/login/')
 def profile(request):
+    """Зөвхөн харах, энгийн профайлын хуудас (засварлах товчтой)."""
+    user_meta, created = UserMeta.objects.get_or_create(user_id=request.user.id)
+    return render(request, 'accounts/profile.html', {'user': request.user, 'user_meta': user_meta})
+
+@login_required(login_url='/accounts/login/')
+def profile_edit(request):
     user_meta, created = UserMeta.objects.get_or_create(user_id=request.user.id)
 
     if request.method == 'POST':
@@ -78,7 +98,7 @@ def profile(request):
         form1 = UserForm(instance=request.user)
         form2 = UserMetaForm(instance=user_meta)
 
-    return render(request, 'accounts/profile.html', {'user':request.user, 'form1': form1, 'form2': form2})
+    return render(request, 'accounts/profile_edit.html', {'user':request.user, 'form1': form1, 'form2': form2})
 
 @staff_member_required
 def user_profile_edit(request, user_id):
@@ -104,7 +124,7 @@ def user_profile_edit(request, user_id):
         form1 = UserForm(instance=user)
         form2 = UserMetaForm(instance=user_meta)
 
-    return render(request, 'accounts/profile.html', {'user': user, 'form1': form1, 'form2': form2})
+    return render(request, 'accounts/profile_edit.html', {'user': user, 'form1': form1, 'form2': form2})
 
 def profile_ready(request):
     return render(request, 'accounts/profile_ready.html')
@@ -127,7 +147,7 @@ def login_view(request):
 
             # Одоо 'meta' нь UserMeta объект тул энэ шалгалт зөв ажиллана
             if not meta.is_valid:
-                next_url = reverse('user_profile')
+                next_url = reverse('profile_edit')
             return redirect(next_url)
         else:
             request.session['invalid_user'] = 1
