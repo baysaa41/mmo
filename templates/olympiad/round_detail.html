@@ -81,7 +81,35 @@
                         </div>
                     {% endif %}
                 </div>
-            {% elif round == 5 or round == 6 or round == 7 %}
+            {% elif round == 5 %}
+                <div class="alert {% if student_status.registered %}alert-success{% elif student_status.qualified %}alert-warning{% else %}alert-secondary{% endif %}">
+                    {% if student_status.qualified %}
+                        <div><i class="fas fa-check-circle me-1"></i> Та Улсын олимпиадын <strong>F ангилалд эрх авсан</strong> байна.</div>
+                    {% else %}
+                        <div><i class="fas fa-times-circle me-1"></i> Та Улсын олимпиадын F ангилалд эрх аваагүй байна. IMO-д оролцохын тулд F ангилалын Улсын эрх авсан байх шаардлагатай.</div>
+                    {% endif %}
+                    {% if student_status.registered %}
+                        <div><i class="fas fa-check-circle me-1"></i> Та IMO сонгон шалгаруулалтад <strong>бүртгэлтэй</strong> байна.</div>
+                    {% else %}
+                        <div><i class="fas fa-exclamation-triangle me-1"></i> Та IMO сонгон шалгаруулалтад бүртгэгдээгүй байна.</div>
+                    {% endif %}
+                </div>
+            {% elif round == 6 %}
+                <div class="alert {% if student_status.registered %}alert-success{% elif student_status.qualified %}alert-warning{% else %}alert-secondary{% endif %}">
+                    {% if not student_status.is_female %}
+                        <div><i class="fas fa-info-circle me-1"></i> EGMO бол зөвхөн эмэгтэй сурагчдын дунд явагддаг олимпиад юм.</div>
+                    {% elif student_status.qualified %}
+                        <div><i class="fas fa-check-circle me-1"></i> Та Аймаг/Дүүргийн олимпиадын E эсвэл F ангилалд оноо авч <strong>сорилд оролцох эрхтэй</strong> болсон байна.</div>
+                    {% else %}
+                        <div><i class="fas fa-times-circle me-1"></i> Та Аймаг/Дүүргийн олимпиадын E эсвэл F ангилалд ядаж 1 оноо аваагүй тул сорилд оролцох эрхгүй байна.</div>
+                    {% endif %}
+                    {% if student_status.registered %}
+                        <div><i class="fas fa-check-circle me-1"></i> Та EGMO сонгон шалгаруулалтад <strong>бүртгэлтэй</strong> байна.</div>
+                    {% else %}
+                        <div><i class="fas fa-exclamation-triangle me-1"></i> Та EGMO сонгон шалгаруулалтад бүртгэгдээгүй байна.</div>
+                    {% endif %}
+                </div>
+            {% elif round == 7 %}
                 <div class="alert {% if student_status.registered %}alert-success{% else %}alert-secondary{% endif %}">
                     {% if student_status.registered %}
                         <i class="fas fa-check-circle me-1"></i> Та {{ round_name }}-д <strong>бүртгэлтэй</strong> байна.
