@@ -17,6 +17,15 @@ def _round1_student_status(user):
     return {'has_school': True, 'school': school, 'registered': registered}
 
 
+def _named_round_student_status(user, olympiads):
+    """IMO/EGMO/APMO (нэрээр шүүгддэг даваа)-д бүртгэлтэй эсэхийг тодорхойлно."""
+    registered = any(
+        o.group_id and o.group.user_set.filter(id=user.id).exists()
+        for o in olympiads
+    )
+    return {'registered': registered}
+
+
 def _round_student_status(user, year, prev_round, place_prefix):
     """Сурагч өмнөх давааны шат-аас шалгарсан, тухайн давааны олимпиадад бүртгэлтэй эсэхийг тодорхойлно."""
     qualified = Award.objects.filter(
@@ -92,6 +101,8 @@ def round_guideline_view(request, round):
             student_status = _round_student_status(request.user, selected_year, prev_round=1, place_prefix='2.1')
         elif round == 3:
             student_status = _round_student_status(request.user, selected_year, prev_round=2, place_prefix='2.2 эрх')
+        elif round in name_filter_map:
+            student_status = _named_round_student_status(request.user, olympiads)
 
     context = {
         'round': round,
