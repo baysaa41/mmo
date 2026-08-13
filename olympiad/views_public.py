@@ -17,14 +17,7 @@ def _round1_student_status(user):
     return {'has_school': True, 'school': school, 'registered': registered}
 
 
-def _registered_in_any(user, olympiads):
-    return any(
-        o.group_id and o.group.user_set.filter(id=user.id).exists()
-        for o in olympiads
-    )
-
-
-def _imo_student_status(user, year, olympiads):
+def _imo_student_status(user, year):
     """IMO сорилгод оролцохын тулд Улсын олимпиадын F ангилалд эрх авсан байх шаардлагатай."""
     qualified = Award.objects.filter(
         contestant=user,
@@ -32,10 +25,10 @@ def _imo_student_status(user, year, olympiads):
         olympiad__level__name__startswith='F',
         place__startswith='Улсын эрх',
     ).exists()
-    return {'qualified': qualified, 'registered': _registered_in_any(user, olympiads)}
+    return {'qualified': qualified}
 
 
-def _egmo_student_status(user, year, olympiads):
+def _egmo_student_status(user, year):
     """EGMO сорилгод оролцохын тулд Аймаг/Дүүргийн олимпиадын E эсвэл F ангилалд ядаж 1 оноо авсан эмэгтэй сурагч байх шаардлагатай."""
     meta = getattr(user, 'data', None)
     is_female = bool(meta and meta.gender and meta.gender.strip().upper().startswith('ЭМ'))
@@ -48,12 +41,7 @@ def _egmo_student_status(user, year, olympiads):
     ).filter(
         Q(olympiad__level__name__startswith='E') | Q(olympiad__level__name__startswith='F')
     ).exists()
-    return {'qualified': qualified, 'is_female': is_female, 'registered': _registered_in_any(user, olympiads)}
-
-
-def _named_round_student_status(user, olympiads):
-    """APMO зэрэг тусгай болзолгүй, нэрээр шүүгддэг давааны бүртгэлтэй эсэхийг тодорхойлно."""
-    return {'registered': _registered_in_any(user, olympiads)}
+    return {'qualified': qualified, 'is_female': is_female}
 
 
 def _round_student_status(user, year, prev_round, place_prefix):
@@ -132,11 +120,9 @@ def round_guideline_view(request, round):
         elif round == 3:
             student_status = _round_student_status(request.user, selected_year, prev_round=2, place_prefix='2.2 эрх')
         elif round == 5:
-            student_status = _imo_student_status(request.user, selected_year, olympiads)
+            student_status = _imo_student_status(request.user, selected_year)
         elif round == 6:
-            student_status = _egmo_student_status(request.user, selected_year, olympiads)
-        elif round in name_filter_map:
-            student_status = _named_round_student_status(request.user, olympiads)
+            student_status = _egmo_student_status(request.user, selected_year)
 
     context = {
         'round': round,
