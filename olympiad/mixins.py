@@ -24,19 +24,20 @@ class OlympiadAccessMixin:
         """Групп ба цагийн шалгалтууд."""
         user = self.request.user
         olympiad = self.olympiad
+        status = olympiad.get_access_status(user)
 
-        if olympiad.group and user not in olympiad.group.user_set.all():
+        if status['code'] == 'no_access':
             messages.info(
                 self.request,
                 f"Зөвхөн '{olympiad.group.name}' бүлгийн сурагчид оролцох боломжтой"
             )
             return redirect('olympiad_home')
 
-        if not olympiad.is_started():
+        if status['code'] == 'not_started':
             messages.info(self.request, 'Олимпиадын бодолт эхлээгүй байна.')
             return redirect('olympiad_home')
 
-        if olympiad.is_finished():
+        if status['code'] == 'finished':
             messages.info(self.request, 'Олимпиадын бодолт дууссан байна.')
             return redirect('olympiad_home')
 

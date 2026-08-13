@@ -114,6 +114,16 @@ class Olympiad(models.Model):
         threshold = timezone.now() - timedelta(seconds=300)
         return bool(self.end_time and self.end_time < threshold)
 
+    def get_access_status(self, user):
+        """Тухайн хэрэглэгчийн энэ олимпиадад оролцох төлөв (OlympiadAccessMixin-тэй ижил дүрэм)."""
+        if self.group and not self.group.user_set.filter(id=user.id).exists():
+            return {'code': 'no_access', 'label': f"Зөвхөн '{self.group.name}' бүлгийн сурагчид", 'css': 'secondary'}
+        if not self.is_started():
+            return {'code': 'not_started', 'label': 'Эхлээгүй байна', 'css': 'warning'}
+        if self.is_finished():
+            return {'code': 'finished', 'label': 'Дууссан', 'css': 'secondary'}
+        return {'code': 'open', 'label': 'Оролцох боломжтой', 'css': 'success'}
+
     # — Template-д ашиглах property-ууд (method-уудыг үл давхцуулна) —
     @property
     def started(self):

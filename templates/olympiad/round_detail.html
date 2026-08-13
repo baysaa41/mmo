@@ -39,6 +39,51 @@
             </div>
         {% endif %}
 
+        {% if student_status %}
+            {% if round == 1 %}
+                {% if not student_status.has_school %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Танд сургууль бүртгэгдээгүй байна. <a href="{% url 'profile_edit' %}">Профайл</a> хэсэгт сургуулиа сонгоно уу.
+                    </div>
+                {% elif student_status.registered %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Та <strong>{{ student_status.school.name }}</strong> сургуульд бүртгэлтэй байна.
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Та <strong>{{ student_status.school.name }}</strong> сургуульд бүртгэгдээгүй байна. Бүртгүүлэхийн тулд
+                        {% if student_status.school.user %}
+                            сургуулийн бүртгэгч багш <strong>{{ student_status.school.user.get_full_name|default:student_status.school.user.username }}</strong>{% if student_status.school.user.data.mobile %} (утас: {{ student_status.school.user.data.mobile }}){% endif %}{% if student_status.school.user.email %} ({{ student_status.school.user.email }}){% endif %}
+                        {% elif student_status.school.manager %}
+                            сургуулийн менежер <strong>{{ student_status.school.manager.get_full_name|default:student_status.school.manager.username }}</strong>
+                        {% else %}
+                            сургуулийнхаа удирдлагатай
+                        {% endif %}
+                        -д хандана уу.
+                    </div>
+                {% endif %}
+            {% elif round == 2 or round == 3 %}
+                <div class="alert {% if student_status.registered %}alert-success{% elif student_status.qualified %}alert-warning{% else %}alert-secondary{% endif %}">
+                    {% if student_status.qualified %}
+                        <div><i class="fas fa-check-circle me-1"></i> Та {% if round == 2 %}сургуулийн{% else %}аймаг/дүүргийн{% endif %} олимпиадаас <strong>шалгарсан</strong>.</div>
+                    {% else %}
+                        <div><i class="fas fa-times-circle me-1"></i> Та {% if round == 2 %}сургуулийн{% else %}аймаг/дүүргийн{% endif %} олимпиадаас шалгараагүй байна.</div>
+                    {% endif %}
+                    {% if student_status.registered %}
+                        <div><i class="fas fa-check-circle me-1"></i> Та энэ давааны олимпиадад <strong>бүртгэлтэй</strong> байна.</div>
+                    {% else %}
+                        <div>
+                            <i class="fas fa-exclamation-triangle me-1"></i> Та энэ давааны олимпиадад бүртгэгдээгүй байна.
+                            {% if student_status.qualified %}{% if round == 2 %}Аймаг/дүүргийн{% else %}Бүс/Нийслэлийн{% endif %} админтай холбогдоно уу.{% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+
         {% if guideline %}
             {% if guideline.school_year_id != year.id %}
                 <div class="alert alert-warning small">
@@ -62,6 +107,7 @@
                     <th>Ангилал</th>
                     <th>Эхлэх</th>
                     <th>Дуусах</th>
+                    {% if request.user.is_authenticated %}<th>Танд боломжтой эсэх</th>{% endif %}
                     <th></th>
                 </tr>
                 {% for olympiad in olympiads %}
@@ -70,6 +116,9 @@
                         <td>{{ olympiad.level.name }}</td>
                         <td>{{ olympiad.start_time|date:'Y-m-d' }}</td>
                         <td>{{ olympiad.end_time|date:'Y-m-d' }}</td>
+                        {% if request.user.is_authenticated %}
+                            <td><span class="badge bg-{{ olympiad.access_status.css }}">{{ olympiad.access_status.label }}</span></td>
+                        {% endif %}
                         <td>
                             {% if olympiad.finished %}
                                 <a class="btn btn-sm btn-outline-primary" href="{% url 'olympiad_result_view' olympiad_id=olympiad.id %}">Дүн харах</a>

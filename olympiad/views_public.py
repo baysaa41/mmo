@@ -3,8 +3,29 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from datetime import datetime, timezone, timedelta
-from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, RoundGuideline
+from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, RoundGuideline, Award
 from django.db.models import Q, Count
+
+
+def _round1_student_status(user):
+    """Сурагч сургуулийн олимпиад (I даваа)-д бүртгэлтэй эсэхийг тодорхойлно."""
+    meta = getattr(user, 'data', None)
+    school = meta.school if meta else None
+    if not school:
+        return {'has_school': False}
+    registered = bool(school.group_id) and user.groups.filter(id=school.group_id).exists()
+    return {'has_school': True, 'school': school, 'registered': registered}
+
+
+def _round_student_status(user, year, prev_round, place_prefix):
+    """Сурагч өмнөх давааны шат-аас шалгарсан, тухайн давааны олимпиадад бүртгэлтэй эсэхийг тодорхойлно."""
+    qualified = Award.objects.filter(
+        contestant=user, olympiad__round=prev_round, olympiad__school_year=year, place__startswith=place_prefix
+    ).exists()
+    registered = Olympiad.objects.filter(
+        round=prev_round + 1, school_year=year, group__isnull=False, group__user=user
+    ).exists()
+    return {'qualified': qualified, 'registered': registered}
 
 
 def olympiads_home(request):
@@ -59,6 +80,19 @@ def round_guideline_view(request, round):
     prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first() if selected_year else None
     next_year = SchoolYear.objects.filter(pk=selected_year.id + 1).first() if selected_year else None
 
+    student_status = None
+    if request.user.is_authenticated and selected_year:
+        olympiads = list(olympiads)
+        for o in olympiads:
+            o.access_status = o.get_access_status(request.user)
+
+        if round == 1:
+            student_status = _round1_student_status(request.user)
+        elif round == 2:
+            student_status = _round_student_status(request.user, selected_year, prev_round=1, place_prefix='2.1')
+        elif round == 3:
+            student_status = _round_student_status(request.user, selected_year, prev_round=2, place_prefix='2.2 эрх')
+
     context = {
         'round': round,
         'round_name': dict(RoundGuideline.ROUND_CHOICES).get(round, ''),
@@ -67,6 +101,7 @@ def round_guideline_view(request, round):
         'year': selected_year,
         'prev': prev_year,
         'next': next_year,
+        'student_status': student_status,
     }
     return render(request, 'olympiad/round_detail.html', context)
 
