@@ -2,6 +2,15 @@
     <div class="alert alert-warning">
         <i class="fas fa-exclamation-triangle me-1"></i>
         Танд сургууль бүртгэгдээгүй байна. <a href="{% url 'profile_edit' %}">Профайл</a> хэсэгт сургуулиа сонгоно уу.
+        {% if province %}
+            Хэрэв таны сургууль жагсаалтад алга бол, шинээр бүртгүүлэхийн тулд
+            {% if province.contact_person %}
+                <strong>{{ province.name }}</strong> аймаг/дүүргийн админ <strong>{{ province.contact_person.get_full_name|default:province.contact_person.username }}</strong>{% if province.contact_person.data.mobile %} (утас: {{ province.contact_person.data.mobile }}){% endif %}{% if province.contact_person.email %} ({{ province.contact_person.email }}){% endif %}
+            {% else %}
+                <strong>{{ province.name }}</strong> аймаг/дүүргийн админтай
+            {% endif %}
+            -д хандана уу.
+        {% endif %}
     </div>
 {% elif registered %}
     <div class="alert alert-success">

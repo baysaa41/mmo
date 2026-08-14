@@ -15,7 +15,7 @@
             </div>
         {% endif %}
 
-        {% include 'partials/_school_registration_status.html' with school=user_meta.school registered=school_registered %}
+        {% include 'partials/_school_registration_status.html' with school=user_meta.school registered=school_registered province=user_meta.province %}
 
         <table class="table table-borderless">
             <tr>
@@ -59,6 +59,33 @@
                 <td>{{ user_meta.mobile|default:"-" }}</td>
             </tr>
         </table>
+
+        {% if user.moderating.exists or user.managing.exists or user.province_set.exists or user.managed_zones.exists %}
+            <hr>
+            <h5>Удирдлагын эрх</h5>
+            <ul class="list-unstyled mb-0">
+                {% for school in user.moderating.all %}
+                    <li class="mb-1"><i class="fas fa-school text-primary me-1"></i> <strong>{{ school.name }}</strong> сургуулийн бүртгэгч багш <a href="{% url 'school_dashboard' school.id %}" class="ms-1">Удирдах</a></li>
+                {% endfor %}
+                {% for school in user.managing.all %}
+                    <li class="mb-1"><i class="fas fa-school text-primary me-1"></i> <strong>{{ school.name }}</strong> сургуулийн менежер <a href="{% url 'school_dashboard' school.id %}" class="ms-1">Удирдах</a></li>
+                {% endfor %}
+                {% if user.province_set.exists %}
+                    <li class="mb-1">
+                        <i class="fas fa-map-marked-alt text-primary me-1"></i> Аймаг/дүүргийн админ:
+                        {% for p in user.province_set.all %}<strong>{{ p.name }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}
+                        <a href="{% url 'my_managed_provinces' %}" class="ms-1">Удирдах</a>
+                    </li>
+                {% endif %}
+                {% if user.managed_zones.exists %}
+                    <li class="mb-1">
+                        <i class="fas fa-globe-asia text-primary me-1"></i> Бүс/Нийслэлийн админ:
+                        {% for z in user.managed_zones.all %}<strong>{{ z.name }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}
+                        <a href="{% url 'my_managed_zones' %}" class="ms-1">Удирдах</a>
+                    </li>
+                {% endif %}
+            </ul>
+        {% endif %}
 
         <hr>
         <div>Хэрвээ та нууц үгээ солих бол: <a href="{% url 'user_password' user_id=user.id %}" class="btn btn-secondary">Нууц үг солих</a></div>

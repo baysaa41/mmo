@@ -12,7 +12,7 @@ def _round1_student_status(user):
     meta = getattr(user, 'data', None)
     school = meta.school if meta else None
     if not school:
-        return {'has_school': False}
+        return {'has_school': False, 'province': meta.province if meta else None}
     return {'has_school': True, 'school': school, 'registered': meta.is_school_registered()}
 
 

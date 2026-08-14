@@ -41,7 +41,7 @@
 
         {% if student_status %}
             {% if round == 1 %}
-                {% include 'partials/_school_registration_status.html' with school=student_status.school registered=student_status.registered %}
+                {% include 'partials/_school_registration_status.html' with school=student_status.school registered=student_status.registered province=student_status.province %}
             {% elif round == 2 or round == 3 %}
                 <div class="alert {% if student_status.registered %}alert-success{% elif student_status.qualified %}alert-warning{% else %}alert-secondary{% endif %}">
                     {% if student_status.qualified %}
