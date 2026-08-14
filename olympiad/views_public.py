@@ -13,8 +13,7 @@ def _round1_student_status(user):
     school = meta.school if meta else None
     if not school:
         return {'has_school': False}
-    registered = bool(school.group_id) and user.groups.filter(id=school.group_id).exists()
-    return {'has_school': True, 'school': school, 'registered': registered}
+    return {'has_school': True, 'school': school, 'registered': meta.is_school_registered()}
 
 
 def _imo_student_status(user, year):

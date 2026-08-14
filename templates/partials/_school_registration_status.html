@@ -1,0 +1,24 @@
+{% if not school %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        Танд сургууль бүртгэгдээгүй байна. <a href="{% url 'profile_edit' %}">Профайл</a> хэсэгт сургуулиа сонгоно уу.
+    </div>
+{% elif registered %}
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle me-1"></i>
+        Та <strong>{{ school.name }}</strong> сургуульд бүртгэлтэй байна.
+    </div>
+{% else %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        Та <strong>{{ school.name }}</strong> сургуульд бүртгүүлэх хүсэлт өгсөн боловч хараахан батлагдаж бүртгэгдээгүй байна. Батлуулахын тулд
+        {% if school.user %}
+            сургуулийн бүртгэгч багш <strong>{{ school.user.get_full_name|default:school.user.username }}</strong>{% if school.user.data.mobile %} (утас: {{ school.user.data.mobile }}){% endif %}{% if school.user.email %} ({{ school.user.email }}){% endif %}
+        {% elif school.manager %}
+            сургуулийн менежер <strong>{{ school.manager.get_full_name|default:school.manager.username }}</strong>
+        {% else %}
+            сургуулийнхаа удирдлагатай
+        {% endif %}
+        -д хандана уу.
+    </div>
+{% endif %}

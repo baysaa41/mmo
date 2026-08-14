@@ -73,7 +73,10 @@ def user_full_profile(request):
 def profile(request):
     """Зөвхөн харах, энгийн профайлын хуудас (засварлах товчтой)."""
     user_meta, created = UserMeta.objects.get_or_create(user_id=request.user.id)
-    return render(request, 'accounts/profile.html', {'user': request.user, 'user_meta': user_meta})
+    school_registered = user_meta.is_school_registered() if user_meta.school_id else None
+    return render(request, 'accounts/profile.html', {
+        'user': request.user, 'user_meta': user_meta, 'school_registered': school_registered,
+    })
 
 @login_required(login_url='/accounts/login/')
 def profile_edit(request):

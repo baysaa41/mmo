@@ -15,6 +15,8 @@
             </div>
         {% endif %}
 
+        {% include 'partials/_school_registration_status.html' with school=user_meta.school registered=school_registered %}
+
         <table class="table table-borderless">
             <tr>
                 <th style="width: 240px">Овог:</th>

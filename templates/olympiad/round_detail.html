@@ -41,30 +41,7 @@
 
         {% if student_status %}
             {% if round == 1 %}
-                {% if not student_status.has_school %}
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        Танд сургууль бүртгэгдээгүй байна. <a href="{% url 'profile_edit' %}">Профайл</a> хэсэгт сургуулиа сонгоно уу.
-                    </div>
-                {% elif student_status.registered %}
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle me-1"></i>
-                        Та <strong>{{ student_status.school.name }}</strong> сургуульд бүртгэлтэй байна.
-                    </div>
-                {% else %}
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        Та <strong>{{ student_status.school.name }}</strong> сургуульд бүртгэгдээгүй байна. Бүртгүүлэхийн тулд
-                        {% if student_status.school.user %}
-                            сургуулийн бүртгэгч багш <strong>{{ student_status.school.user.get_full_name|default:student_status.school.user.username }}</strong>{% if student_status.school.user.data.mobile %} (утас: {{ student_status.school.user.data.mobile }}){% endif %}{% if student_status.school.user.email %} ({{ student_status.school.user.email }}){% endif %}
-                        {% elif student_status.school.manager %}
-                            сургуулийн менежер <strong>{{ student_status.school.manager.get_full_name|default:student_status.school.manager.username }}</strong>
-                        {% else %}
-                            сургуулийнхаа удирдлагатай
-                        {% endif %}
-                        -д хандана уу.
-                    </div>
-                {% endif %}
+                {% include 'partials/_school_registration_status.html' with school=student_status.school registered=student_status.registered %}
             {% elif round == 2 or round == 3 %}
                 <div class="alert {% if student_status.registered %}alert-success{% elif student_status.qualified %}alert-warning{% else %}alert-secondary{% endif %}">
                     {% if student_status.qualified %}

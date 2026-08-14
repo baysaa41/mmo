@@ -67,6 +67,12 @@ class UserMeta(models.Model):
     def __str__(self):
         return '{}'.format(self.user.username)
 
+    def is_school_registered(self):
+        """Сургуульд бүртгэгдсэн (сургуулийн group-т орсон) эсэхийг шалгана."""
+        if not self.school_id or not self.school.group_id:
+            return False
+        return self.user.groups.filter(id=self.school.group_id).exists()
+
     def save(self, *args, **kwargs):
         # --- ШИНЭЭР НЭМЭГДСЭН ЛОГИК ---
         # Хэрэв обьект шинээр үүсээгүй (засагдаж байгаа) бол хуучин сургуулийг шалгах
