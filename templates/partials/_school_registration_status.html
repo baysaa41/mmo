@@ -5,7 +5,7 @@
         {% if province %}
             Хэрэв таны сургууль жагсаалтад алга бол, шинээр бүртгүүлэхийн тулд
             {% if province.contact_person %}
-                <strong>{{ province.name }}</strong> аймаг/дүүргийн админ <strong>{{ province.contact_person.get_full_name|default:province.contact_person.username }}</strong>{% if province.contact_person.data.mobile %} (утас: {{ province.contact_person.data.mobile }}){% endif %}{% if province.contact_person.email %} ({{ province.contact_person.email }}){% endif %}
+                <strong>{{ province.name }}</strong> аймаг/дүүргийн админ <strong>{{ province.contact_person.get_full_name|default:province.contact_person.username }}</strong>{% if province.contact_person.email %} ({{ province.contact_person.email }}){% endif %}
             {% else %}
                 <strong>{{ province.name }}</strong> аймаг/дүүргийн админтай
             {% endif %}
@@ -22,7 +22,7 @@
         <i class="fas fa-exclamation-triangle me-1"></i>
         Та <strong>{{ school.name }}</strong> сургуульд бүртгүүлэх хүсэлт өгсөн боловч хараахан батлагдаж бүртгэгдээгүй байна. Батлуулахын тулд
         {% if school.user %}
-            сургуулийн бүртгэгч багш <strong>{{ school.user.get_full_name|default:school.user.username }}</strong>{% if school.user.data.mobile %} (утас: {{ school.user.data.mobile }}){% endif %}{% if school.user.email %} ({{ school.user.email }}){% endif %}
+            сургуулийн бүртгэгч багш <strong>{{ school.user.get_full_name|default:school.user.username }}</strong>{% if school.user.email %} ({{ school.user.email }}){% endif %}
         {% elif school.manager %}
             сургуулийн менежер <strong>{{ school.manager.get_full_name|default:school.manager.username }}</strong>
         {% else %}

@@ -240,6 +240,8 @@ a.home-panel-title:hover {
     padding: 1rem;
 }
 .home-sponsor-banner img {
+    width: auto;
+    height: auto;
     max-width: 100%;
 }
 
