@@ -25,6 +25,7 @@ urlpatterns = [
     path('', views_public.olympiads_home, name='olympiad_home'),
     path('round/<int:round>/', views_public.round_guideline_view, name='olympiad_round_detail'),
     path('round2-quota/', views_public.round2_school_quota_view, name='round2_school_quota'),
+    path('round2-quota-summary/', views_public.round2_quota_summary_view, name='round2_quota_summary'),
     path('problems/', views_public.problems_home, name='olympiad_problems_home'),
     path('results/', views_results.results_home, name='olympiad_results_home'),
     path('supplements/', views_contest.supplement_home, name='olympiad_supplement_home'),

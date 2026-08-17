@@ -135,5 +135,11 @@
                 <a href="{% url 'round2_school_quota' %}{% if year %}?year={{ year.id }}{% endif %}" class="btn btn-sm btn-primary">Тооцоо харах</a>
             </div>
         </div>
+        <div class="home-panel mt-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span><i class="fas fa-book me-1"></i> Квотын дэвтэр — бүх аймаг, дүүргийн нэмэлт эрхийг нэг дор харна.</span>
+                <a href="{% url 'round2_quota_summary' %}{% if year %}?year={{ year.id }}{% endif %}" class="btn btn-sm btn-outline-primary">Дэвтэр нээх</a>
+            </div>
+        </div>
     {% endif %}
 {% endblock %}

@@ -194,6 +194,85 @@ def round2_school_quota_view(request):
     }
     return render(request, 'olympiad/round2_quota.html', context)
 
+
+def round2_quota_summary_view(request):
+    """Аймаг/дүүрэг бүрийн 2-р даваанд нэмэгдэх (жагсаалтаар) эрхийн нийлбэрийг нэг дор
+    харуулах нэгдсэн тайлан (Квотын дэвтэр)."""
+    now = datetime.now(timezone.utc).date()
+    active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
+    year_id = request.GET.get('year', active_year.id if active_year else None)
+    selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
+
+    prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first() if selected_year else None
+    next_year = SchoolYear.objects.filter(pk=selected_year.id + 1).first() if selected_year else None
+
+    levels = []
+    aimags = []
+    duuregs = []
+    grand = {'schools': 0, 'base': 0, 'additional': 0, 'quota': 0}
+    max_aimag = 0
+    max_duureg = 0
+
+    if selected_year:
+        student_olympiads_qs = Olympiad.objects.filter(
+            round=2, school_year=selected_year
+        ).exclude(
+            Q(level__name__startswith='S') | Q(level__name__startswith='T')
+        ).select_related('level').order_by('level_id')
+        levels = [o.level for o in student_olympiads_qs]
+
+        summary = []
+        for province in Province.objects.order_by('id'):
+            entry = {
+                'province': province,
+                'is_aimag': province.id <= 21,
+                'levels': {},
+                'base_total': 0,
+                'additional_total': 0,
+                'quota_total': 0,
+                'school_count': 0,
+                'configured': False,
+            }
+            for o in student_olympiads_qs:
+                table = compute_school_quota_table(province, o)
+                if table is None:
+                    entry['levels'][o.level_id] = None
+                    continue
+                entry['configured'] = True
+                entry['levels'][o.level_id] = table['total_additional']
+                entry['base_total'] += table['total_base']
+                entry['additional_total'] += table['total_additional']
+                entry['quota_total'] += table['total_quota']
+                entry['school_count'] = max(entry['school_count'], len(table['schools_data']))
+            summary.append(entry)
+
+        aimags = sorted([e for e in summary if e['is_aimag']], key=lambda e: -e['additional_total'])
+        duuregs = sorted([e for e in summary if not e['is_aimag']], key=lambda e: -e['additional_total'])
+
+        grand = {
+            'count': len(aimags) + len(duuregs),
+            'schools': sum(e['school_count'] for e in summary),
+            'base': sum(e['base_total'] for e in summary),
+            'additional': sum(e['additional_total'] for e in summary),
+            'quota': sum(e['quota_total'] for e in summary),
+        }
+        max_aimag = max([e['additional_total'] for e in aimags], default=0) or 1
+        max_duureg = max([e['additional_total'] for e in duuregs], default=0) or 1
+
+    context = {
+        'year': selected_year,
+        'prev': prev_year,
+        'next': next_year,
+        'levels': levels,
+        'aimags': aimags,
+        'duuregs': duuregs,
+        'grand': grand,
+        'max_aimag': max_aimag,
+        'max_duureg': max_duureg,
+    }
+    return render(request, 'olympiad/round2_quota_summary.html', context)
+
+
 def problems_home(request):
     now = datetime.now(timezone.utc)
     school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()

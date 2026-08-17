@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load summary_filters %}
+
+{% block title %}Квотын дэвтэр{% endblock %}
+
+{% block extra_css %}
+<style>
+    .quota-notebook {
+        --qn-ink: #10192e;
+        --qn-ink-muted: #55607a;
+        --qn-ink-faint: #8791a8;
+        --qn-line: #e1e6ef;
+        --qn-accent: #2450e0;
+        --qn-accent-ink: #163aad;
+        --qn-accent-soft: #e9eefb;
+    }
+    .quota-notebook .stat-card {
+        background: #fff;
+        border: 1px solid var(--qn-line);
+        border-radius: 10px;
+        padding: 14px 16px;
+        height: 100%;
+    }
+    .quota-notebook .stat-card .label {
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--qn-ink-faint);
+        margin-bottom: 4px;
+    }
+    .quota-notebook .stat-card .value {
+        font-variant-numeric: tabular-nums;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--qn-ink);
+    }
+    .quota-notebook .group-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 2px solid var(--qn-ink);
+        padding-bottom: 6px;
+        margin: 2.2rem 0 .75rem;
+    }
+    .quota-notebook .group-head h2 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .quota-notebook .group-head .meta {
+        font-size: .8rem;
+        color: var(--qn-ink-faint);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    .quota-notebook table {
+        font-variant-numeric: tabular-nums;
+    }
+    .quota-notebook thead th {
+        font-size: .7rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--qn-ink-faint);
+        border-bottom-width: 1px !important;
+        white-space: nowrap;
+    }
+    .quota-notebook td.num, .quota-notebook th.num { text-align: right; }
+    .quota-notebook td.muted { color: var(--qn-ink-muted); }
+    .quota-notebook td.total { font-weight: 700; }
+    .quota-notebook .bar-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+    .quota-notebook .bar-track {
+        width: 70px;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--qn-line);
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .quota-notebook .bar-fill {
+        display: block;
+        height: 100%;
+        background: var(--qn-accent);
+        border-radius: 3px;
+    }
+    .quota-notebook .bar-val {
+        font-weight: 700;
+        min-width: 2.2em;
+        color: var(--qn-accent-ink);
+    }
+    .quota-notebook tbody tr:hover { background: var(--qn-accent-soft); }
+    .quota-notebook .province-link { color: inherit; text-decoration: none; }
+    .quota-notebook .province-link:hover { color: var(--qn-accent-ink); text-decoration: underline; }
+    .quota-notebook .not-configured { color: var(--qn-ink-faint); font-style: italic; font-size: .82rem; }
+    @media (max-width: 560px) {
+        .quota-notebook .bar-track { width: 36px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="home-panel quota-notebook">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'olympiad_round_detail' round=2 %}{% if year %}?year={{ year.id }}{% endif %}">Аймаг/Дүүргийн олимпиад</a></li>
+            <li class="breadcrumb-item active">Квотын дэвтэр</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h3 class="mb-0"><i class="fas fa-book me-1"></i> Квотын дэвтэр</h3>
+        <div class="d-flex align-items-center gap-1">
+            {% if prev is not None %}
+                <a class="btn btn-light btn-sm" href="?year={{ prev.id }}">&larr; {{ prev.name }}</a>
+            {% endif %}
+            {% if year %}<span class="btn btn-secondary btn-sm disabled">{{ year.name }}</span>{% endif %}
+            {% if next is not None %}
+                <a class="btn btn-light btn-sm" href="?year={{ next.id }}">{{ next.name }} &rarr;</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <p class="text-muted small" style="max-width: 68ch;">
+        Аймаг, дүүрэг тус бүрийн сургуулиудад ногдох <strong>Жагсаалтаар (нэмэлт)</strong> эрхийн нийлбэр — сүүлийн 3
+        жилийн 2-р давааны Top 20 (аймаг) / Top 50 (дүүрэг) дүнгээс тооцов. Дэлгэрэнгүй сургууль тус бүрийн задаргааг
+        харахын тулд аймаг/дүүргийн нэр дээр дарна уу.
+    </p>
+
+    {% if not year %}
+        <div class="alert alert-info">Хичээлийн жил сонгогдоогүй байна.</div>
+    {% elif not aimags and not duuregs %}
+        <div class="alert alert-info">{{ year.name }} онд II давааны олимпиад бүртгэгдээгүй байна.</div>
+    {% else %}
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="label">Аймаг / дүүрэг</div>
+                    <div class="value">{{ grand.count }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="label">Суурь эрх (нийт)</div>
+                    <div class="value">{{ grand.base }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="label">Нэмэлт эрх (нийт)</div>
+                    <div class="value">{{ grand.additional }}</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="label">Нийт квот</div>
+                    <div class="value">{{ grand.quota }}</div>
+                </div>
+            </div>
+        </div>
+
+        <section>
+            <div class="group-head">
+                <h2>Аймаг <span class="text-muted fw-normal">— сургууль тутам суурь 2 эрх</span></h2>
+                <span class="meta">{{ aimags|length }} аймаг · нэмэлт эрхээр эрэмбэлэв</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm bg-white">
+                    <thead class="table-light">
+                        <tr>
+                            <th></th>
+                            <th>Аймаг</th>
+                            {% for lvl in levels %}<th class="num">{{ lvl.name }}</th>{% endfor %}
+                            <th class="num">Нэмэлт</th>
+                            <th class="num">Суурь</th>
+                            <th class="num">Нийт квот</th>
+                            <th class="num">Сургууль</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in aimags %}
+                            <tr>
+                                <td class="text-muted small">{{ forloop.counter }}</td>
+                                <td>
+                                    {% if e.configured %}
+                                        <a class="province-link" href="{% url 'round2_school_quota' %}?year={{ year.id }}&province={{ e.province.id }}">{{ e.province.name }}</a>
+                                    {% else %}
+                                        {{ e.province.name }}
+                                    {% endif %}
+                                </td>
+                                {% for lvl in levels %}
+                                    <td class="num muted">{{ e.levels|get_item:lvl.id|default_if_none:"—" }}</td>
+                                {% endfor %}
+                                <td class="num">
+                                    {% if e.configured %}
+                                        <div class="bar-cell">
+                                            <span class="bar-track"><span class="bar-fill" style="width: {% widthratio e.additional_total max_aimag 100 %}%"></span></span>
+                                            <span class="bar-val">{{ e.additional_total }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="not-configured">тохируулагдаагүй</span>
+                                    {% endif %}
+                                </td>
+                                <td class="num muted">{{ e.base_total }}</td>
+                                <td class="num total">{{ e.quota_total }}</td>
+                                <td class="num muted">{{ e.school_count }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <div class="group-head">
+                <h2>Нийслэлийн дүүрэг <span class="text-muted fw-normal">— сургууль тутам суурь 3 эрх</span></h2>
+                <span class="meta">{{ duuregs|length }} дүүрэг · нэмэлт эрхээр эрэмбэлэв</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm bg-white">
+                    <thead class="table-light">
+                        <tr>
+                            <th></th>
+                            <th>Дүүрэг</th>
+                            {% for lvl in levels %}<th class="num">{{ lvl.name }}</th>{% endfor %}
+                            <th class="num">Нэмэлт</th>
+                            <th class="num">Суурь</th>
+                            <th class="num">Нийт квот</th>
+                            <th class="num">Сургууль</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in duuregs %}
+                            <tr>
+                                <td class="text-muted small">{{ forloop.counter }}</td>
+                                <td>
+                                    {% if e.configured %}
+                                        <a class="province-link" href="{% url 'round2_school_quota' %}?year={{ year.id }}&province={{ e.province.id }}">{{ e.province.name }}</a>
+                                    {% else %}
+                                        {{ e.province.name }}
+                                    {% endif %}
+                                </td>
+                                {% for lvl in levels %}
+                                    <td class="num muted">{{ e.levels|get_item:lvl.id|default_if_none:"—" }}</td>
+                                {% endfor %}
+                                <td class="num">
+                                    {% if e.configured %}
+                                        <div class="bar-cell">
+                                            <span class="bar-track"><span class="bar-fill" style="width: {% widthratio e.additional_total max_duureg 100 %}%"></span></span>
+                                            <span class="bar-val">{{ e.additional_total }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="not-configured">тохируулагдаагүй</span>
+                                    {% endif %}
+                                </td>
+                                <td class="num muted">{{ e.base_total }}</td>
+                                <td class="num total">{{ e.quota_total }}</td>
+                                <td class="num muted">{{ e.school_count }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <p class="text-muted small mt-3" style="max-width: 72ch;">
+            Бар графикийн масштаб бүлэг тус бүрдээ тусдаа (аймаг ↔ дүүрэг хооронд шууд харьцуулахад ашиглахгүй).
+            Эх сурвалж: <code>compute_school_quota_table()</code>, ОДООГИЙН арга (дундаж-суурьт, <code>ranking_b_p</code>).
+        </p>
+    {% endif %}
+</div>
+{% endblock %}
