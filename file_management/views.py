@@ -34,14 +34,15 @@ def upload_file(request):
 def download_file(request, file_id):
     if is_manager(request.user.id):
         file_instance = get_object_or_404(FileUpload, id=file_id)
-        file_path = file_instance.file.path
-        file_name = os.path.basename(file_path)
-        mime_type, _ = mimetypes.guess_type(file_path)
+        file_name = os.path.basename(file_instance.file.name)
+        mime_type, _ = mimetypes.guess_type(file_name)
 
         # Track download in FileAccessLog
         FileAccessLog.objects.create(file=file_instance, user=request.user)
 
-        with open(file_path, 'rb') as file:
+        # Storage API-аар унших (S3 болон local storage-д хоёуланд нь ажиллана;
+        # .path нь S3Boto3Storage дээр дэмжигдэхгүй тул ашиглаж болохгүй)
+        with file_instance.file.open('rb') as file:
             response = HttpResponse(file.read(), content_type=mime_type)
             response['Content-Disposition'] = f'attachment; filename="{file_name}"'
             return response
