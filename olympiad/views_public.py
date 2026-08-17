@@ -267,7 +267,9 @@ def round2_quota_summary_view(request):
             max_aimag = max([e['additional_total'] for e in aimags], default=0) or 1
             max_duureg = max([e['additional_total'] for e in duuregs], default=0) or 1
 
-            cache.set(cache_key, (levels, aimags, duuregs, grand, max_aimag, max_duureg), 3600)
+            # Хугацаагүй хадгална: энэ өгөгдөл зөвхөн generate_scoresheets команд (cache.clear()
+            # дуудна) эсвэл ?clean=1-ээр хүчээр шинэчлэгдэх үед л өөрчлөгдөнө.
+            cache.set(cache_key, (levels, aimags, duuregs, grand, max_aimag, max_duureg), None)
 
     context = {
         'year': selected_year,
