@@ -94,7 +94,10 @@ def to_scoresheet(olympiad_id):
         if contestant_id in existing_sheets:
             # Update existing
             sheet = existing_sheets[contestant_id]
-            sheet.school = school_obj
+            if sheet.school_id is None:
+                # Тухайн үеийн сургуулийг хадгална: сурагч дараа нь сургууль шилжсэн ч
+                # аль хэдийн бичигдсэн school-г одоогийн профайлаар дахин бичихгүй.
+                sheet.school = school_obj
             sheet.total = total
             for key, value in score_data.items():
                 setattr(sheet, key, value)

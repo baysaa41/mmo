@@ -163,8 +163,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('  Улсын нийт эрэмбэ шинэчлэгдлээ.'))
 
         # Зөвхөн оролцогчид байгаа аймаг, бүсүүдийг олж авах
-        active_provinces = ScoreSheet.objects.filter(olympiad_id=olympiad_id, user__data__province__isnull=False).values_list('user__data__province_id', flat=True).distinct()
-        active_zones = ScoreSheet.objects.filter(olympiad_id=olympiad_id, user__data__province__zone__isnull=False).values_list('user__data__province__zone_id', flat=True).distinct()
+        active_provinces = ScoreSheet.objects.filter(olympiad_id=olympiad_id, school__province__isnull=False).values_list('school__province_id', flat=True).distinct()
+        active_zones = ScoreSheet.objects.filter(olympiad_id=olympiad_id, school__province__zone__isnull=False).values_list('school__province__zone_id', flat=True).distinct()
 
         olympiad_detail['province_count'] = len(active_provinces)
         olympiad_detail['zone_count'] = len(active_zones)

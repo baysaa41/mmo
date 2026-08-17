@@ -175,9 +175,12 @@ def compute_school_quota_table(province, round2_olympiad):
     # --- 2) ЖАГСААЛТААР: сүүлийн 3 жилийн round=2 Top N-д хэдэн сурагч оржээ (2 аргаар) ---
     year_ids = [round2_olympiad.school_year_id - d for d in (3, 2, 1)]
     year_names = []
+    year_olympiad_ids = []
     for yid in year_ids:
         sy = SchoolYear.objects.filter(id=yid).first()
         year_names.append(sy.name if sy else '—')
+        hist_olympiad = Olympiad.objects.filter(round=2, school_year_id=yid, level=round2_olympiad.level).first()
+        year_olympiad_ids.append(hist_olympiad.id if hist_olympiad else None)
 
     avg_by_school = round2_avg_quota_by_school(
         province, round2_olympiad.level, year_ids, historical_topn
@@ -220,6 +223,11 @@ def compute_school_quota_table(province, round2_olympiad):
         'region_type': region_type,
         'year_ids': year_ids,
         'year_names': year_names,
+        'year_olympiad_ids': year_olympiad_ids,
+        'year_columns': [
+            {'name': name, 'olympiad_id': oid}
+            for name, oid in zip(year_names, year_olympiad_ids)
+        ],
         'total_B': total_B,
         'schools_data': schools_data,
         'total_round1_participants': sum(d['round1_participants'] for d in schools_data),

@@ -323,10 +323,10 @@ def olympiad_top_stats(request, olympiad_id):
 
     # --- аль ranking багана ашиглахыг шийдэх ---
     if province_id != "0":
-        scoresheets = scoresheets.filter(user__data__province_id=province_id)
+        scoresheets = scoresheets.filter(school__province_id=province_id)
         rank_field = "ranking_a_p"
     elif zone_id != "0":
-        scoresheets = scoresheets.filter(user__data__province__zone_id=zone_id)
+        scoresheets = scoresheets.filter(school__province__zone_id=zone_id)
         rank_field = "ranking_a_z"
     else:
         rank_field = "ranking_a"
@@ -351,8 +351,8 @@ def olympiad_top_stats(request, olympiad_id):
 
     # Статистикууд
     top50_by_school = top50.values("school__name").annotate(count=Count("id")).order_by("-count")
-    top30_by_province = top30.values("user__data__province__name").annotate(count=Count("id")).order_by("-count")
-    top30_by_zone = top30.values("user__data__province__zone__name").annotate(count=Count("id")).order_by("-count")
+    top30_by_province = top30.values("school__province__name").annotate(count=Count("id")).order_by("-count")
+    top30_by_zone = top30.values("school__province__zone__name").annotate(count=Count("id")).order_by("-count")
 
     # Нийлбэр онооны тархалт (гистограмм)
     score_distribution = scoresheets.values('total').annotate(count=Count('id')).order_by('total')

@@ -72,7 +72,7 @@
                 </tr>
                 {% for row in top30_by_province %}
                     <tr>
-                        <td>{{ row.user__data__province__name }}</td>
+                        <td>{{ row.school__province__name }}</td>
                         <td>{{ row.count }}</td>
                     </tr>
                 {% endfor %}
@@ -93,7 +93,7 @@
                 </tr>
                 {% for row in top30_by_zone %}
                     <tr>
-                        <td>{{ row.user__data__province__zone__name }}</td>
+                        <td>{{ row.school__province__zone__name }}</td>
                         <td>{{ row.count }}</td>
                     </tr>
                 {% endfor %}

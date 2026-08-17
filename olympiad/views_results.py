@@ -111,7 +111,7 @@ def olympiad_results(request, olympiad_id):
 
         # --- Аймаг/Бүс шүүлтүүр ---
         if province_id != "0":
-            scoresheets = scoresheets.filter(user__data__province_id=province_id)
+            scoresheets = scoresheets.filter(school__province_id=province_id)
             # Ranking field сонголт: official/all/unofficial
             if official_filter == "official":
                 rank_field_a = "ranking_a_p"
@@ -126,7 +126,7 @@ def olympiad_results(request, olympiad_id):
                 rank_field_b = "ranking_b_p_all"
                 list_rank_field = "list_rank_p_all"
         elif zone_id != "0":
-            scoresheets = scoresheets.filter(user__data__province__zone_id=zone_id)
+            scoresheets = scoresheets.filter(school__province__zone_id=zone_id)
             # Ranking field сонголт: official/all/unofficial
             if official_filter == "official":
                 rank_field_a = "ranking_a_z"
@@ -885,7 +885,7 @@ def round2_summary_view(request):
             # ScoreSheet-ээс тухайн аймаг, олимпиадын оролцогчдын тоог авах
             participant_count = ScoreSheet.objects.filter(
                 olympiad=olympiad,
-                user__data__province=province
+                school__province=province
             ).count()
 
             if level_name not in province_data['levels']:

@@ -104,9 +104,15 @@
                         <th colspan="2" class="text-center text-muted">Шинэ арга (A/B) — харьцуулах</th>
                     </tr>
                     <tr>
-                        <th class="text-center small">{{ qt.year_names.0 }}</th>
-                        <th class="text-center small">{{ qt.year_names.1 }}</th>
-                        <th class="text-center small">{{ qt.year_names.2 }}</th>
+                        {% for col in qt.year_columns %}
+                            <th class="text-center small">
+                                {% if col.olympiad_id %}
+                                    <a href="{% url 'olympiad_result_view' olympiad_id=col.olympiad_id %}?p={{ qt.province.id }}">{{ col.name }}</a>
+                                {% else %}
+                                    {{ col.name }}
+                                {% endif %}
+                            </th>
+                        {% endfor %}
                         <th class="text-center small text-muted">Нэмэлт</th>
                         <th class="text-center small text-muted">Нийт квот</th>
                     </tr>

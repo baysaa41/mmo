@@ -33,7 +33,7 @@ def update_rankings_a_p(olympiad_id, province_id):
     """Updates rankings for province - official only."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province_id=province_id,
+        school__province_id=province_id,
         is_official=True
     ).order_by("-total"))
 
@@ -61,7 +61,7 @@ def update_rankings_a_p_all(olympiad_id, province_id):
     """Updates rankings for province - all students."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province_id=province_id
+        school__province_id=province_id
     ).order_by("-total"))
 
     if not scores:
@@ -88,7 +88,7 @@ def update_rankings_a_p_u(olympiad_id, province_id):
     """Updates rankings for province - unofficial only."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province_id=province_id,
+        school__province_id=province_id,
         is_official=False
     ).order_by("-total"))
 
@@ -116,7 +116,7 @@ def update_rankings_a_z(olympiad_id, zone_id):
     """Updates rankings for zone - official only."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province__zone_id=zone_id,
+        school__province__zone_id=zone_id,
         is_official=True
     ).order_by("-total"))
 
@@ -144,7 +144,7 @@ def update_rankings_a_z_all(olympiad_id, zone_id):
     """Updates rankings for zone - all students."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province__zone_id=zone_id
+        school__province__zone_id=zone_id
     ).order_by("-total"))
 
     if not scores:
@@ -171,7 +171,7 @@ def update_rankings_a_z_u(olympiad_id, zone_id):
     """Updates rankings for zone - unofficial only."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province__zone_id=zone_id,
+        school__province__zone_id=zone_id,
         is_official=False
     ).order_by("-total"))
 
@@ -223,7 +223,7 @@ def update_rankings_b_p(olympiad_id, province_id):
     """Updates rankings_b_p for province - official only."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province_id=province_id,
+        school__province_id=province_id,
         is_official=True
     ).order_by("total"))
 
@@ -251,7 +251,7 @@ def update_rankings_b_p_all(olympiad_id, province_id):
     """Updates rankings_b_p_all for province - all students."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province_id=province_id
+        school__province_id=province_id
     ).order_by("total"))
 
     if not scores:
@@ -278,7 +278,7 @@ def update_rankings_b_p_u(olympiad_id, province_id):
     """Updates rankings_b_p_u for province - unofficial only."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province_id=province_id,
+        school__province_id=province_id,
         is_official=False
     ).order_by("total"))
 
@@ -306,7 +306,7 @@ def update_rankings_b_z(olympiad_id, zone_id):
     """Updates rankings_b_z for zone - official only."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province__zone_id=zone_id,
+        school__province__zone_id=zone_id,
         is_official=True
     ).order_by("total"))
 
@@ -334,7 +334,7 @@ def update_rankings_b_z_all(olympiad_id, zone_id):
     """Updates rankings_b_z_all for zone - all students."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province__zone_id=zone_id
+        school__province__zone_id=zone_id
     ).order_by("total"))
 
     if not scores:
@@ -361,7 +361,7 @@ def update_rankings_b_z_u(olympiad_id, zone_id):
     """Updates rankings_b_z_u for zone - unofficial only."""
     scores = list(ScoreSheet.objects.filter(
         olympiad_id=olympiad_id,
-        user__data__province__zone_id=zone_id,
+        school__province__zone_id=zone_id,
         is_official=False
     ).order_by("total"))
 
