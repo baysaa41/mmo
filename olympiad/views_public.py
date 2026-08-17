@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from datetime import datetime, timezone, timedelta
 from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, RoundGuideline, Award
 from olympiad.utils.round2_quota import compute_school_quota_table
+from olympiad.utils.round3_quota import compute_district_quota_table, get_capital_districts
 from accounts.models import Province
 from django.db.models import Q, Count
 from django.core.cache import cache
@@ -79,6 +80,35 @@ def olympiads_home(request):
     return render(request, 'olympiad/home.html', {'olympiads': olympiads, 'now': now})
 
 
+def get_capital_quota_tables(selected_year, force_update=False):
+    """Тухайн хичээлийн жилийн нийслэлийн round=3 дүүргийн квотын хүснэгтүүдийг
+    (ангилал бүрээр, D/E/F/S/T) буцаана — round3_district_quota_view (дэлгэрэнгүй
+    "Хотын эрхийн дэвтэр") болон round_guideline_view (round=3 хуудасны товч
+    хүснэгт) хоёулаа ашигладаг тул кэштэй хамт нэг дор."""
+    cache_key = f"round3_district_quota_{selected_year.id}"
+    cached = None if force_update else cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    quota_tables = []
+    capital_olympiads = Olympiad.objects.filter(
+        round=3, school_year=selected_year, name__icontains='нийслэл'
+    ).select_related('level').order_by('level_id')
+
+    for o in capital_olympiads:
+        if not o.level:
+            continue
+        is_teacher_category = o.level.name.startswith('S') or o.level.name.startswith('T')
+        table = compute_district_quota_table(o.level, selected_year, is_teacher_category)
+        if table:
+            quota_tables.append({'level': o.level, **table})
+
+    # Хугацаагүй хадгална: зөвхөн generate_scoresheets команд (cache.clear() дуудна)
+    # эсвэл ?clean=1-ээр хүчээр шинэчлэгдэх үед л өөрчлөгдөнө.
+    cache.set(cache_key, quota_tables, None)
+    return quota_tables
+
+
 def round_guideline_view(request, round):
     now = datetime.now(timezone.utc).date()
     active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
@@ -126,6 +156,39 @@ def round_guideline_view(request, round):
         elif round == 6:
             student_status = _egmo_student_status(request.user, selected_year)
 
+    capital_quota_pivot = None
+    guideline_content_before = guideline.content if guideline else None
+    guideline_content_after = None
+    if round == 3 and selected_year:
+        # "Хотын эрхийн дэвтэр"-ийг удирдамжийн "Бүсийн эрх"-ийн хүснэгтийн ард, харин
+        # "Улсын олимпиадын эрх олгох" хэсгийн өмнө оруулахын тулд удирдамжийн HTML-г
+        # тэр хэсгийн эхлэлээр таслана. Тэмдэглэгээ олдохгүй бол бүх агуулгыг өмнө нь
+        # үзүүлнэ.
+        if guideline and guideline.content:
+            marker = '<p><strong>Улсын олимпиадын эрх олгох'
+            split_idx = guideline.content.find(marker)
+            if split_idx != -1:
+                guideline_content_before = guideline.content[:split_idx]
+                guideline_content_after = guideline.content[split_idx:]
+
+        quota_tables = get_capital_quota_tables(selected_year)
+        if quota_tables:
+            levels = [qt['level'] for qt in quota_tables]
+            district_rows = []
+            for d in get_capital_districts():
+                values = []
+                for qt in quota_tables:
+                    match = next((r for r in qt['districts_data'] if r['district'].id == d.id), None)
+                    values.append(match['total_quota'] if match else 0)
+                district_rows.append({'district': d, 'values': values, 'row_total': sum(values)})
+            totals = [qt['total_quota'] for qt in quota_tables]
+            capital_quota_pivot = {
+                'levels': levels,
+                'district_rows': district_rows,
+                'totals': totals,
+                'grand_total': sum(totals),
+            }
+
     context = {
         'round': round,
         'round_name': dict(RoundGuideline.ROUND_CHOICES).get(round, ''),
@@ -135,6 +198,9 @@ def round_guideline_view(request, round):
         'prev': prev_year,
         'next': next_year,
         'student_status': student_status,
+        'capital_quota_pivot': capital_quota_pivot,
+        'guideline_content_before': guideline_content_before,
+        'guideline_content_after': guideline_content_after,
     }
     return render(request, 'olympiad/round_detail.html', context)
 
@@ -283,6 +349,31 @@ def round2_quota_summary_view(request):
         'max_duureg': max_duureg,
     }
     return render(request, 'olympiad/round2_quota_summary.html', context)
+
+
+def round3_district_quota_view(request):
+    """Нийслэлийн олимпиад (round=3, Хотын эрх): дүүрэг тус бүрийн эрхийн тооцоог
+    ангилал бүрээр (D, E, F, S, T) нэг дор харах нийтийн хуудас ("Хотын эрхийн дэвтэр")."""
+    now = datetime.now(timezone.utc).date()
+    active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
+    year_id = request.GET.get('year', active_year.id if active_year else None)
+    selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
+
+    prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first() if selected_year else None
+    next_year = SchoolYear.objects.filter(pk=selected_year.id + 1).first() if selected_year else None
+
+    quota_tables = []
+    if selected_year:
+        force_update = request.GET.get('clean', '0') == '1'
+        quota_tables = get_capital_quota_tables(selected_year, force_update=force_update)
+
+    context = {
+        'year': selected_year,
+        'prev': prev_year,
+        'next': next_year,
+        'quota_tables': quota_tables,
+    }
+    return render(request, 'olympiad/round3_district_quota.html', context)
 
 
 def problems_home(request):

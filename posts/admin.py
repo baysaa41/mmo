@@ -9,6 +9,7 @@ class PostAdmin(admin.ModelAdmin):
     list_display = ('title', 'year', 'author', 'startdate', 'isshow', 'isspec')
     list_filter = ('year', 'isshow', 'isspec', 'author')
     search_fields = ('title', 'descr')
+    autocomplete_fields = ('attachments',)
 
     # Шинээр нэмэх, засах хуудсыг цэгцтэй бүлгүүдэд хуваах
     fieldsets = (
@@ -20,7 +21,7 @@ class PostAdmin(admin.ModelAdmin):
         }),
         ('Нэмэлт медиа ба файлууд', {
             'classes': ('collapse',),  # Энэ хэсгийг нууж, дарахад дэлгэгддэг болгоно
-            'fields': ('intro', 'imagesource', 'embedcode', 'pictures', 'files', 'tags')
+            'fields': ('intro', 'imagesource', 'embedcode', 'pictures', 'files', 'attachments', 'tags')
         }),
         ('Системийн мэдээлэл (зөвхөн харах)', {
             'fields': ('createdate', 'updatedate', 'sawcount', 'createuserid', 'oldid')

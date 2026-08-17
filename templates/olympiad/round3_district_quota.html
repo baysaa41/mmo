@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Хотын эрхийн дэвтэр{% endblock %}
+
+{% block content %}
+    <div class="home-panel">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'olympiad_round_detail' round=3 %}{% if year %}?year={{ year.id }}{% endif %}">Нийслэл/Бүсийн олимпиад</a></li>
+                <li class="breadcrumb-item active">Хотын эрхийн дэвтэр</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h3 class="mb-0"><i class="fas fa-book me-1"></i> Хотын эрхийн дэвтэр</h3>
+            <div class="d-flex align-items-center gap-1">
+                {% if prev is not None %}
+                    <a class="btn btn-light btn-sm" href="?year={{ prev.id }}">&larr; {{ prev.name }}</a>
+                {% endif %}
+                {% if year %}<span class="btn btn-secondary btn-sm disabled">{{ year.name }}</span>{% endif %}
+                {% if next is not None %}
+                    <a class="btn btn-light btn-sm" href="?year={{ next.id }}">{{ next.name }} &rarr;</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <p class="text-muted small" style="max-width: 72ch;">
+            Нийслэлийн 7 дүүрэг тус бүрээс round=3 (нийслэлийн олимпиад)-д орох эрхийн задаргаа —
+            "Хотын эрх, дүүргээс" (суурь) + "Хотын эрх, жагсаалтаар" (нэмэлт) — ангилал бүрээр.
+        </p>
+
+        {% if not year %}
+            <div class="alert alert-info">Хичээлийн жил сонгогдоогүй байна.</div>
+        {% elif not quota_tables %}
+            <div class="alert alert-info">
+                {{ year.name }} онд нийслэлд зориулсан III давааны олимпиад бүртгэгдээгүй байна.
+            </div>
+        {% else %}
+            {% for qt in quota_tables %}
+                <div class="mb-5">
+                    <h4>
+                        {{ qt.level.name }} ангилал
+                        <small class="text-muted">
+                            {% if qt.is_teacher_category %}(багш){% else %}(сурагч){% endif %}
+                            — Нийслэл
+                        </small>
+                    </h4>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-1">Дүүргээс (суурь, нийт)</h6>
+                                    <h3 class="mb-0">{{ qt.total_base }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-1">Жагсаалтаар (нийт)</h6>
+                                    <h3 class="mb-0 text-success">{{ qt.total_additional }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-1">Нийт квот</h6>
+                                    <h3 class="mb-0 fw-bold">{{ qt.total_quota }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Алгоритмын тайлбар -->
+                    <div class="card mb-3 border-warning">
+                        <div class="card-header bg-warning bg-opacity-25" data-bs-toggle="collapse" data-bs-target="#algoCollapse-{{ qt.round3_olympiad.id }}" style="cursor:pointer">
+                            <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Доорх хүснэгтийг хэрхэн тооцсон
+                                <i class="fas fa-chevron-down float-end mt-1"></i>
+                            </h5>
+                        </div>
+                        <div id="algoCollapse-{{ qt.round3_olympiad.id }}" class="collapse">
+                            <div class="card-body">
+                                <p class="mb-2">
+                                    Дүүрэг тус бүрийн <strong>Нийт квот</strong> = <strong>Дүүргээс</strong> (суурь эрх) +
+                                    <strong>Жагсаалтаар</strong> (нэмэлт эрх).
+                                </p>
+                                <h6 class="fw-bold">1. "Дүүргээс" (суурь эрх)</h6>
+                                <p class="mb-1">
+                                    Нийслэлийн бүх дүүрэг ангилал тус бүрд тогтмол
+                                    <strong>{{ qt.base_quota_per_district }}</strong>
+                                    {% if qt.is_teacher_category %}багшийн{% else %}сурагчийн{% endif %}
+                                    суурь эрхтэй байна — энэ жилийн аймаг/дүүргийн олимпиадын бодит
+                                    дүнгээс үл хамааран баталгаатай эрх.
+                                </p>
+                                <h6 class="fw-bold mt-3">2. "Жагсаалтаар" (нэмэлт эрх) — багана: {{ qt.year_names.0 }} / {{ qt.year_names.1 }} / {{ qt.year_names.2 }} / Жагсаалтаар</h6>
+                                {% if qt.is_teacher_category %}
+                                    <p class="mb-1">
+                                        Нийслэлийн round=3 олимпиадад сүүлийн 3 жилийн ({{ qt.year_names.0 }},
+                                        {{ qt.year_names.1 }}, {{ qt.year_names.2 }}) тус бүрд, тухайн дүүргээс
+                                        хэдэн багш хот даяар <strong>Top {{ qt.historical_topn }}</strong>-д орсоныг
+                                        тоолж, 3 жилийн баганад тус тусад нь харуулав.
+                                    </p>
+                                    <p class="mb-0">
+                                        Багшийн ангилалд нийт <strong>{{ qt.teacher_total_quota }}</strong> нэмэлт
+                                        эрхийг дүүргүүдэд <strong>A/B харьцаагаар</strong> хуваарилна: A(дүүрэг) =
+                                        тухайн дүүргээс 3 жилд Top {{ qt.historical_topn }}-д орсон нийт тоо,
+                                        B = нийслэл даяар 3 жилийн нийт тоо (одоо B = <strong>{{ qt.total_B }}</strong>),
+                                        Нэмэлт(дүүрэг) = ceil((A/B) × {{ qt.teacher_total_quota }}).
+                                    </p>
+                                {% else %}
+                                    <p class="mb-1">
+                                        Нийслэлийн round=3 олимпиадад сүүлийн 3 жилийн ({{ qt.year_names.0 }},
+                                        {{ qt.year_names.1 }}, {{ qt.year_names.2 }}) тус бүрд, тухайн дүүргээс
+                                        хэдэн сурагч хот даяар <strong>Top {{ qt.historical_topn }}</strong>-д
+                                        орсоныг тоолж, 3 жилийн баганад тус тусад нь харуулав. Оноо тэнцсэн
+                                        тохиолдолд аль цөөнийг сонгоно.
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>Жагсаалтаар (нэмэлт) = ceil(дундаж(3 жилийн тоо))</strong> — 3
+                                        жилийн тоог дундажлаад дээш нь бүхэлчилсэн дүн. Дүн ороогүй/олимпиад
+                                        явагдаагүй жилийг 0 гэж тооцно. Дүүрэг тус бүр тусад нь тооцогдох тул
+                                        нийлбэрт хязгаар байхгүй.
+                                    </p>
+                                {% endif %}
+                                <p class="text-muted small mb-0 mt-2">
+                                    "Нийслэл" олимпиадын гишүүнчлэл өөрөө "жинхэнэ УБ хотын сурагч" гэсэн үг биш
+                                    (зөвхөн улсын квотод өрсөлдөхөөр ирсэн бусад аймгийн сурагч ч тэнд бүртгэлтэй
+                                    байж болно). Тиймээс round=3-ийн БҮХ олимпиадын ("нийслэл" ба "бүс", хуучин
+                                    жилүүдэд ганц хосолсон бол түүнийг) дүнг нэгтгээд, аль хэдийн тооцогдсон
+                                    <code>ranking_b_z</code> (zone_id=5, "жинхэнэ" 7 дүүргийн сурагчдад зориулж
+                                    тухайн олимпиад бүрд тусад нь тооцогддог) талбараар шүүнэ. Тэнцсэн бүлэг
+                                    хамгийн муу байраар тэмдэглэгддэг тул "тэнцвэл цөөнийг сонгоно" дүрмийг
+                                    байгалиараа хэрэгжүүлдэг. Нэг сурагч хоёр round=3 олимпиадад зэрэг
+                                    бүртгэлтэй байдаггүй тул нэгтгэхэд давхардал үүсэхгүй.
+                                    <strong>(хосолсон)</strong> гэж тэмдэглэсэн жилд тухайн ангилалд round=3-ийн
+                                    ганц (нийслэл, бүсийг хамт хамарсан) олимпиад л байсан гэсэн үг.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th rowspan="2" class="align-middle">#</th>
+                                    <th rowspan="2" class="align-middle">Дүүрэг</th>
+                                    <th rowspan="2" class="align-middle text-center">Дүүргээс<br>(суурь)</th>
+                                    <th colspan="3" class="text-center">Сүүлийн 3 жил (Top {{ qt.historical_topn }})</th>
+                                    <th rowspan="2" class="align-middle text-center">Жагсаалтаар<br>(нэмэлт)</th>
+                                    <th rowspan="2" class="align-middle text-center bg-primary text-white">Нийт квот</th>
+                                </tr>
+                                <tr>
+                                    {% for col in qt.year_columns %}
+                                        <th class="text-center small">
+                                            {% if col.olympiad_id %}
+                                                <a href="{% url 'olympiad_result_view' olympiad_id=col.olympiad_id %}">{{ col.name }}</a>
+                                            {% else %}
+                                                {{ col.name }}
+                                            {% endif %}
+                                            {% if col.is_combined %}
+                                                <br><span class="text-muted" title="Энэ жил нийслэл, бүсийн олимпиадыг хамт зохион байгуулсан тул зөвхөн нийслэлийн дүүргийн оролцогчдыг шүүж дахин эрэмбэлсэн дүн.">(хосолсон)</span>
+                                            {% endif %}
+                                        </th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in qt.districts_data %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ row.district.name }}</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary">{{ row.base_quota }}</span>
+                                        </td>
+                                        {% for y in row.yearly_counts %}
+                                            <td class="text-center text-muted small">{{ y }}</td>
+                                        {% endfor %}
+                                        <td class="text-center">
+                                            <span class="badge bg-success">{{ row.additional_quota }}</span>
+                                        </td>
+                                        <td class="text-center fw-bold bg-light">{{ row.total_quota }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-secondary fw-bold">
+                                    <td colspan="2">Нийслэл — нийт</td>
+                                    <td class="text-center">{{ qt.total_base }}</td>
+                                    {% for y in qt.total_yearly_counts %}
+                                        <td class="text-center">{{ y }}</td>
+                                    {% endfor %}
+                                    <td class="text-center">{{ qt.total_additional }}</td>
+                                    <td class="text-center bg-primary text-white">{{ qt.total_quota }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <p class="text-muted small mt-3" style="max-width: 72ch;">
+                Эх сурвалж: <code>compute_district_quota_table()</code>
+                (<code>olympiad/utils/round3_quota.py</code>).
+            </p>
+        {% endif %}
+    </div>
+{% endblock %}
