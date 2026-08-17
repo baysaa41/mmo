@@ -13,9 +13,9 @@ I давааны шинэ зааврын дагуу (2026 оны 4 сарын 22
     байгалиараа хэрэгжүүлдэг).
   - ШИНЭ (харьцуулах) арга: A/B харьцаагаар тооцно — A = тухайн сургуулиас Top N-д
     орсон нийт тоо (3 жилийн нийлбэр), B = аймаг/дүүрэг даяар Top N-д орсон нийт тоо,
-    нэмэлт эрх = ceil((A/B) * N). Эрэмбэ, тэнцлийг `ranking_a_p` талбараар тооцно
-    (тэнцсэн бүлэг өөрийн бүлгийн ХАМГИЙН САЙН байраар тэмдэглэгддэг тул илүү
-    "уужуу" — олон сурагчийг багтаадаг).
+    нэмэлт эрх = ceil((A/B) * N). Эрэмбэ, тэнцлийг `ranking_b_p` талбараар тооцно
+    (тэнцсэн бүлэг өөрийн бүлгийн ХАМГИЙН МУУ байраар тэмдэглэгддэг тул "тэнцвэл
+    цөөнийг сонгоно" дүрмийг байгалиараа хэрэгжүүлдэг — ОДООГИЙН аргатай адил).
 """
 import math
 from itertools import groupby
@@ -86,7 +86,7 @@ def round2_avg_quota_by_school(province, level, year_ids, quota_n):
 
 def round2_additional_quota_by_school(province, level, year_ids, quota_n):
     """ШИНЭ (харьцуулах) арга: "жагсаалтаар" нэмэлт эрхийг сүүлийн 3 жилийн (`year_ids`,
-    SchoolYear ID) round=2 дүнгээс A/B харьцаагаар (`ranking_a_p` талбараар) тооцно.
+    SchoolYear ID) round=2 дүнгээс A/B харьцаагаар (`ranking_b_p` талбараар) тооцно.
 
     A(сургууль) = тухайн сургуулиас 3 жилд Top N-д орсон нийт сурагчийн тоо.
     B = аймаг/дүүрэг даяар 3 жилд Top N-д орсон нийт сурагчийн тоо (бүх сургуулийн нийлбэр).
@@ -100,7 +100,7 @@ def round2_additional_quota_by_school(province, level, year_ids, quota_n):
     total_B = 0
     for yid in year_ids:
         hist_olympiad = Olympiad.objects.filter(round=2, school_year_id=yid, level=level).first()
-        counts = round2_topn_by_school(hist_olympiad, province, quota_n, rank_field='ranking_a_p') if hist_olympiad else {}
+        counts = round2_topn_by_school(hist_olympiad, province, quota_n, rank_field='ranking_b_p') if hist_olympiad else {}
         yearly_counts_list.append(counts)
         total_B += sum(counts.values())
 
@@ -127,7 +127,7 @@ def compute_school_quota_table(province, round2_olympiad):
     тус бүрийн 2-р даваанд оролцох эрхийн хүснэгтийг бүрэн тооцоолж буцаана.
 
     Үндсэн (харуулах) дүн нь ОДООГИЙН арга (дундаж-суурьт, ranking_b_p) — "new_" угтвартай
-    талбарууд нь ШИНЭ, шийдэгдээгүй A/B харьцаат аргын (ranking_a_p) харьцуулах дүн.
+    талбарууд нь ШИНЭ, шийдэгдээгүй A/B харьцаат аргын (мөн ranking_b_p) харьцуулах дүн.
 
     Хэрэв энэ round2_olympiad-д холбогдсон round=1 олимпиад олдохгүй бол None буцаана
     (тухайлбал, I даваа энэ жил хараахан бэлдэгдээгүй бол)."""
@@ -210,7 +210,7 @@ def compute_school_quota_table(province, round2_olympiad):
 
     schools_data = sorted(
         schools_map.values(),
-        key=lambda d: d['school'].name if d['school'] else 'Тодорхойгүй'
+        key=lambda d: (-d['total_quota'], d['school'].name if d['school'] else 'Тодорхойгүй')
     )
 
     return {
