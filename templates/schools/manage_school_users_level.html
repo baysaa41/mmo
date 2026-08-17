@@ -8,6 +8,22 @@
     <a href="{% url 'school_dashboard' school.id %}" class="btn btn-secondary btn-sm mb-4">&larr; Удирдлагын самбар луу буцах</a>
     <hr>
 
+    {% if round2_quota %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-1"></i>
+            <strong>{{ selected_level.name }}</strong> ангиллаас 2-р даваанд (аймаг/дүүргийн олимпиад)
+            оролцох эрхтэй: <span class="badge bg-primary fs-6">{{ round2_quota.total_quota }}</span> сурагч
+            <span class="text-muted">
+                (сургуулиас {{ round2_quota.base_quota }} + жагсаалтаар {{ round2_quota.additional_quota }} —
+                сүүлийн 3 жилд ({{ round2_quota.year_names.0 }}: {{ round2_quota.yearly_counts.0 }},
+                {{ round2_quota.year_names.1 }}: {{ round2_quota.yearly_counts.1 }},
+                {{ round2_quota.year_names.2 }}: {{ round2_quota.yearly_counts.2 }}) Top {{ round2_quota.historical_topn }}
+                ({{ round2_quota.region_type }})-ын дундажийг ceil хийж тооцов.
+                <em>Шийдэгдээгүй харьцуулах арга (A/B): нийт {{ round2_quota.new_total_quota }}</em>)
+            </span>
+        </div>
+    {% endif %}
+
     {# ---------------------------------------------------- #}
     {#         СУРАГЧ УДИРДАХ ХЭСЭГ                           #}
     {# ---------------------------------------------------- #}

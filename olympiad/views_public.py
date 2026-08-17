@@ -4,6 +4,8 @@ from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from datetime import datetime, timezone, timedelta
 from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, RoundGuideline, Award
+from olympiad.utils.round2_quota import compute_school_quota_table
+from accounts.models import Province
 from django.db.models import Q, Count
 
 
@@ -134,6 +136,63 @@ def round_guideline_view(request, round):
         'student_status': student_status,
     }
     return render(request, 'olympiad/round_detail.html', context)
+
+
+def round2_school_quota_view(request):
+    """Аймаг/дүүргийн олимпиад (round=2): сургуулиудын эрхийн тооцоог аймаг/дүүрэг,
+    ангилал сонгож харах нийтийн хуудас."""
+    now = datetime.now(timezone.utc).date()
+    active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
+    year_id = request.GET.get('year', active_year.id if active_year else None)
+    selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
+
+    prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first() if selected_year else None
+    next_year = SchoolYear.objects.filter(pk=selected_year.id + 1).first() if selected_year else None
+
+    all_provinces = Province.objects.order_by('name')
+    selected_province = None
+    province_id = request.GET.get('province')
+    if province_id:
+        selected_province = Province.objects.filter(pk=province_id).first()
+
+    all_categories = []
+    selected_category_id = None
+    quota_tables = []
+    if selected_year:
+        student_olympiads_qs = Olympiad.objects.filter(
+            round=2, school_year=selected_year
+        ).exclude(
+            Q(level__name__startswith='S') | Q(level__name__startswith='T')
+        ).select_related('level').order_by('level_id')
+        all_categories = [o.level for o in student_olympiads_qs]
+
+        category_id = request.GET.get('category')
+        if category_id:
+            try:
+                selected_category_id = int(category_id)
+            except (TypeError, ValueError):
+                selected_category_id = None
+
+        if selected_province:
+            olympiads_to_compute = student_olympiads_qs
+            if selected_category_id:
+                olympiads_to_compute = olympiads_to_compute.filter(level_id=selected_category_id)
+            for o in olympiads_to_compute:
+                table = compute_school_quota_table(selected_province, o)
+                if table:
+                    quota_tables.append({'province': selected_province, 'round2_olympiad': o, **table})
+
+    context = {
+        'year': selected_year,
+        'prev': prev_year,
+        'next': next_year,
+        'all_provinces': all_provinces,
+        'selected_province': selected_province,
+        'all_categories': all_categories,
+        'selected_category_id': selected_category_id,
+        'quota_tables': quota_tables,
+    }
+    return render(request, 'olympiad/round2_quota.html', context)
 
 def problems_home(request):
     now = datetime.now(timezone.utc)

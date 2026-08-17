@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Сургуулиудын эрхийн тооцоо{% endblock %}
+
+{% block content %}
+    <div class="home-panel">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'olympiad_round_detail' round=2 %}{% if year %}?year={{ year.id }}{% endif %}">Аймаг/Дүүргийн олимпиад</a></li>
+                <li class="breadcrumb-item active">Сургуулиудын эрхийн тооцоо</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h3 class="mb-0"><i class="fas fa-calculator me-1"></i> Сургуулиудын эрхийн тооцоо</h3>
+            <div class="d-flex align-items-center gap-1">
+                {% if prev is not None %}
+                    <a class="btn btn-light btn-sm" href="?year={{ prev.id }}{% if selected_province %}&province={{ selected_province.id }}{% endif %}{% if selected_category_id %}&category={{ selected_category_id }}{% endif %}">&larr; {{ prev.name }}</a>
+                {% endif %}
+                {% if year %}<span class="btn btn-secondary btn-sm disabled">{{ year.name }}</span>{% endif %}
+                {% if next is not None %}
+                    <a class="btn btn-light btn-sm" href="?year={{ next.id }}{% if selected_province %}&province={{ selected_province.id }}{% endif %}{% if selected_category_id %}&category={{ selected_category_id }}{% endif %}">{{ next.name }} &rarr;</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <p class="text-muted small">
+            Аймаг/дүүргээ (шаардлагатай бол ангиллаа нэмэлтээр) сонгож, сургууль тус бүрээс хэдэн
+            сурагч 2-р даваанд оролцох эрхтэйг урьдчилан тооцоолж харна.
+        </p>
+        <form method="get" class="row g-2 align-items-end mb-3">
+            {% if year %}<input type="hidden" name="year" value="{{ year.id }}">{% endif %}
+            <div class="col-auto">
+                <label for="province-select" class="form-label mb-1 small">Аймаг, дүүрэг</label>
+                <select name="province" id="province-select" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Сонгоно уу --</option>
+                    {% for p in all_provinces %}
+                        <option value="{{ p.id }}" {% if selected_province and selected_province.id == p.id %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label for="category-select" class="form-label mb-1 small">Ангилал <span class="text-muted">(сонголт)</span></label>
+                <select name="category" id="category-select" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Бүгд --</option>
+                    {% for c in all_categories %}
+                        <option value="{{ c.id }}" {% if selected_category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-sm">Харах</button>
+            </div>
+        </form>
+
+        {% if selected_province %}
+            {% if quota_tables %}
+                {% for qt in quota_tables %}
+                    {% include 'partials/_school_quota_table.html' %}
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    {{ selected_province.name }}-д {% if year %}{{ year.name }} оны хувьд {% endif %}I давааны олимпиад
+                    тохируулагдаагүй тул тооцоолол харуулах боломжгүй байна.
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endblock %}

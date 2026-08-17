@@ -28,6 +28,7 @@ from .models import School
 from .forms import UserSearchForm, AddUserForm, UserForm, UserMetaForm, UploadExcelForm
 from accounts.models import UserMeta, Level, Province
 from olympiad.models import Olympiad, SchoolYear, Problem, Result
+from olympiad.utils.round2_quota import round2_avg_quota_by_school, round2_additional_quota_by_school
 
 import pandas as pd
 from django.db import transaction
@@ -185,6 +186,49 @@ def school_dashboard(request, school_id):
         'olympiads': olympiads,
     }
     return render(request, 'schools/school_dashboard.html', context)
+
+
+def compute_school_round2_quota(school, level):
+    """Тухайн сургууль, тухайн ангиллаас 2-р даваанд (аймаг/дүүргийн олимпиад) хэдэн сурагч
+    оролцох эрхтэйг I давааны шинэ зааврын дагуу тооцоолно (compute_school_quota_table-тай
+    ижил алгоритм): сургуулиас (тогтмол 2/3) + жагсаалтаар. Аль аргыг ашиглахаа шийдээгүй тул
+    хоёуланг нь буцаана — ОДООГИЙН (үндсэн, ranking_b_p, дундаж-суурьт) ба ШИНЭ
+    (харьцуулах, ranking_a_p, A/B харьцаат) — 'new_' угтвартай талбарууд нь ШИНЭ арга."""
+    current_year = SchoolYear.get_current()
+    if not current_year:
+        return None
+
+    province = school.province
+    is_aimag = province.id <= 21
+    base_quota = 2 if is_aimag else 3
+    historical_topn = 20 if is_aimag else 50
+
+    year_ids = [current_year.id - d for d in (3, 2, 1)]
+    year_names = []
+    for yid in year_ids:
+        sy = SchoolYear.objects.filter(id=yid).first()
+        year_names.append(sy.name if sy else '—')
+
+    avg_by_school = round2_avg_quota_by_school(province, level, year_ids, historical_topn)
+    avg_info = avg_by_school.get(school.id, {'yearly_counts': [0, 0, 0], 'additional_quota': 0})
+
+    ratio_by_school, total_B = round2_additional_quota_by_school(province, level, year_ids, historical_topn)
+    ratio_info = ratio_by_school.get(school.id, {'yearly_counts': [0, 0, 0], 'total_A': 0, 'additional_quota': 0})
+
+    return {
+        'region_type': 'Аймаг' if is_aimag else 'Дүүрэг',
+        'base_quota': base_quota,
+        'historical_topn': historical_topn,
+        'year_names': year_names,
+        'yearly_counts': avg_info['yearly_counts'],
+        'additional_quota': avg_info['additional_quota'],
+        'total_quota': base_quota + avg_info['additional_quota'],
+        'new_total_A': ratio_info['total_A'],
+        'new_total_B': total_B,
+        'new_additional_quota': ratio_info['additional_quota'],
+        'new_total_quota': base_quota + ratio_info['additional_quota'],
+    }
+
 
 @login_required
 def manage_school_by_level(request, school_id, level_id):
@@ -406,6 +450,10 @@ def manage_school_by_level(request, school_id, level_id):
         search_form = UserSearchForm()
         add_user_form = AddUserForm()
 
+    round2_quota = None
+    if isinstance(selected_level, Level) and school.province:
+        round2_quota = compute_school_round2_quota(school, selected_level)
+
     context = {
         'school': school,
         'group': group,
@@ -415,6 +463,7 @@ def manage_school_by_level(request, school_id, level_id):
         'add_user_form': add_user_form,
         'search_results': search_results,
         'all_school_users': all_school_users if level_id == 100 else None,
+        'round2_quota': round2_quota,
     }
     return render(request, 'schools/manage_school_users_level.html', context)
 

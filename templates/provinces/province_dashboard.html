@@ -74,6 +74,7 @@
                 <ul>
                     <li><strong>"Сургуулийн бүртгэл"</strong> — аймгийн сургуулиудын менежер, бүртгэгч багшийн мэдээллийг харах, засах.</li>
                     <li><strong>"Сургуулиуд удирдах"</strong> — сургуулиудын удирдлагын самбар руу орох.</li>
+                    <li><strong>"Тооцоолсон эрх"</strong> баганад сурагчдын олимпиад тус бүрд, I давааны шинэ зааврын дагуу (сургуулиас + жагсаалтаар) тооцоолсон нийт эрхийн тоог шууд харуулна — дарж дэлгэрэнгүй (сургууль тус бүрээр) харах боломжтой.</li>
                     <li><strong>"Файлууд"</strong> — олимпиадын заавар, хуваарь зэрэг баримт бичгүүдийг татах.</li>
                 </ul>
 
@@ -156,10 +157,11 @@
             <table class="table table-hover table-bordered">
                 <thead>
                     <tr>
-                        <th style="width: 40%;">Олимпиад - Ангилал</th>
-                        <th style="width: 25%;">Аймаг, дүүргийн олимпиадад оролцох</th>
-                        <th style="width: 25%;">Сургуулийн олимпиадад оролцсон</th>
-                        <th style="width: 10%;">Үйлдэл</th>
+                        <th style="width: 30%;">Олимпиад - Ангилал</th>
+                        <th style="width: 17%;">Аймаг, дүүргийн олимпиадад оролцох</th>
+                        <th style="width: 17%;">Сургуулийн олимпиадад оролцсон</th>
+                        <th style="width: 16%;">Тооцоолсон эрх</th>
+                        <th style="width: 20%;">Үйлдэл</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -171,6 +173,16 @@
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-info fs-6">{{ olympiad.province_total }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if olympiad.quota_total is not None %}
+                                    <a href="{% url 'round2_school_quota' %}?year={{ olympiad.school_year_id }}&province={{ province.id }}&category={{ olympiad.level_id }}"
+                                       class="badge bg-primary fs-6 text-decoration-none" title="Эрхийн тооцоог дэлгэрэнгүй харах">
+                                        {{ olympiad.quota_total }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <a href="{% url 'province_olympiad_view' province.id olympiad.id %}"

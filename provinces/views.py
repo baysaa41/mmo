@@ -9,6 +9,7 @@ from django.db.models import Q
 from accounts.models import Province, Zone
 from olympiad.models import Olympiad, Award, ScoreSheet, Result, Problem, SchoolYear
 from olympiad.utils.group_management import ensure_olympiad_has_group, get_or_create_round2_group
+from olympiad.utils.round2_quota import compute_school_quota_table
 from schools.models import School
 from django.contrib.auth.models import User, Group
 
@@ -166,6 +167,10 @@ def province_dashboard(request, province_id):
                 user__data__province=province,
                 is_official=True
             ).values('user').distinct().count()
+
+            # I давааны шинэ зааврын дагуу тооцоолсон нийт эрхийн тоо (сургуулиас + жагсаалтаар)
+            quota_table = compute_school_quota_table(province, olympiad)
+            olympiad.quota_total = quota_table['total_quota'] if quota_table else None
 
     # Багш болон сурагчдын олимпиадыг ялгах
     teacher_olympiads = [o for o in round2_olympiads if o.is_teacher_olympiad]
