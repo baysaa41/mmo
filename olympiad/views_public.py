@@ -7,6 +7,7 @@ from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, Ro
 from olympiad.utils.round2_quota import compute_school_quota_table
 from accounts.models import Province
 from django.db.models import Q, Count
+from django.core.cache import cache
 
 
 def _round1_student_status(user):
@@ -214,50 +215,59 @@ def round2_quota_summary_view(request):
     max_duureg = 0
 
     if selected_year:
-        student_olympiads_qs = Olympiad.objects.filter(
-            round=2, school_year=selected_year
-        ).exclude(
-            Q(level__name__startswith='S') | Q(level__name__startswith='T')
-        ).select_related('level').order_by('level_id')
-        levels = [o.level for o in student_olympiads_qs]
+        force_update = request.GET.get('clean', '0') == '1'
+        cache_key = f"round2_quota_summary_{selected_year.id}"
+        cached = None if force_update else cache.get(cache_key)
 
-        summary = []
-        for province in Province.objects.order_by('id'):
-            entry = {
-                'province': province,
-                'is_aimag': province.id <= 21,
-                'levels': {},
-                'base_total': 0,
-                'additional_total': 0,
-                'quota_total': 0,
-                'school_count': 0,
-                'configured': False,
+        if cached:
+            levels, aimags, duuregs, grand, max_aimag, max_duureg = cached
+        else:
+            student_olympiads_qs = Olympiad.objects.filter(
+                round=2, school_year=selected_year
+            ).exclude(
+                Q(level__name__startswith='S') | Q(level__name__startswith='T')
+            ).select_related('level').order_by('level_id')
+            levels = [o.level for o in student_olympiads_qs]
+
+            summary = []
+            for province in Province.objects.order_by('id'):
+                entry = {
+                    'province': province,
+                    'is_aimag': province.id <= 21,
+                    'levels': {},
+                    'base_total': 0,
+                    'additional_total': 0,
+                    'quota_total': 0,
+                    'school_count': 0,
+                    'configured': False,
+                }
+                for o in student_olympiads_qs:
+                    table = compute_school_quota_table(province, o)
+                    if table is None:
+                        entry['levels'][o.level_id] = None
+                        continue
+                    entry['configured'] = True
+                    entry['levels'][o.level_id] = table['total_additional']
+                    entry['base_total'] += table['total_base']
+                    entry['additional_total'] += table['total_additional']
+                    entry['quota_total'] += table['total_quota']
+                    entry['school_count'] = max(entry['school_count'], len(table['schools_data']))
+                summary.append(entry)
+
+            aimags = sorted([e for e in summary if e['is_aimag']], key=lambda e: -e['additional_total'])
+            duuregs = sorted([e for e in summary if not e['is_aimag']], key=lambda e: -e['additional_total'])
+
+            grand = {
+                'count': len(aimags) + len(duuregs),
+                'schools': sum(e['school_count'] for e in summary),
+                'base': sum(e['base_total'] for e in summary),
+                'additional': sum(e['additional_total'] for e in summary),
+                'quota': sum(e['quota_total'] for e in summary),
             }
-            for o in student_olympiads_qs:
-                table = compute_school_quota_table(province, o)
-                if table is None:
-                    entry['levels'][o.level_id] = None
-                    continue
-                entry['configured'] = True
-                entry['levels'][o.level_id] = table['total_additional']
-                entry['base_total'] += table['total_base']
-                entry['additional_total'] += table['total_additional']
-                entry['quota_total'] += table['total_quota']
-                entry['school_count'] = max(entry['school_count'], len(table['schools_data']))
-            summary.append(entry)
+            max_aimag = max([e['additional_total'] for e in aimags], default=0) or 1
+            max_duureg = max([e['additional_total'] for e in duuregs], default=0) or 1
 
-        aimags = sorted([e for e in summary if e['is_aimag']], key=lambda e: -e['additional_total'])
-        duuregs = sorted([e for e in summary if not e['is_aimag']], key=lambda e: -e['additional_total'])
-
-        grand = {
-            'count': len(aimags) + len(duuregs),
-            'schools': sum(e['school_count'] for e in summary),
-            'base': sum(e['base_total'] for e in summary),
-            'additional': sum(e['additional_total'] for e in summary),
-            'quota': sum(e['quota_total'] for e in summary),
-        }
-        max_aimag = max([e['additional_total'] for e in aimags], default=0) or 1
-        max_duureg = max([e['additional_total'] for e in duuregs], default=0) or 1
+            cache.set(cache_key, (levels, aimags, duuregs, grand, max_aimag, max_duureg), 3600)
 
     context = {
         'year': selected_year,
