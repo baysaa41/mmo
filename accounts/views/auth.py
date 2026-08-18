@@ -153,7 +153,7 @@ def login_view(request):
                 next_url = reverse('profile_edit')
             return redirect(next_url)
         else:
-            request.session['invalid_user'] = 1
+            messages.error(request, 'Нэвтрэх нэр эсвэл нууц үг буруу байна.')
     return render(request, 'accounts/login.html', {'form': form})
 
 def logout_view(request):
