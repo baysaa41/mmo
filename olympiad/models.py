@@ -14,6 +14,12 @@ class SchoolYear(models.Model):
     start = models.DateField(null=True, blank=True)
     end = models.DateField(null=True, blank=True)
     descr = models.CharField(max_length=100, null=True, blank=True)
+    guideline_post = models.ForeignKey(
+        'posts.Post', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='guideline_school_years',
+        verbose_name='Олимпиадын удирдамж пост',
+        help_text='Цэсний "Олимпиадын удирдамж" линк энэ хичээлийн жилд идэвхтэй үед энд заасан пост руу автоматаар холбогдоно.',
+    )
 
     class Meta:
         ordering = ['-name']

@@ -4,7 +4,11 @@ from django.contrib import admin
 
 from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, Result, Solution, Team, Upload, Tag, RoundGuideline
 
-admin.site.register(SchoolYear)
+class SchoolYearAdmin(admin.ModelAdmin):
+    list_display = ("name", "start", "end", "guideline_post")
+    autocomplete_fields = ("guideline_post",)
+
+admin.site.register(SchoolYear, SchoolYearAdmin)
 
 
 class RoundGuidelineAdmin(admin.ModelAdmin):

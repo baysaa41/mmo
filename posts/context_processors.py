@@ -19,4 +19,20 @@ def upcoming_olympiads(request):
 def current_school_year(request):
     now = timezone.now().date()
     school_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
-    return {'current_school_year': school_year}
+
+    # Одоогийн хичээлийн жилд удирдамж пост холбогдоогүй бол (жишээ нь шинэ жил
+    # эхлээд удирдамж пост нь бэлэн болоогүй үед) удирдамж посттой хамгийн
+    # сүүлийн хичээлийн жилийнхийг ашиглана. Ингэснээр цэсний "Олимпиадын
+    # удирдамж" линк код дотор хатуу бичсэн пост рүү бус, өгөгдлөөс тодорхойлогдох
+    # постад үргэлж холбогдоно.
+    guideline_post = school_year.guideline_post if school_year else None
+    if not guideline_post:
+        fallback_year = SchoolYear.objects.filter(
+            guideline_post__isnull=False
+        ).order_by('-start').first()
+        guideline_post = fallback_year.guideline_post if fallback_year else None
+
+    return {
+        'current_school_year': school_year,
+        'olympiad_guideline_post': guideline_post,
+    }
