@@ -74,6 +74,10 @@ def file_list(request):
             # Хэрэв хичээлийн жил байхгүй бол бүх файлыг харуулна
             files = FileUpload.objects.all().select_related('uploader', 'school_year')
 
+        # Аль хэдийн нийтлэлийн хавсралт болсон файлыг энэ жагсаалтад харуулахгүй
+        # (тухайн файл нийтлэл дээрээ өөрөө хавсралтаар харагдана)
+        files = files.filter(posts__isnull=True)
+
         # Файл бүрийн татагдсан тоог тооцоолох
         files = files.annotate(download_count=Count('access_logs'))
 
