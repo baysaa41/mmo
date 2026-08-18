@@ -14,11 +14,36 @@ from schools.models import School
 from django_registration.forms import RegistrationForm
 from django_recaptcha.fields import ReCaptchaField
 from django_recaptcha.widgets import ReCaptchaV3
+from urllib.error import URLError
+
+
+class ResilientReCaptchaField(ReCaptchaField):
+    """
+    django_recaptcha зөвхөн HTTPError-ийг барьдаг тул Google-ийн
+    /siteverify рүү хийх сүлжээний хүсэлт цагаа алдах, DNS/холболтын
+    алдаа гарах, эсвэл хүлээгдээгүй хариу ирэх үед (URLError, timeout,
+    JSON/key алдаа) шалгалт хийгдэхгүйгээр 500 алдаа өгдөг байсныг
+    засав: эдгээрийг энгийн form алдаа болгож харуулна.
+    """
+    def validate(self, value):
+        try:
+            super().validate(value)
+        except (URLError, TimeoutError, OSError, ValueError, KeyError):
+            raise forms.ValidationError(
+                self.error_messages['captcha_error'], code='captcha_error'
+            )
 
 
 class RegistrationFormWithCaptcha(RegistrationForm):
     """Spam бүртгэлээс сэргийлэх зорилгоор reCAPTCHA v3 нэмсэн бүртгэлийн форм."""
-    captcha = ReCaptchaField(widget=ReCaptchaV3(action='register'), label='')
+    captcha = ResilientReCaptchaField(
+        widget=ReCaptchaV3(action='register'),
+        label='',
+        error_messages={
+            'captcha_invalid': 'Роботын шалгалт амжилтгүй боллоо. Хуудсыг дахин ачаалж, ахин оролдоно уу.',
+            'captcha_error': 'Роботын шалгалт хийхэд алдаа гарлаа. Хэсэг хугацааны дараа ахин оролдоно уу.',
+        },
+    )
 
 class AddRemoveUsersToGroupForm(forms.Form):
     users = forms.ModelMultipleChoiceField(

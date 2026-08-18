@@ -35,6 +35,11 @@
 
             <form method="post" novalidate>
                 {% csrf_token %}
+                {% if form.captcha.errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ form.captcha.errors|join:" " }}
+                    </div>
+                {% endif %}
                 {{ form|crispy }}
                 <div class="d-grid mt-3">
                     <button type="submit" class="btn btn-success btn-lg">Бүртгүүлэх</button>
