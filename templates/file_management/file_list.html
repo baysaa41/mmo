@@ -58,6 +58,9 @@
                                     <th style="width: 10%;">Татах</th>
                                     <th style="width: 15%;">Оруулсан</th>
                                     <th style="width: 10%;">Цаг</th>
+                                    {% if user.is_staff %}
+                                        <th style="width: 10%;">Устгах</th>
+                                    {% endif %}
                                 </tr>
                             </thead>
                             <tbody>
@@ -83,6 +86,16 @@
                                         <td>
                                             <small>{{ file.uploaded_at|date:"Y-m-d H:i" }}</small>
                                         </td>
+                                        {% if user.is_staff %}
+                                            <td class="text-center">
+                                                <form method="post" action="{% url 'delete_file' file.id %}" onsubmit="return confirm('Энэ файлыг устгахдаа итгэлтэй байна уу?');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i> Устгах
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        {% endif %}
                                     </tr>
                                 {% endfor %}
                             </tbody>

@@ -1,7 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Count
+from django.views.decorators.http import require_POST
 
 from schools.models import School
 from olympiad.models import SchoolYear
@@ -85,6 +86,16 @@ def file_list(request):
         return render(request, 'file_management/file_list.html', context)
     else:
         return render(request, 'error.html', {'message': 'Та сургуулийн хаягаар нэвтрээгүй байна.'})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+@require_POST
+def delete_file(request, file_id):
+    file_instance = get_object_or_404(FileUpload, id=file_id)
+    file_instance.file.delete(save=False)
+    file_instance.delete()
+    return redirect('file_list')
 
 
 def is_manager(user_id):
