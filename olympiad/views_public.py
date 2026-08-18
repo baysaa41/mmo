@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from datetime import datetime, timezone, timedelta
-from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, RoundGuideline, Award
+from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, RoundGuideline, Award, OlympiadTimeline
 from olympiad.utils.round2_quota import compute_school_quota_table
 from olympiad.utils.round3_quota import compute_district_quota_table, get_capital_districts
 from accounts.models import Province
@@ -559,3 +559,19 @@ def olympiad_top_stats(request, olympiad_id):
         "score_counts": score_counts,
     }
     return render(request, "olympiad/olympiad_top_stats.html", context)
+
+
+def olympiad_timeline_view(request):
+    """ММО-ийн Улсын олимпиадуудын түүхэн жагсаалт (imo-official.org/editions
+    хуудастай төстэй): дугаар, огноо, байршил, тайлбар, оролцогчдын тоо.
+
+    OlympiadTimeline нь Olympiad-аас тооцоологддоггүй бие даасан хүснэгт —
+    staff зөвхөн үүнийг л (Django admin-аар) засварлаж шинэ мөр нэмнэ.
+    """
+    rows = OlympiadTimeline.objects.select_related('school_year', 'host').all()
+    next_edition = (rows[0].number + 1) if rows else 1
+    return render(request, 'olympiad/timeline.html', {
+        'rows': rows,
+        'next_edition': next_edition,
+        'next_edition_name': f'ММО-{next_edition}-р олимпиад',
+    })

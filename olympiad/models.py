@@ -544,3 +544,34 @@ class ScoreSheet(models.Model):
         # нийт оноо тооцох
         self.total = sum(getattr(self, f"s{i+1}") or 0 for i in range(20))
         super().save(*args, **kwargs)
+
+
+class OlympiadTimeline(models.Model):
+    """Улсын олимпиадын түүхэн жагсаалт (/olympiads/timeline/ хуудас).
+
+    Round=4 Olympiad бичлэгүүдээс тооцоолж гаргадаггүй, харин бие даасан хүснэгт —
+    staff зөвхөн энд засварлана, Olympiad-ийн round=4 бичлэгүүдэд хамаагүй.
+    """
+    number = models.PositiveIntegerField(unique=True, verbose_name='Дугаар')
+    school_year = models.ForeignKey(
+        SchoolYear, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name='Хичээлийн жил',
+        help_text='Тухайн олимпиадтай холбоотой хичээлийн жил.',
+    )
+    start_date = models.DateField(null=True, blank=True, verbose_name='Эхэлсэн огноо')
+    end_date = models.DateField(null=True, blank=True, verbose_name='Дууссан огноо')
+    host = models.ForeignKey(Province, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Байршил')
+    description = models.TextField(blank=True, default='', verbose_name='Тайлбар')
+    contestants = models.PositiveIntegerField(null=True, blank=True, verbose_name='Оролцогчдын тоо')
+    series_file_url = models.URLField(
+        blank=True, null=True, verbose_name='Цуврал',
+        help_text='Тухайн олимпиадын бодлого/хариултын цувралын PDF файлын холбоос.',
+    )
+
+    class Meta:
+        ordering = ['-number']
+        verbose_name = 'Олимпиадын түүхэн бичлэг'
+        verbose_name_plural = 'Олимпиадын түүх (timeline)'
+
+    def __str__(self):
+        return f'ММО-{self.number}'

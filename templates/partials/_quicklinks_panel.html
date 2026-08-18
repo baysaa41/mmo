@@ -20,8 +20,8 @@
         <li><a class="home-quicklink" href="{% url 'olympiad_problems_home' %}">
             <i class="fas fa-book"></i> Олимпиадын бодлогууд <i class="fas fa-chevron-right"></i>
         </a></li>
-        <li><a class="home-quicklink" href="{% url 'posts:post_view' %}?id=435">
-            <i class="fas fa-stream"></i> Олимпиадын цувралууд <i class="fas fa-chevron-right"></i>
+        <li><a class="home-quicklink" href="{% url 'olympiad_timeline' %}">
+            <i class="fas fa-history"></i> Олимпиадын түүх <i class="fas fa-chevron-right"></i>
         </a></li>
         {% if user.is_authenticated %}
             <li><a class="home-quicklink" href="{% url 'olympiad_supplement_home' %}">

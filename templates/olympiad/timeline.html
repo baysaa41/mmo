@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Олимпиадын түүх{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+            <h3>Улсын олимпиадын түүх</h3>
+            <p class="lead text-muted mb-0">ММО-ийн Улсын шатанд зохион байгуулагдсан олимпиадуудын жагсаалт, дугаарлалт.</p>
+        </div>
+        {% if request.user.is_staff %}
+            <a class="btn btn-primary btn-sm flex-shrink-0"
+               href="{% url 'admin:olympiad_olympiadtimeline_add' %}?number={{ next_edition }}"
+               target="_blank">
+                <i class="fas fa-plus me-1"></i> Дараагийн олимпиад нэмэх (№{{ next_edition }})
+            </a>
+        {% endif %}
+    </div>
+    <hr class="my-3">
+
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle">
+            <colgroup>
+                <col style="width:6%">
+                <col style="width:10%">
+                <col style="width:16%">
+                <col style="width:12%">
+                <col style="width:18%">
+                <col style="width:10%">
+                <col style="width:8%">
+                {% if request.user.is_staff %}<col style="width:10%">{% endif %}
+            </colgroup>
+            <tr>
+                <th>№</th>
+                <th>Хичээлийн жил</th>
+                <th>Огноо</th>
+                <th>Байршил</th>
+                <th>Тайлбар</th>
+                <th>Оролцогчид</th>
+                <th>Цуврал</th>
+                {% if request.user.is_staff %}<th>Засах</th>{% endif %}
+            </tr>
+            {% for row in rows %}
+                <tr>
+                    <td><strong>{{ row.number }}</strong></td>
+                    <td>{{ row.school_year.name|default:'—' }}</td>
+                    <td>
+                        {% if row.start_date %}
+                            {{ row.start_date|date:'Y-m-d' }}{% if row.end_date and row.end_date != row.start_date %} — {{ row.end_date|date:'Y-m-d' }}{% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ row.host.name|default:'—' }}</td>
+                    <td>{{ row.description|default:'—'|truncatechars:80 }}</td>
+                    <td>
+                        {% if row.contestants %}
+                            {{ row.contestants }} оролцогч
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.series_file_url %}
+                            <a href="{{ row.series_file_url }}" target="_blank" title="Цуврал (PDF)"><i class="fas fa-file-pdf text-danger"></i></a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    {% if request.user.is_staff %}
+                        <td>
+                            <a href="{% url 'admin:olympiad_olympiadtimeline_change' row.id %}" target="_blank" title="Засах">
+                                <i class="fas fa-edit text-secondary"></i>
+                            </a>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-secondary">Мэдээлэл алга байна.</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <p class="text-muted small">Байршил болон өмнөх жилүүдийн оролцогчдын тоо зэрэг дутуу мэдээллийг цаашид нөхөж баяжуулна.
+        Мэдээлэл дутуу, алдаатай бол <a href="mailto:baysa@mmo.mn">baysa@mmo.mn</a> хаягаар холбогдоно уу.</p>
+{% endblock %}

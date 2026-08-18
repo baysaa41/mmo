@@ -2,10 +2,11 @@ from django.contrib import admin
 
 # Register your models here.
 
-from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, Result, Solution, Team, Upload, Tag, RoundGuideline
+from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, Result, Solution, Team, Upload, Tag, RoundGuideline, OlympiadTimeline
 
 class SchoolYearAdmin(admin.ModelAdmin):
     list_display = ("name", "start", "end", "guideline_post")
+    search_fields = ("name",)
     autocomplete_fields = ("guideline_post",)
 
 admin.site.register(SchoolYear, SchoolYearAdmin)
@@ -16,6 +17,16 @@ class RoundGuidelineAdmin(admin.ModelAdmin):
     list_filter = ("school_year", "round")
 
 admin.site.register(RoundGuideline, RoundGuidelineAdmin)
+
+
+class OlympiadTimelineAdmin(admin.ModelAdmin):
+    list_display = ("number", "school_year", "start_date", "end_date", "host", "contestants", "series_file_url")
+    list_editable = ("host", "contestants", "series_file_url")
+    ordering = ("-number",)
+    search_fields = ("number", "description")
+    autocomplete_fields = ("school_year", "host")
+
+admin.site.register(OlympiadTimeline, OlympiadTimelineAdmin)
 
 admin.site.register(Topic)
 admin.site.register(AnswerChoice)

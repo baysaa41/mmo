@@ -23,6 +23,7 @@ from .views_api import SaveAnswerAPIView
 urlpatterns = [
     # === I. Нүүр хуудас ба үндсэн үзэгдлүүд ===
     path('', views_public.olympiads_home, name='olympiad_home'),
+    path('timeline/', views_public.olympiad_timeline_view, name='olympiad_timeline'),
     path('round/<int:round>/', views_public.round_guideline_view, name='olympiad_round_detail'),
     path('round2-quota/', views_public.round2_school_quota_view, name='round2_school_quota'),
     path('round2-quota-summary/', views_public.round2_quota_summary_view, name='round2_quota_summary'),
