@@ -538,8 +538,9 @@ class ScoreSheet(models.Model):
 
     def save(self, *args, **kwargs):
         # зөвхөн анх үүсэх үед school-г онооно
+        # (UserMeta байхгүй бол сургуулийг тодорхойгүй буюу None-ээр үлдээнэ)
         if not self.pk and not self.school:
-            self.school = self.user.data.school
+            self.school = self.user.data.school if hasattr(self.user, 'data') and self.user.data else None
 
         # нийт оноо тооцох
         self.total = sum(getattr(self, f"s{i+1}") or 0 for i in range(20))

@@ -204,6 +204,8 @@
                                 <a href="{% url 'olympiad_answer_view' olympiad.id %}?s={{ data.school.id }}">
                                     {{ data.school.name }}
                                 </a>
+                            {% else %}
+                                Тодорхойгүй
                             {% endif %}
                         </td>
                         {% for score in data.scores %}
