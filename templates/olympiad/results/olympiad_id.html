@@ -198,7 +198,7 @@
                                 ID-гүй
                             {% endif %}
                         </td>
-                        <td>{{ data.province }}</td>
+                        <td>{{ data.province|default:"Тодорхойгүй" }}</td>
                         <td>
                             {% if data.school %}
                                 <a href="{% url 'olympiad_answer_view' olympiad.id %}?s={{ data.school.id }}">
