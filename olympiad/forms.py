@@ -53,11 +53,15 @@ class ChangeScoreSheetSchoolForm(forms.Form):
     province = forms.ModelChoiceField(
         queryset=Province.objects.all().order_by("name"),
         label="Аймаг/Дүүрэг",
+        required=False,
+        empty_label="Тодорхойгүй",
         widget=forms.Select(attrs={"class": "form-select", "id": "province-select"})
     )
     school = forms.ModelChoiceField(
         queryset=School.objects.none(),
         label="Сургууль",
+        required=False,
+        empty_label="Тодорхойгүй",
         widget=forms.Select(attrs={"class": "form-select", "id": "school-select"})
     )
     prizes = forms.CharField(

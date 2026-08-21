@@ -158,7 +158,9 @@ def scoresheet_change_school(request, scoresheet_id):
 
     if request.method == "POST":
         form = ChangeScoreSheetSchoolForm(request.POST)
-        if form.is_valid():
+        # province солигдоход JS автоматаар илгээдэг сургуулийн жагсаалт
+        # шинэчлэх зориулалттай илгээлт тул хадгалахгүй, зөвхөн дахин рендэрлэнэ
+        if "province_refresh" not in request.POST and form.is_valid():
             sheet.school = form.cleaned_data["school"]
             sheet.prizes = form.cleaned_data.get("prizes", "")
             sheet.save()

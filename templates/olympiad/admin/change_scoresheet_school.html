@@ -41,8 +41,15 @@
 
 <script>
   // province сонгогдоход формоо автоматаар дахин илгээж сургуулиудыг ачаалуулах
+  // (энэ илгээлт зөвхөн сургуулийн жагсаалтыг шинэчлэх зорилготой тул хадгалахгүй)
   document.getElementById('province-select').addEventListener('change', function() {
-    document.getElementById('school-change-form').submit();
+    var form = document.getElementById('school-change-form');
+    var flag = document.createElement('input');
+    flag.type = 'hidden';
+    flag.name = 'province_refresh';
+    flag.value = '1';
+    form.appendChild(flag);
+    form.submit();
   });
 </script>
 {% endblock %}
