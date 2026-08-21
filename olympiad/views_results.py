@@ -166,10 +166,7 @@ def olympiad_results(request, olympiad_id):
         score_data_list = []
         for sheet in page_obj:
             try:
-                province = (
-                    (sheet.school.province.name if sheet.school and sheet.school.province else "")
-                    or (sheet.user.data.province.name if sheet.user.data and sheet.user.data.province else "")
-                )
+                province = sheet.school.province.name if sheet.school and sheet.school.province else ""
                 score_data_list.append({
                     "scoresheet_id": sheet.id,
                     "list_rank": getattr(sheet, list_rank_field),
