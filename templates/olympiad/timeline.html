@@ -52,7 +52,7 @@
                         {% endif %}
                     </td>
                     <td>{{ row.host.name|default:'—' }}</td>
-                    <td>{{ row.description|default:'—'|truncatechars:80 }}</td>
+                    <td{% if row.description %} title="{{ row.description }}" style="cursor:help; text-decoration:underline dotted; text-decoration-color:#ccc;"{% endif %}>{{ row.description|default:'—'|truncatechars:80 }}</td>
                     <td>
                         {% if row.contestants %}
                             {{ row.contestants }} оролцогч
