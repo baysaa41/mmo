@@ -6,16 +6,18 @@ class ProvinceEditForm(forms.ModelForm):
     """Аймаг, дүүргийн мэдээлэл засварлах форм"""
     class Meta:
         model = Province
-        fields = ['name', 'zone', 'contact_person']
+        fields = ['name', 'zone', 'contact_person', 'registrar']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'zone': forms.Select(attrs={'class': 'form-control'}),
             'contact_person': forms.Select(attrs={'class': 'form-control'}),
+            'registrar': forms.Select(attrs={'class': 'form-control'}),
         }
         labels = {
             'name': 'Аймаг, дүүргийн нэр',
             'zone': 'Бүс',
-            'contact_person': 'Холбоо барих хүн',
+            'contact_person': 'Аймгийн удирдах ажилтан',
+            'registrar': 'Бүртгэгч багш',
         }
 
 

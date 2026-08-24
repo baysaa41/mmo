@@ -49,8 +49,8 @@ class AuthorAdmin(admin.ModelAdmin):
 admin.site.register(Author, AuthorAdmin)
 
 class ProvinceAdmin(admin.ModelAdmin):
-    list_display = ('name','zone')
+    list_display = ('name','zone', 'contact_person', 'registrar')
     search_fields = ('name',)
-    autocomplete_fields = ['contact_person']
+    autocomplete_fields = ['contact_person', 'registrar']
 
 admin.site.register(Province,ProvinceAdmin)

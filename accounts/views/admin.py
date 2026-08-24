@@ -1008,7 +1008,7 @@ def province_contacts(request):
     from ..models import Province, Zone
     from django.contrib.auth.models import User
 
-    provinces = Province.objects.select_related('zone', 'contact_person').order_by('zone__name', 'name')
+    provinces = Province.objects.select_related('zone', 'contact_person', 'registrar').order_by('zone__name', 'name')
     zones = Zone.objects.select_related('contact_person').order_by('name')
 
     if request.method == 'POST':
@@ -1028,6 +1028,24 @@ def province_contacts(request):
                     user = User.objects.get(id=int(user_id))
                     province.contact_person = user
                     province.save(update_fields=['contact_person'])
+                    messages.success(request, f'"{province.name}" → {user.last_name} {user.first_name} (ID: {user.id})')
+                except (ValueError, User.DoesNotExist):
+                    messages.error(request, f'ID={user_id} хэрэглэгч олдсонгүй.')
+
+        elif action == 'change_province_registrar':
+            province_id = request.POST.get('province_id')
+            user_id = request.POST.get('user_id', '').strip()
+            province = get_object_or_404(Province, id=province_id)
+
+            if not user_id:
+                province.registrar = None
+                province.save(update_fields=['registrar'])
+                messages.success(request, f'"{province.name}" аймгийн бүртгэгч багшийг хаслаа.')
+            else:
+                try:
+                    user = User.objects.get(id=int(user_id))
+                    province.registrar = user
+                    province.save(update_fields=['registrar'])
                     messages.success(request, f'"{province.name}" → {user.last_name} {user.first_name} (ID: {user.id})')
                 except (ValueError, User.DoesNotExist):
                     messages.error(request, f'ID={user_id} хэрэглэгч олдсонгүй.')
@@ -1085,6 +1103,40 @@ def province_contacts(request):
                 province.contact_person = user
                 province.save(update_fields=['contact_person'])
                 messages.success(request, f'"{province.name}" → шинэ хэрэглэгч {user.last_name} {user.first_name} (ID: {user.id}) үүсгэж холболоо.')
+
+        elif action == 'create_and_assign_province_registrar':
+            province_id = request.POST.get('province_id')
+            province = get_object_or_404(Province, id=province_id)
+            new_last_name = request.POST.get('new_last_name', '').strip()
+            new_first_name = request.POST.get('new_first_name', '').strip()
+            new_email = request.POST.get('new_email', '').strip()
+            new_phone = request.POST.get('new_phone', '').strip()
+
+            if not new_last_name or not new_first_name:
+                messages.error(request, 'Овог, нэр заавал оруулна.')
+            else:
+                import time
+                username = f'province_{province.id}_registrar_{int(time.time())}'
+                user = User.objects.create_user(
+                    username=username,
+                    first_name=new_first_name,
+                    last_name=new_last_name,
+                    email=new_email,
+                    password=User.objects.make_random_password(),
+                )
+                from ..models import UserMeta
+                meta, _ = UserMeta.objects.get_or_create(user=user)
+                meta.province = province
+                if new_phone:
+                    try:
+                        meta.mobile = int(new_phone)
+                    except ValueError:
+                        pass
+                meta.save()
+
+                province.registrar = user
+                province.save(update_fields=['registrar'])
+                messages.success(request, f'"{province.name}" → шинэ бүртгэгч багш {user.last_name} {user.first_name} (ID: {user.id}) үүсгэж холболоо.')
 
         elif action == 'create_and_assign_zone':
             zone_id = request.POST.get('zone_id')

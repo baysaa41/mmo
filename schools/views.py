@@ -46,8 +46,10 @@ def my_managed_schools_view(request):
     schools_managing = request.user.managing.all()
     my_schools = (schools_moderating | schools_managing).select_related('user', 'manager', 'group', 'province').distinct().order_by('province__name', 'name')
 
-    # Аймгийн contact_person эсвэл Province manager эсэхийг шалгах
-    managed_province = Province.objects.filter(contact_person=request.user).first()
+    # Аймгийн удирдах ажилтан/бүртгэгч багш эсвэл Province manager эсэхийг шалгах
+    managed_province = Province.objects.filter(
+        Q(contact_person=request.user) | Q(registrar=request.user)
+    ).first()
     if not managed_province:
         import re as _re
         for g in request.user.groups.values_list('name', flat=True):
@@ -80,8 +82,7 @@ def all_schools_registry_view(request):
     if pid:
         try:
             province = Province.objects.get(id=pid)
-            # Аймгийн contact эсвэл Province_{id}_Managers group-д байгаа эсэхийг шалгах
-            if province.contact_person == request.user or request.user.groups.filter(name=f"Province_{province.id}_Managers").exists():
+            if province.user_has_access(request.user):
                 managed_province = province
             elif not is_staff:
                 messages.error(request, 'Та энэ аймгийн сургуулиудыг удирдах эрхгүй.')
@@ -174,7 +175,7 @@ def school_dashboard(request, school_id):
         groups=school.group
     )
 
-    is_province_contact = school.province and school.province.contact_person == request.user
+    is_province_contact = bool(school.province and school.province.user_has_access(request.user))
 
     context = {
         'school': school,
@@ -934,8 +935,7 @@ def manage_all_schools_view(request):
     if province_id:
         try:
             province = Province.objects.get(id=province_id)
-            # Аймгийн contact эсвэл Province_{id}_Managers group-д байгаа эсэхийг шалгах
-            if province.contact_person == request.user or request.user.groups.filter(name=f"Province_{province.id}_Managers").exists():
+            if province.user_has_access(request.user):
                 managed_province = province
             elif not is_staff:
                 messages.error(request, 'Та энэ аймгийн сургуулиудыг удирдах эрхгүй.')
@@ -1030,7 +1030,7 @@ def change_school_admin_view(request, school_id):
     """
     school = get_object_or_404(School, id=school_id)
 
-    is_province_contact = school.province and school.province.contact_person == request.user
+    is_province_contact = bool(school.province and school.province.user_has_access(request.user))
     is_manager = school.manager == request.user
     if not request.user.is_staff and not is_province_contact and not is_manager:
         messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
@@ -1242,7 +1242,7 @@ def change_school_manager_view(request, school_id):
     """
     school = get_object_or_404(School, id=school_id)
 
-    is_province_contact = school.province and school.province.contact_person == request.user
+    is_province_contact = bool(school.province and school.province.user_has_access(request.user))
     if not request.user.is_staff and not is_province_contact:
         messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
         return redirect('my_managed_schools')

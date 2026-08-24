@@ -20,15 +20,7 @@ from openpyxl.styles import Border, Side, Font, Alignment
 
 def user_can_manage_province(user, province):
     """Хэрэглэгч аймгаа удирдах эрхтэй эсэхийг шалгах"""
-    if user.is_staff:
-        return True
-
-    if province.contact_person == user:
-        return True
-
-    # Province_{id}_Managers группт орсон эсэх
-    group_name = f"Province_{province.id}_Managers"
-    if user.groups.filter(name=group_name).exists():
+    if province.user_has_access(user):
         return True
 
     # edit_province эрхтэй эсэх
@@ -47,7 +39,7 @@ def my_managed_provinces(request):
 
     if request.user.is_staff:
         # Staff бол бүх аймгийг харуулна
-        managed_provinces = Province.objects.all().select_related('zone', 'contact_person').order_by('name')
+        managed_provinces = Province.objects.all().select_related('zone', 'contact_person', 'registrar').order_by('name')
         is_staff_access = True
     else:
         # Province_{id}_Managers group-д байгаа аймгуудын ID-г олох
@@ -60,10 +52,10 @@ def my_managed_provinces(request):
             except (ValueError, AttributeError):
                 continue
 
-        # Contact person эсвэл Province_{id}_Managers group-д байгаа аймгууд
+        # Удирдах ажилтан, бүртгэгч багш эсвэл Province_{id}_Managers group-д байгаа аймгууд
         managed_provinces = Province.objects.filter(
-            Q(contact_person=request.user) | Q(id__in=province_ids)
-        ).select_related('zone', 'contact_person').distinct().order_by('name')
+            Q(contact_person=request.user) | Q(registrar=request.user) | Q(id__in=province_ids)
+        ).select_related('zone', 'contact_person', 'registrar').distinct().order_by('name')
 
     context = {
         'provinces': managed_provinces,
@@ -91,6 +83,35 @@ def province_change_contact(request, province_id):
                 province.contact_person = user
                 province.save(update_fields=['contact_person'])
                 messages.success(request, f'"{province.name}" аймгийн удирдах хүнийг {user.last_name} {user.first_name} (ID: {user.id}) болгож солилоо.')
+            except (ValueError, User.DoesNotExist):
+                messages.error(request, f'ID={user_id} хэрэглэгч олдсонгүй.')
+
+    return redirect('province_dashboard', province_id=province_id)
+
+
+@login_required
+def province_change_registrar(request, province_id):
+    """Аймгийн бүртгэгч багшийг солих (staff эсвэл тухайн аймгийн удирдах ажилтан)"""
+    province = get_object_or_404(Province, id=province_id)
+
+    if not (request.user.is_staff or province.contact_person == request.user):
+        messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
+        return redirect('province_dashboard', province_id=province_id)
+
+    if request.method == 'POST':
+        user_id = request.POST.get('registrar_id', '').strip()
+
+        if not user_id:
+            # Хоосон болгох
+            province.registrar = None
+            province.save(update_fields=['registrar'])
+            messages.success(request, f'"{province.name}" аймгийн бүртгэгч багшийг хаслаа.')
+        else:
+            try:
+                user = User.objects.get(id=int(user_id))
+                province.registrar = user
+                province.save(update_fields=['registrar'])
+                messages.success(request, f'"{province.name}" аймгийн бүртгэгч багшийг {user.last_name} {user.first_name} (ID: {user.id}) болгож солилоо.')
             except (ValueError, User.DoesNotExist):
                 messages.error(request, f'ID={user_id} хэрэглэгч олдсонгүй.')
 

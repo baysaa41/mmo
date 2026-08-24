@@ -46,16 +46,9 @@ class School(models.Model):
         if self.manager == user:
             return True
 
-        # Аймгийн manager эрх шалгах
-        if self.province:
-            # Province contact person эсэх
-            if self.province.contact_person == user:
-                return True
-
-            # Province_{id}_Managers group-д байгаа эсэх
-            group_name = f"Province_{self.province.id}_Managers"
-            if user.groups.filter(name=group_name).exists():
-                return True
+        # Аймгийн удирдах ажилтан/бүртгэгч багш эрх шалгах
+        if self.province and self.province.user_has_access(user):
+            return True
 
         return False
 

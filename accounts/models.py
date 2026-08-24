@@ -105,7 +105,12 @@ class TeacherStudent(models.Model):
 class Province(models.Model):
     name = models.CharField(max_length=120, null=True)
     zone = models.ForeignKey('Zone', on_delete=models.SET_NULL, null=True)
-    contact_person = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    contact_person = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Аймгийн удирдах ажилтан')
+    registrar = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='registering_provinces',
+        verbose_name='Бүртгэгч багш'
+    )
 
     class Meta:
         permissions = [
@@ -114,6 +119,22 @@ class Province(models.Model):
 
     def __str__(self):
         return '{}'.format(self.name)
+
+    def user_has_access(self, user):
+        """
+        Хэрэглэгч энэ аймаг/дүүргийг удирдах эрхтэй эсэхийг шалгана.
+        Staff, удирдах ажилтан (contact_person), бүртгэгч багш (registrar),
+        эсвэл Province_{id}_Managers группд байгаа бол эрхтэй.
+        """
+        if user.is_staff:
+            return True
+        if self.contact_person == user:
+            return True
+        if self.registrar == user:
+            return True
+        if user.groups.filter(name=f"Province_{self.id}_Managers").exists():
+            return True
+        return False
 
 
 class Zone(models.Model):

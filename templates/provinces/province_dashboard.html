@@ -61,6 +61,37 @@
         </div>
     {% endif %}
 
+    {% if user.is_staff or province.contact_person == user %}
+        <div class="card border-info mb-4">
+            <div class="card-header bg-info text-dark">
+                <span><i class="fas fa-user-edit me-1"></i> Бүртгэгч багш</span>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Одоогийн бүртгэгч багш:</strong>
+                    {% if province.registrar %}
+                        {{ province.registrar.last_name }} {{ province.registrar.first_name }}
+                        <span class="text-muted">(ID: {{ province.registrar.id }})</span>
+                    {% else %}
+                        <span class="text-muted">Тодорхойгүй</span>
+                    {% endif %}
+                </p>
+                <form method="post" action="{% url 'province_change_registrar' province.id %}" class="d-flex align-items-end gap-2">
+                    {% csrf_token %}
+                    <div>
+                        <label for="registrar_id" class="form-label mb-0" style="font-size: 0.85em;">Хэрэглэгчийн ID</label>
+                        <input type="number" name="registrar_id" id="registrar_id"
+                               class="form-control form-control-sm" style="width: 140px;"
+                               placeholder="ID оруулах"
+                               value="{{ province.registrar.id|default:'' }}">
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-info">Солих</button>
+                </form>
+                <div class="form-text">Хоосон орхиод "Солих" дарвал бүртгэгч багшийг хасна.</div>
+            </div>
+        </div>
+    {% endif %}
+
     <!-- Заавар -->
     <div class="card mb-4 border-warning">
         <div class="card-header bg-warning bg-opacity-25" data-bs-toggle="collapse" data-bs-target="#guideCollapse" style="cursor:pointer">

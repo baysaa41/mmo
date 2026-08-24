@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.views.decorators.http import require_POST
 
 from schools.models import School
@@ -124,8 +124,8 @@ def is_manager(user_id):
     if School.objects.filter(manager=user).exists():
         return True
 
-    # Аймгийн contact person эрх
-    if Province.objects.filter(contact_person=user).exists():
+    # Аймгийн удирдах ажилтан/бүртгэгч багш эрх
+    if Province.objects.filter(Q(contact_person=user) | Q(registrar=user)).exists():
         return True
 
     # Province_{id}_Managers group эрх
