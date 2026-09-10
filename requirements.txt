@@ -71,7 +71,7 @@ django-storages==1.14.6
 # ==============================================================================
 pandas==3.0.3
 numpy==2.5.1
-openpyxl==3.1.1
+openpyxl==3.1.5
 
 # ==============================================================================
 # Machine Learning (school_predictor.pkl, see accounts/management/commands/fill_school_prediction.py)
