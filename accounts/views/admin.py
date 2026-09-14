@@ -1014,25 +1014,7 @@ def province_contacts(request):
     if request.method == 'POST':
         action = request.POST.get('action')
 
-        if action == 'change_province_contact':
-            province_id = request.POST.get('province_id')
-            user_id = request.POST.get('user_id', '').strip()
-            province = get_object_or_404(Province, id=province_id)
-
-            if not user_id:
-                province.contact_person = None
-                province.save(update_fields=['contact_person'])
-                messages.success(request, f'"{province.name}" аймгийн удирдах хүнийг хаслаа.')
-            else:
-                try:
-                    user = User.objects.get(id=int(user_id))
-                    province.contact_person = user
-                    province.save(update_fields=['contact_person'])
-                    messages.success(request, f'"{province.name}" → {user.last_name} {user.first_name} (ID: {user.id})')
-                except (ValueError, User.DoesNotExist):
-                    messages.error(request, f'ID={user_id} хэрэглэгч олдсонгүй.')
-
-        elif action == 'change_province_registrar':
+        if action == 'change_province_registrar':
             province_id = request.POST.get('province_id')
             user_id = request.POST.get('user_id', '').strip()
             province = get_object_or_404(Province, id=province_id)

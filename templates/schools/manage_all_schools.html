@@ -116,7 +116,7 @@
                             <th class="text-center align-middle">Менежер</th>
                             <th class="text-center align-middle">Сүүлд нэвтэрсэн</th>
                             {% if request.user.is_staff %}
-                                <th class="text-center align-middle" colspan="3">Үйлдэл</th>
+                                <th class="text-center align-middle" colspan="2">Үйлдэл</th>
                             {% endif %}
                         </tr>
                         </thead>
@@ -149,11 +149,6 @@
                                     {% endif %}
                                 </td>
                                 {% if request.user.is_staff %}
-                                    <td class="text-center">
-                                        <a href="{% url 'change_school_manager' school.id %}" class="btn btn-sm btn-success" target="_blank">
-                                            <i class="fas fa-user-tie"></i> Менежер&nbsp;солих
-                                        </a>
-                                    </td>
                                     <td class="text-center">
                                         {% if school.manager %}
                                             <a href="{% url 'change_school_manager_password' school.manager.id %}" class="btn btn-sm btn-secondary" target="_blank">

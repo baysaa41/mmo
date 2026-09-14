@@ -27,7 +27,7 @@
             <div class="card-body">
                 <h6 class="fw-bold">Сургуулийн мэдээлэл</h6>
                 <ul>
-                    <li>Менежер, бүртгэгч багшийн мэдээллийг <i class="fas fa-pen fa-xs"></i> засах, <i class="fas fa-key fa-xs"></i> нууц үг солих товчоор өөрчилнө.</li>
+                    <li>Менежер, бүртгэгч багшийн мэдээллийг <i class="fas fa-pen fa-xs"></i> засах, <i class="fas fa-key fa-xs"></i> нууц үг солих товчоор өөрчилнө. Менежер нь системээс томилогддог тул <i class="fas fa-exchange-alt fa-xs"></i> хэрэглэгч сольж болохгүй — зөвхөн бүртгэгч багшийг л сольж болно.</li>
                     <li><strong>"Мэдээлэл засах"</strong> товчоор сургуулийн нэр, хаяг зэрэг мэдээллийг засна.</li>
                 </ul>
 
@@ -61,9 +61,6 @@
                             <a href="{% url 'change_school_manager_password' school.manager.id %}" class="ms-1" title="Нууц үг солих"><i class="fas fa-key fa-xs"></i></a>
                         {% else %}
                             <span class="text-muted">(Тодорхойгүй)</span>
-                        {% endif %}
-                        {% if request.user.is_staff or is_province_contact %}
-                        <a href="{% url 'change_school_manager' school.id %}" class="ms-1" title="Менежер солих"><i class="fas fa-exchange-alt fa-xs"></i></a>
                         {% endif %}
                     </p>
                 </div>

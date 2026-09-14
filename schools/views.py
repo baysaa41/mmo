@@ -1235,47 +1235,6 @@ def manager_change_moderator_view(request, school_id):
 
 
 @login_required
-def change_school_manager_view(request, school_id):
-    """
-    Сургуулийн менежерийг хайж олоод солих хуудас.
-    Staff болон аймгийн contact_person хандах эрхтэй.
-    """
-    school = get_object_or_404(School, id=school_id)
-
-    is_province_contact = bool(school.province and school.province.user_has_access(request.user))
-    if not request.user.is_staff and not is_province_contact:
-        messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
-        return redirect('my_managed_schools')
-
-    search_results = None
-
-    if request.method == 'POST':
-        if 'assign_manager' in request.POST:
-            user_id = request.POST.get('user_id')
-            new_manager = get_object_or_404(User, id=user_id)
-            school.manager = new_manager
-            school.save()
-            messages.success(request, f"'{school.name}' сургуулийн менежерийг '{new_manager.get_full_name()}' хэрэглэгчээр амжилттай солилоо.")
-            if request.user.is_staff:
-                return redirect('manage_all_schools')
-            return redirect('school_dashboard', school_id=school.id)
-
-        search_form = UserSearchForm(request.POST)
-        if search_form.is_valid():
-            search_results = search_form.search_users()
-
-    else:
-        search_form = UserSearchForm()
-
-    context = {
-        'school': school,
-        'search_form': search_form,
-        'search_results': search_results,
-    }
-    return render(request, 'schools/change_school_manager.html', context)
-
-
-@login_required
 def change_school_manager_password_view(request, user_id):
     """
     Сургуулийн менежерийн нууц үгийг солих хуудас.

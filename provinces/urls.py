@@ -4,8 +4,8 @@ from . import views
 urlpatterns = [
     path('', views.my_managed_provinces, name='my_managed_provinces'),
     path('<int:province_id>/', views.province_dashboard, name='province_dashboard'),
-    path('<int:province_id>/change-contact/', views.province_change_contact, name='province_change_contact'),
     path('<int:province_id>/change-registrar/', views.province_change_registrar, name='province_change_registrar'),
+    path('admin/<int:user_id>/edit/', views.edit_province_admin_view, name='edit_province_admin'),
     path('<int:province_id>/olympiad/<int:olympiad_id>/',
          views.province_olympiad_view, name='province_olympiad_view'),
     path('<int:province_id>/olympiad/<int:olympiad_id>/add-by-threshold/',

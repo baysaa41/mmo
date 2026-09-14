@@ -72,7 +72,7 @@
                     <th style="width: 12%;">Аймаг</th>
                     <th style="width: 8%;">Бүс</th>
                     <th style="width: 18%;">Удирдах ажилтан</th>
-                    <th style="width: 18%;">ID-аар солих</th>
+                    <th style="width: 10%;">Засах</th>
                     <th style="width: 18%;">Бүртгэгч багш</th>
                     <th style="width: 18%;">ID-аар солих</th>
                     <th style="width: 15%;">Шинээр үүсгэх</th>
@@ -96,14 +96,13 @@
                             {% endif %}
                         </td>
                         <td>
-                            <form method="post" class="d-flex gap-1 align-items-center">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="change_province_contact">
-                                <input type="hidden" name="province_id" value="{{ province.id }}">
-                                <input type="number" name="user_id" class="form-control form-control-sm" style="width: 100px;"
-                                       placeholder="User ID" value="{{ province.contact_person.id|default:'' }}">
-                                <button type="submit" class="btn btn-sm btn-outline-primary">Солих</button>
-                            </form>
+                            {% if province.contact_person %}
+                                <a href="{% url 'edit_province_admin' province.contact_person.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                    <i class="fas fa-pen fa-xs"></i> Засах
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
                         </td>
                         <td>
                             {% if province.registrar %}
@@ -127,14 +126,16 @@
                             </form>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-outline-success mb-1"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#createModal"
-                                    data-entity-type="province"
-                                    data-entity-id="{{ province.id }}"
-                                    data-entity-name="{{ province.name }}">
-                                + Удирдах ажилтан
-                            </button>
+                            {% if not province.contact_person %}
+                                <button type="button" class="btn btn-sm btn-outline-success mb-1"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#createModal"
+                                        data-entity-type="province"
+                                        data-entity-id="{{ province.id }}"
+                                        data-entity-name="{{ province.name }}">
+                                    + Удирдах ажилтан
+                                </button>
+                            {% endif %}
                             <button type="button" class="btn btn-sm btn-outline-info"
                                     data-bs-toggle="modal"
                                     data-bs-target="#createModal"

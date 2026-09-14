@@ -6,11 +6,12 @@ from django.http import HttpResponse
 from django.db import transaction
 from django.db.models import Q
 
-from accounts.models import Province, Zone
+from accounts.models import Province, Zone, UserMeta
 from olympiad.models import Olympiad, Award, ScoreSheet, Result, Problem, SchoolYear
 from olympiad.utils.group_management import ensure_olympiad_has_group, get_or_create_round2_group
 from olympiad.utils.round2_quota import compute_school_quota_table
 from schools.models import School
+from schools.forms import UserForm, UserMetaForm
 from django.contrib.auth.models import User, Group
 
 import pandas as pd
@@ -64,29 +65,47 @@ def my_managed_provinces(request):
     return render(request, 'provinces/my_managed_provinces.html', context)
 
 
-@staff_member_required
-def province_change_contact(request, province_id):
-    """Аймгийн удирдах хүнийг солих (staff only)"""
-    province = get_object_or_404(Province, id=province_id)
+@login_required
+def edit_province_admin_view(request, user_id):
+    """
+    Аймгийн удирдах ажилтан/бүртгэгч багшийн профайлыг засах хуудас.
+    Хэрэглэгчийг солихгүй — зөвхөн бүртгэлийн мэдээллийг нь засна
+    (системээс томилогддог тогтмол аккаунт тул).
+    """
+    target_user = get_object_or_404(User, id=user_id)
+
+    province = Province.objects.filter(
+        Q(contact_person=target_user) | Q(registrar=target_user)
+    ).first()
+
+    if not request.user.is_staff:
+        if not province or not province.user_has_access(request.user):
+            messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
+            return redirect('my_managed_provinces')
+
+    user_meta, created = UserMeta.objects.get_or_create(user=target_user)
 
     if request.method == 'POST':
-        user_id = request.POST.get('contact_person_id', '').strip()
+        user_form = UserForm(request.POST, instance=target_user)
+        user_meta_form = UserMetaForm(request.POST, instance=user_meta)
+        if user_form.is_valid() and user_meta_form.is_valid():
+            user_form.save()
+            user_meta_form.save()
+            messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн мэдээллийг амжилттай шинэчиллээ.")
+            if request.user.is_staff:
+                return redirect('province_contacts')
+            return redirect('province_dashboard', province_id=province.id)
+    else:
+        user_form = UserForm(instance=target_user)
+        user_meta_form = UserMetaForm(instance=user_meta)
 
-        if not user_id:
-            # Хоосон болгох
-            province.contact_person = None
-            province.save(update_fields=['contact_person'])
-            messages.success(request, f'"{province.name}" аймгийн удирдах хүнийг хаслаа.')
-        else:
-            try:
-                user = User.objects.get(id=int(user_id))
-                province.contact_person = user
-                province.save(update_fields=['contact_person'])
-                messages.success(request, f'"{province.name}" аймгийн удирдах хүнийг {user.last_name} {user.first_name} (ID: {user.id}) болгож солилоо.')
-            except (ValueError, User.DoesNotExist):
-                messages.error(request, f'ID={user_id} хэрэглэгч олдсонгүй.')
-
-    return redirect('province_dashboard', province_id=province_id)
+    context = {
+        'user_form': user_form,
+        'user_meta_form': user_meta_form,
+        'target_user': target_user,
+        'province': province,
+    }
+    return render(request, 'provinces/edit_province_admin.html', context)
 
 
 @login_required
