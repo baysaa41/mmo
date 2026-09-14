@@ -165,6 +165,67 @@ class CustomPasswordResetView(PasswordResetView):
     email_template_name = 'registration/password_reset_email.html'
     success_url = '/password_reset/done/'
 
+    # Хайлтын жагсаалтад харуулах боломжтой хамгийн олон тохирол. Үүнээс
+    # илүү (жишээ нь сургуулиуд бөөнөөр нь бүртгэхдээ ашигладаг ерөнхий
+    # имэйлүүд дээр мянга мянган хэрэглэгч давхцдаг) бол хайлтын жагсаалт
+    # практик бус тул хэрэглэгчийг username-ээ шууд оруулахыг хүснэ.
+    MAX_SELECTABLE_USERS = 500
+
+    def _save_opts(self, target_users=None):
+        return dict(
+            use_https=self.request.is_secure(),
+            token_generator=self.token_generator,
+            from_email=self.from_email,
+            email_template_name=self.email_template_name,
+            subject_template_name=self.subject_template_name,
+            request=self.request,
+            html_email_template_name=self.html_email_template_name,
+            extra_email_context=self.extra_email_context,
+            target_users=target_users,
+        )
+
+    def form_valid(self, form):
+        email = form.cleaned_data['email']
+        matched_pks = list(form.get_users(email).values_list('pk', flat=True))
+
+        if len(matched_pks) <= 1:
+            form.save(**self._save_opts())
+            return redirect(self.get_success_url())
+
+        # Нэг имэйл дээр олон хэрэглэгч (username) давхцаж байна.
+        selected_username = self.request.POST.get('selected_username', '').strip()
+        if selected_username:
+            chosen = User.objects.filter(
+                pk__in=matched_pks, username=selected_username, is_active=True
+            ).first()
+            if chosen is None:
+                # Санамсаргүй эсвэл зохиомол утга ирсэн ч аль ч тохиолдолд
+                # хэрэглэгч байгаа эсэхийг ил гаргахгүйн тулд амжилттай
+                # хуудас руу чимээгүйхэн шилжинэ (имэйл илгээгдэхгүй).
+                return redirect(self.get_success_url())
+            form.save(**self._save_opts(target_users=[chosen]))
+            return redirect(self.get_success_url())
+
+        if len(matched_pks) > self.MAX_SELECTABLE_USERS:
+            form.add_error(
+                None,
+                'Энэ имэйл хаягтай олон бүртгэл олдсон тул жагсаалт харуулах боломжгүй байна. '
+                'Нууц үгээ сэргээхийн тулд өөрийн хэрэглэгчийн нэрийг (username) шууд оруулна уу. '
+                'Мөн цаашид ийм алдаанаас зайлсхийхийн тулд сургуулийнхаа бүртгэлийн ажилтантай '
+                'холбогдож, өөрийн хувийн имэйл хаягаараа солиулахыг зөвлөж байна.'
+            )
+            return self.form_invalid(form)
+
+        matched_users = (
+            User.objects.filter(pk__in=matched_pks)
+            .select_related('data', 'data__school', 'data__grade')
+            .order_by('last_name', 'first_name', 'username')
+        )
+        context = self.get_context_data(form=form)
+        context['matched_users'] = matched_users
+        context['submitted_identifier'] = email
+        return self.render_to_response(context)
+
 @method_decorator(csrf_protect, name='dispatch')
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     """

@@ -113,10 +113,17 @@ class CustomPasswordResetForm(PasswordResetForm):
             request=None,
             html_email_template_name=None,
             extra_email_context=None,
+            target_users=None,
         ):
             """
             Generate a one-use only link for resetting password and send it to the
             user.
+
+            `target_users` нь заавал биш; заасан бол зөвхөн тэдгээр хэрэглэгчид
+            (get_users(email)-ийн дэд олонлог гэж найдвал зохих) илгээнэ. Энэ нь
+            нэг имэйл дээр олон хэрэглэгч (username) давхцаж байгаа үед хэрэглэгч
+            жагсаалтаас яг аль нэгийг сонгосны дараа зөвхөн түүнд л илгээхэд
+            ашиглагдана.
             """
             email = self.cleaned_data["email"]
             if not domain_override:
@@ -126,7 +133,7 @@ class CustomPasswordResetForm(PasswordResetForm):
             else:
                 site_name = domain = domain_override
 
-            for user in self.get_users(email):
+            for user in (target_users if target_users is not None else self.get_users(email)):
                 user_email = user.email
                 user_name = user.username
                 context = {
