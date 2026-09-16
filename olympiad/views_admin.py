@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.core.cache import cache
 from django.contrib.auth.models import User
 
-from .models import Olympiad, ScoreSheet, Result, SchoolYear, Upload, Problem, Topic
+from .models import Olympiad, ScoreSheet, Result, SchoolYear, Upload, Problem, Topic, Award
 from .forms import ChangeScoreSheetSchoolForm, ResultsGraderForm, UploadForm, ProblemEditForm
 
 from django.http import JsonResponse
@@ -162,8 +162,25 @@ def scoresheet_change_school(request, scoresheet_id):
         # шинэчлэх зориулалттай илгээлт тул хадгалахгүй, зөвхөн дахин рендэрлэнэ
         if "province_refresh" not in request.POST and form.is_valid():
             sheet.school = form.cleaned_data["school"]
-            sheet.prizes = form.cleaned_data.get("prizes", "")
-            sheet.save()
+            prizes_text = form.cleaned_data.get("prizes", "").strip()
+            sheet.prizes = prizes_text
+
+            with transaction.atomic():
+                sheet.save()
+                # Award-ыг эндээс шинэчлэх шалтгаан: generate_scoresheets команд
+                # ScoreSheet.prizes-ийг Award-аас бүрмөсөн дахин угсардаг тул,
+                # энд Award-тай холбохгүй бол дараагийн rerun үед энэ гар
+                # засвар алга болно.
+                Award.objects.filter(
+                    olympiad_id=sheet.olympiad_id, contestant_id=sheet.user_id
+                ).delete()
+                if prizes_text:
+                    Award.objects.create(
+                        olympiad_id=sheet.olympiad_id,
+                        contestant_id=sheet.user_id,
+                        place=prizes_text,
+                    )
+
             return redirect("olympiad_result_view", olympiad_id=sheet.olympiad_id)
     else:
         form = ChangeScoreSheetSchoolForm(initial={
