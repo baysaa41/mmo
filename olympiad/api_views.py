@@ -292,14 +292,15 @@ def user_profile(request, user_id):
     Headers:
     - X-API-Key: API key for authentication
 
-    Хувийн мэдээллийг (email, регистр, хаяг) буцаахгүй.
+    Буцаах: овог, нэр, аймаг/дүүрэг, сургууль, анги, утас, имэйл.
+    Регистр, хаяг, нууц мэдээллийг буцаахгүй.
     """
     if not check_api_key(request):
         return JsonResponse({'error': 'Invalid or missing API key'}, status=401)
 
     try:
         user = User.objects.select_related(
-            'data', 'data__school', 'data__grade'
+            'data', 'data__school', 'data__grade', 'data__province'
         ).get(id=user_id)
     except User.DoesNotExist:
         return JsonResponse({'error': 'Хэрэглэгч олдсонгүй'}, status=404)
@@ -314,7 +315,26 @@ def user_profile(request, user_id):
         'username': user.username,
         'first_name': user.first_name,
         'last_name': user.last_name,
+        'email': user.email,
+        'province': meta.province.name if meta and meta.province_id else None,
         'school': school,
         'grade': meta.grade.name if meta and meta.grade_id else None,
         'mobile': str(meta.mobile) if meta and meta.mobile else None,
     })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def list_provinces(request):
+    """
+    Аймаг/дүүргийн жагсаалт (MathMinds-ийн олимпиадын бүртгэлийн select-д)
+    GET /api/provinces/
+    Headers:
+    - X-API-Key: API key for authentication
+    """
+    if not check_api_key(request):
+        return JsonResponse({'error': 'Invalid or missing API key'}, status=401)
+
+    from accounts.models import Province
+    provinces = Province.objects.exclude(name__isnull=True).exclude(name='').order_by('id')
+    return JsonResponse({'results': [{'id': p.id, 'name': p.name} for p in provinces]})
