@@ -281,3 +281,40 @@ def user_achievements(request, user_id):
             'first_round_count': first_round_count
         }
     })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def user_profile(request, user_id):
+    """
+    Хэрэглэгчийн үндсэн мэдээлэл (MathMinds-ийн олимпиадын бүртгэлийг бөглөхөд)
+    GET /api/users/{user_id}/profile/
+    Headers:
+    - X-API-Key: API key for authentication
+
+    Хувийн мэдээллийг (email, регистр, хаяг) буцаахгүй.
+    """
+    if not check_api_key(request):
+        return JsonResponse({'error': 'Invalid or missing API key'}, status=401)
+
+    try:
+        user = User.objects.select_related(
+            'data', 'data__school', 'data__grade'
+        ).get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Хэрэглэгч олдсонгүй'}, status=404)
+
+    meta = getattr(user, 'data', None)
+    school = None
+    if meta:
+        school = meta.school.name if meta.school_id else meta.user_school_name
+
+    return JsonResponse({
+        'id': user.id,
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'school': school,
+        'grade': meta.grade.name if meta and meta.grade_id else None,
+        'mobile': str(meta.mobile) if meta and meta.mobile else None,
+    })

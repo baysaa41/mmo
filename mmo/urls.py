@@ -37,6 +37,7 @@ urlpatterns = ([
     path('api/olympiads/', olympiad_api.list_olympiads, name='api_olympiads'),
     path('api/olympiads/<int:olympiad_id>/problems/', olympiad_api.olympiad_problems, name='api_olympiad_problems'),
     path('api/users/<int:user_id>/achievements/', olympiad_api.user_achievements, name='api_user_achievements'),
+    path('api/users/<int:user_id>/profile/', olympiad_api.user_profile, name='api_user_profile'),
 ])
 
 if settings.DEBUG:
