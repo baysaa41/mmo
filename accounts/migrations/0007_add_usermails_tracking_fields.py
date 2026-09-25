@@ -3,10 +3,32 @@ import uuid
 from django.db import migrations, models
 
 
-def backfill_tracking_tokens(apps, schema_editor):
+# 0001_initial-д is_opened, tracking_token талбарууд хожим гараар нэмэгдсэн тул
+# шинэ (хоосон) DB дээр энэ migration "column already exists" алдаа өгдөг байв.
+# Одоо зөвхөн DB-д байхгүй баганыг нэмнэ. State-ийн хувьд 0001 эдгээрийг
+# эцсийн хэлбэрээр нь аль хэдийн тодорхойлсон тул state operation хэрэггүй.
+
+def add_missing_tracking_fields(apps, schema_editor):
     UserMails = apps.get_model('accounts', 'UserMails')
-    for row in UserMails.objects.all().only('id').iterator():
-        UserMails.objects.filter(pk=row.pk).update(tracking_token=uuid.uuid4())
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        columns = {
+            col.name for col in
+            connection.introspection.get_table_description(cursor, UserMails._meta.db_table)
+        }
+
+    if 'is_opened' not in columns:
+        schema_editor.add_field(UserMails, UserMails._meta.get_field('is_opened'))
+
+    if 'tracking_token' not in columns:
+        final_field = UserMails._meta.get_field('tracking_token')
+        nullable_field = models.UUIDField(null=True, default=None)
+        nullable_field.set_attributes_from_name('tracking_token')
+        nullable_field.model = UserMails
+        schema_editor.add_field(UserMails, nullable_field)
+        for pk in UserMails.objects.values_list('pk', flat=True).iterator():
+            UserMails.objects.filter(pk=pk).update(tracking_token=uuid.uuid4())
+        schema_editor.alter_field(UserMails, nullable_field, final_field)
 
 
 class Migration(migrations.Migration):
@@ -16,20 +38,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='usermails',
-            name='is_opened',
-            field=models.BooleanField(default=False),
-        ),
-        migrations.AddField(
-            model_name='usermails',
-            name='tracking_token',
-            field=models.UUIDField(null=True, default=None),
-        ),
-        migrations.RunPython(backfill_tracking_tokens, migrations.RunPython.noop),
-        migrations.AlterField(
-            model_name='usermails',
-            name='tracking_token',
-            field=models.UUIDField(default=uuid.uuid4, unique=True),
-        ),
+        migrations.RunPython(add_missing_tracking_fields, migrations.RunPython.noop),
     ]
