@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
@@ -36,6 +37,30 @@ from .forms import UploadExcelForm
 
 from django.contrib.admin.views.decorators import staff_member_required
 from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm
+
+# "Бүх сурагчид" хэсгээс шинээр нэмсэн сурагчид оноох "Бусад" ангилал
+OTHER_LEVEL_ID = 8
+
+
+def _student_schools(target_user):
+    """
+    Сурагчийн харьяалагдах сургуулиуд: UserMeta.school болон
+    сургуулийн группийн гишүүнчлэлээр.
+    """
+    return School.objects.filter(
+        Q(group__user=target_user) | Q(usermeta__user=target_user)
+    ).select_related('province').distinct()
+
+
+def _managed_student_school(request_user, target_user):
+    """
+    request_user нь target_user-ийн аль нэг сургуулийг удирдах эрхтэй
+    (School.user_has_access) бол тэр сургуулийг, эс бөгөөс None буцаана.
+    """
+    for school in _student_schools(target_user):
+        if school.user_has_access(request_user):
+            return school
+    return None
 
 @login_required
 def my_managed_schools_view(request):
@@ -292,23 +317,25 @@ def manage_school_by_level(request, school_id, level_id):
                         new_user.username = f'u{new_user.id}'
                         new_user.save()
 
+                        # Нэмж буй хүний биш, URL-д заасан сургуулийг оноох
+                        # (staff/аймгийн менежер өөр сургуульд нэмэх үед зөрөхгүй).
                         meta_data = {
                             'user': new_user,
-                            'school': request.user.data.school,
-                            'province': request.user.data.province,
+                            'school': school,
+                            'province': school.province,
                         }
                         if level_id != 0:
                             meta_data['level'] = selected_level
 
                         if level_id == 100:
-                            selected_level = Level.objects.get(pk=8)
+                            selected_level = Level.objects.get(pk=OTHER_LEVEL_ID)
                             meta_data['level'] = selected_level
 
                         UserMeta.objects.create(**meta_data)
                         new_user.groups.add(group)
 
                     # Тавтай морилно уу имэйл + password reset link илгээх
-                    school_name = request.user.data.school.name if request.user.data.school else "ММОХ"
+                    school_name = school.name
                     success, error = SchoolEmailService.send_new_user_welcome_with_reset_link(
                         new_user,
                         school_name,
@@ -787,10 +814,15 @@ def edit_user_in_group(request, user_id):
     """
     target_user = get_object_or_404(User, id=user_id)
 
+    # Staff хэрэглэгчийн имэйлийг сольж нууц үг сэргээлгэх замаар эрх авахаас сэргийлнэ.
+    if (target_user.is_staff or target_user.is_superuser) and not request.user.is_superuser:
+        messages.error(request, 'Та staff эрхтэй хэрэглэгчийг засах боломжгүй.')
+        return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
+
     if request.user.is_staff:
         school = School.objects.filter(group__user=target_user).first()
     else:
-        school = School.objects.filter(group__user=target_user, user=request.user).first()
+        school = _managed_student_school(request.user, target_user)
         if not school:
             messages.error(request, 'Та энэ хэрэглэгчийг засах эрхгүй.')
             return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
@@ -877,38 +909,36 @@ def change_student_password_view(request, user_id):
     Сургуулийн модератор нь сурагчийн нууц үгийг солих хуудас.
     """
     target_user = get_object_or_404(User, id=user_id)
-    moderator = request.user
+    is_self = target_user == request.user
 
     # --- АЮУЛГҮЙ БАЙДЛЫН ШАЛГАЛТУУД ---
     # 1. Засварлах гэж буй хэрэглэгч нь staff/superuser биш байх ёстой.
-    if (target_user.is_staff or target_user.is_superuser) and not request.user.is_superuser:
+    if (target_user.is_staff or target_user.is_superuser) and not request.user.is_superuser and not is_self:
         messages.error(request, "Та staff эрхтэй хэрэглэгчийн нууц үгийг солих боломжгүй.")
-        return redirect('school_dashboard', school_id=moderator.data.school.id) # Өөрийнх нь dashboard руу буцаах
+        return redirect('my_managed_schools')
 
-    # 2. Модератор нь тухайн сурагчийн сургуульд хамааралтай эсэхийг шалгах.
-    try:
-        # Сурагчийн сургууль
-        student_school = target_user.data.school
+    # 2. Сурагчийн харьяалагдах сургуулийг удирдах эрхтэй эсэхийг шалгах.
+    #    Сургуульгүй сурагчийг ямар ч модератор удирдах эрхгүй.
+    if is_self or request.user.is_staff:
+        student_school = _student_schools(target_user).first()
+    else:
+        student_school = _managed_student_school(request.user, target_user)
         if not student_school:
-            student_school = moderator.data.school
-        # Модератор/менежерын удирддаг сургуулиудыг олох
-        moderator_schools = School.objects.filter(Q(user=moderator) | Q(manager=moderator))
-
-        if (not student_school or not moderator_schools.filter(pk=student_school.pk).exists()) and not request.user.is_staff:
             messages.error(request, "Та энэ сурагчийн нууц үгийг солих эрхгүй.")
-            return redirect('school_dashboard', school_id=moderator.data.school.id)
-    except UserMeta.DoesNotExist:
-        messages.error(request, "Сурагчийн профайлын мэдээлэл олдсонгүй.")
-        return redirect('school_dashboard', school_id=moderator.data.school.id)
-
+            return redirect('my_managed_schools')
 
     if request.method == 'POST':
         form = SchoolAdminPasswordChangeForm(user=target_user, data=request.POST)
         if form.is_valid():
             form.save()
             messages.success(request, f"'{target_user.get_full_name()}' хэрэглэгчийн нууц үгийг амжилттай солилоо.")
-            # Буцах замыг зөв тодорхойлох
-            return redirect('school_all_users', school_id=student_school.id)
+            if is_self:
+                # Өөрийн нууц үгээ сольсны дараа session-оос гаргахгүй байх
+                update_session_auth_hash(request, target_user)
+                return redirect('user_profile')
+            if student_school:
+                return redirect('school_all_users', school_id=student_school.id)
+            return redirect('my_managed_schools')
     else:
         form = SchoolAdminPasswordChangeForm(user=target_user)
 
@@ -1141,6 +1171,7 @@ def change_school_admin_password_view(request, user_id):
     return render(request, 'schools/change_password.html', context)
 
 
+@staff_member_required
 def school_list_view(request):
     # Textarea-аас орж ирсэн түүхий текстийг авах
     query_string = request.GET.get('q', '')
