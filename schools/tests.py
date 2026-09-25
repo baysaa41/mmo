@@ -185,3 +185,143 @@ class AddNewStudentTests(SchoolAccessTestBase):
         )
         new_user = User.objects.get(email='sukh@example.com')
         self.assertEqual(new_user.data.school, self.school_b)
+
+
+class EnrollmentServiceTests(SchoolAccessTestBase):
+    def setUp(self):
+        from schools import enrollment
+        from schools.models import EnrollmentLog
+        self.enrollment = enrollment
+        self.Log = EnrollmentLog
+
+    def in_group(self, user, school):
+        return user.groups.filter(pk=school.group_id).exists()
+
+    def test_enroll_sets_school_province_level_group_and_logs(self):
+        user = make_user('fresh')
+        action = self.enrollment.enroll(user, self.school_a, by=self.moderator_a, level=self.level)
+        user.data.refresh_from_db()
+        self.assertEqual(action, self.Log.Action.ENROLL)
+        self.assertEqual(user.data.school, self.school_a)
+        self.assertEqual(user.data.province, self.province_a)
+        self.assertEqual(user.data.level, self.level)
+        self.assertTrue(self.in_group(user, self.school_a))
+        log = self.Log.objects.get(user=user)
+        self.assertEqual((log.to_school, log.performed_by), (self.school_a, self.moderator_a))
+
+    def test_enroll_creates_missing_usermeta(self):
+        user = User.objects.create_user(username='no_meta_enroll')
+        self.enrollment.enroll(user, self.school_a)
+        self.assertEqual(UserMeta.objects.get(user=user).school, self.school_a)
+
+    def test_enroll_is_noop_for_existing_member(self):
+        self.assertIsNone(self.enrollment.enroll(self.student_b, self.school_b))
+        self.assertFalse(self.Log.objects.filter(user=self.student_b).exists())
+
+    def test_transfer_leaves_old_group(self):
+        action = self.enrollment.enroll(self.student_b, self.school_a, by=self.staff)
+        self.assertEqual(action, self.Log.Action.TRANSFER)
+        self.assertFalse(self.in_group(self.student_b, self.school_b))
+        self.assertTrue(self.in_group(self.student_b, self.school_a))
+        # дуудагчийн user.data cache шинэчлэгдсэн байх ёстой
+        self.assertEqual(self.student_b.data.school, self.school_a)
+        # UserMeta.save hook давхар UNENROLL log бичихгүй
+        self.assertEqual(self.Log.objects.filter(user=self.student_b).count(), 1)
+
+    def test_unenroll_clears_school_so_student_is_not_pending_again(self):
+        self.assertTrue(self.enrollment.unenroll(self.student_b, self.school_b, by=self.moderator_b))
+        self.student_b.data.refresh_from_db()
+        self.assertIsNone(self.student_b.data.school)
+        self.assertFalse(self.in_group(self.student_b, self.school_b))
+        self.assertEqual(self.Log.objects.get(user=self.student_b).action, self.Log.Action.UNENROLL)
+
+    def test_unenroll_non_member_is_noop(self):
+        self.assertFalse(self.enrollment.unenroll(self.schoolless_student, self.school_a))
+
+    def test_approve_requires_student_to_have_chosen_school(self):
+        self.assertFalse(self.enrollment.approve(self.schoolless_student, self.school_a))
+        self.assertFalse(self.in_group(self.schoolless_student, self.school_a))
+
+    def test_usermeta_save_outside_service_leaves_old_group_and_logs(self):
+        meta = self.student_b.data
+        meta.school = self.school_a
+        meta.save()
+        self.assertFalse(self.in_group(self.student_b, self.school_b))
+        log = self.Log.objects.get(user=self.student_b)
+        self.assertEqual((log.action, log.from_school), (self.Log.Action.UNENROLL, self.school_b))
+
+
+class PendingStudentsTests(SchoolAccessTestBase):
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from schools import enrollment
+        self.enrollment = enrollment
+        self.now = timezone.now()
+        self.long_ago = self.now - timedelta(days=3 * 365)
+
+    def make_pending(self, username, last_login):
+        user = make_user(username, school=self.school_a, province=self.province_a)
+        User.objects.filter(pk=user.pk).update(last_login=last_login)
+        return user
+
+    def test_only_recently_active_or_requested_students_are_pending(self):
+        active = self.make_pending('active', self.now)
+        stale = self.make_pending('stale', self.long_ago)
+        never = self.make_pending('never', None)
+        requested = self.make_pending('requested', None)
+        self.enrollment.record_school_request(requested, None, self.school_a, by=requested)
+
+        pending = set(self.enrollment.pending_students(self.school_a))
+        self.assertEqual(pending, {active, requested})
+        self.assertNotIn(stale, pending)
+        self.assertNotIn(never, pending)
+
+    def test_members_are_not_pending(self):
+        active = self.make_pending('member', self.now)
+        self.school_a.group.user_set.add(active)
+        self.assertFalse(self.enrollment.pending_students(self.school_a).exists())
+
+    def test_approve_all_skips_stale_predicted_students(self):
+        active = self.make_pending('active2', self.now)
+        stale = self.make_pending('stale2', self.long_ago)
+        self.client.force_login(self.moderator_a)
+        self.client.post(
+            reverse('school_all_users', args=[self.school_a.id]), {'approve_all_users': '1'},
+        )
+        self.assertTrue(active.groups.filter(pk=self.school_a.group_id).exists())
+        self.assertFalse(stale.groups.filter(pk=self.school_a.group_id).exists())
+
+    def test_remove_user_view_unenrolls(self):
+        self.client.force_login(self.moderator_b)
+        self.client.post(
+            reverse('school_all_users', args=[self.school_b.id]),
+            {'remove_user': '1', 'user_id': self.student_b.id},
+        )
+        self.student_b.data.refresh_from_db()
+        self.assertIsNone(self.student_b.data.school)
+        self.assertNotIn(self.student_b, self.enrollment.pending_students(self.school_b))
+
+    def test_profile_school_change_records_request(self):
+        from schools.models import EnrollmentLog
+        student = make_user('chooser', province=self.province_a)
+        self.client.force_login(student)
+        response = self.client.post(reverse('profile_edit'), {
+            'last_name': 'Бат', 'first_name': 'Сараа', 'email': 'saraa@example.com',
+            'reg_num': 'УБ12345678', 'province': self.province_a.id, 'school': self.school_a.id,
+            'gender': 'Эм', 'mobile': '99112233', 'is_valid': 'on',
+        })
+        self.assertRedirects(response, reverse('user_profile'), fetch_redirect_response=False)
+        log = EnrollmentLog.objects.get(user=student)
+        self.assertEqual((log.action, log.to_school), (EnrollmentLog.Action.REQUEST, self.school_a))
+        self.assertIn(student, self.enrollment.pending_students(self.school_a))
+
+    def test_dashboard_lists_only_recent_pending(self):
+        active = self.make_pending('dash_active', self.now)
+        stale = self.make_pending('dash_stale', self.long_ago)
+        self.client.force_login(self.moderator_a)
+        response = self.client.get(reverse('school_dashboard', args=[self.school_a.id]))
+        self.assertEqual(response.status_code, 200)
+        pending = set(response.context['pending_students'])
+        self.assertIn(active, pending)
+        self.assertNotIn(stale, pending)

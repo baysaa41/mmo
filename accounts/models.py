@@ -74,23 +74,21 @@ class UserMeta(models.Model):
         return self.user.groups.filter(id=self.school.group_id).exists()
 
     def save(self, *args, **kwargs):
-        # --- ШИНЭЭР НЭМЭГДСЭН ЛОГИК ---
-        # Хэрэв обьект шинээр үүсээгүй (засагдаж байгаа) бол хуучин сургуулийг шалгах
-        if self.pk:
-            try:
-                # Мэдээллийн сангаас хуучин хувилбарыг авах
-                old_meta = UserMeta.objects.get(pk=self.pk)
-                old_school = old_meta.school
-                new_school = self.school
+        # Сургууль солигдвол хуучин сургуулийн группээс хасна, эс бөгөөс
+        # сурагч хоёр сургуульд зэрэг бүртгэлтэй болно. schools.enrollment
+        # service өөрөө үүнийг хийдэг тул тэндээс дуудагдсан үед алгасна.
+        if self.pk and not getattr(self, '_enrollment_handled', False):
+            old_school_id = (
+                UserMeta.objects.filter(pk=self.pk).values_list('school_id', flat=True).first()
+            )
+            if old_school_id and old_school_id != self.school_id:
+                from schools.models import School
+                from schools.enrollment import leave_old_school_group
+                old_school = School.objects.filter(pk=old_school_id).first()
+                if old_school:
+                    leave_old_school_group(self.user, old_school, new_school=self.school)
 
-                # Хэрэв сургууль солигдсон бөгөөд хуучин сургууль нь групптэй бол
-                if old_school != new_school and old_school and old_school.group:
-                    # Хэрэглэгчийг хуучин сургуулийн группээс хасах
-                    old_school.group.user_set.remove(self.user)
-            except UserMeta.DoesNotExist:
-                pass # Шинэ обьект бол алгасах
-
-        super().save(*args, **kwargs) # Үндсэн хадгалах үйлдлийг дуудах
+        super().save(*args, **kwargs)
 
 class TeacherStudent(models.Model):
     teacher = models.ForeignKey(User, related_name='students', on_delete=models.CASCADE)

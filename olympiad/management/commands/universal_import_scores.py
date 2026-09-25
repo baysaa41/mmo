@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from olympiad.models import Olympiad, Problem, Result
 from accounts.models import Province, UserMeta
+from schools import enrollment
 from schools.models import School
 from rapidfuzz import fuzz
 import unicodedata
@@ -885,25 +886,12 @@ class Command(BaseCommand):
             new_school = self.get_or_create_busad_school(new_province)
             self.stdout.write(f"      → '{new_province.name} - Бусад' сургуульд бүртгэгдлээ")
 
-        # Хуучин сургуулийн group-ээс хасах
-        if old_school and old_school.group:
-            try:
-                old_school.group.user_set.remove(user)
-                self.stdout.write(f"      → Хуучин группээс хасагдлаа: {old_school.name}")
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"      ⚠️ Хуучин группээс хасахад алдаа: {e}"))
-
-        # Шинэ сургууль болон group шинэчлэх
-        user.data.school = new_school
-        user.data.save(update_fields=['school'])
-
-        # Шинэ сургуулийн group-д нэмэх
-        if new_school and new_school.group:
-            try:
-                new_school.group.user_set.add(user)
-                self.stdout.write(f"      → Шинэ группд нэмэгдлээ: {new_school.name}")
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f"      ⚠️ Шинэ группд нэмэхэд алдаа: {e}"))
+        # Хуучин группээс хасах, UserMeta.school солих, шинэ группт нэмэхийг
+        # нэг транзакцид (schools.enrollment) хийнэ.
+        enrollment.enroll(user, new_school, note='universal_import_scores: сургууль солигдсон')
+        if old_school and old_school != new_school:
+            self.stdout.write(f"      → Хуучин группээс хасагдлаа: {old_school.name}")
+        self.stdout.write(f"      → Шинэ группд нэмэгдлээ: {new_school.name}")
 
         return new_school
 

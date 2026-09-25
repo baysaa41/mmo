@@ -25,6 +25,7 @@ from django.http import HttpResponse
 from datetime import date, timedelta
 from openpyxl.styles import Border, Side, Font, Alignment
 
+from . import enrollment
 from .models import School
 from .forms import UserSearchForm, AddUserForm, UserForm, UserMetaForm, UploadExcelForm
 from accounts.models import UserMeta, Level, Province
@@ -194,11 +195,7 @@ def school_dashboard(request, school_id):
 
     # --- ШИНЭЭР НЭМЭГДСЭН ЛОГИК ---
     # Тухайн сургуулийг сонгосон боловч группт нь ороогүй сурагчдыг олох
-    pending_students = User.objects.filter(
-        data__school=school
-    ).exclude(
-        groups=school.group
-    )
+    pending_students = enrollment.pending_students(school)
 
     is_province_contact = bool(school.province and school.province.user_has_access(request.user))
 
@@ -273,13 +270,8 @@ def manage_school_by_level(request, school_id, level_id):
         selected_level = {'id': 100, 'name': 'Бүх сурагчид'}
         users_in_level = group.user_set.all().select_related('data__grade')
         # Сургуульд бүртгэлгүй боловч өөрийгөө тухайн сургууль гэж бүртгүүлсэн сурагчид
-        pending_users = User.objects.filter(
-            data__school=school
-        ).exclude(
-            groups=group
-        ).select_related('data__grade')
+        pending_users = enrollment.pending_students(school).select_related('data__grade')
         # Нэг жагсаалт болгож нэгтгэх
-        registered_ids = set(group.user_set.values_list('id', flat=True))
         all_school_users = []
         for u in users_in_level:
             all_school_users.append({'user': u, 'is_registered': True})
@@ -317,22 +309,16 @@ def manage_school_by_level(request, school_id, level_id):
                         new_user.username = f'u{new_user.id}'
                         new_user.save()
 
-                        # Нэмж буй хүний биш, URL-д заасан сургуулийг оноох
-                        # (staff/аймгийн менежер өөр сургуульд нэмэх үед зөрөхгүй).
-                        meta_data = {
-                            'user': new_user,
-                            'school': school,
-                            'province': school.province,
-                        }
-                        if level_id != 0:
-                            meta_data['level'] = selected_level
-
                         if level_id == 100:
                             selected_level = Level.objects.get(pk=OTHER_LEVEL_ID)
-                            meta_data['level'] = selected_level
 
-                        UserMeta.objects.create(**meta_data)
-                        new_user.groups.add(group)
+                        # Нэмж буй хүний биш, URL-д заасан сургуулийг оноох
+                        # (staff/аймгийн менежер өөр сургуульд нэмэх үед зөрөхгүй).
+                        enrollment.enroll(
+                            new_user, school, by=request.user,
+                            level=selected_level if isinstance(selected_level, Level) else None,
+                            note='шинэ хэрэглэгч үүсгэсэн',
+                        )
 
                     # Тавтай морилно уу имэйл + password reset link илгээх
                     school_name = school.name
@@ -419,27 +405,17 @@ def manage_school_by_level(request, school_id, level_id):
                     f"Зөвхөн системийн админ шилжүүлэг хийж чадна."
                 )
             else:
-                # Хуучин сургуульд байсан group-оос хасах (staff үед)
-                if request.user.is_staff and user_meta.school and user_meta.school != school:
-                    old_group = user_meta.school.group
-                    if old_group:
-                        old_group.user_set.remove(user_to_add)
-
-                # Шинэ сургуульд оноох
-                user_meta.school = school
-                # Сургуулийн дүүргийн мэдээллийг хэрэглэгчийн дүүрэг болгож оноох
-                if school.province:
-                    user_meta.province = school.province
-                if level_id != 0:
-                    user_meta.level = selected_level if isinstance(selected_level, Level) else None
-                user_meta.save()
-
-                group.user_set.add(user_to_add)
+                # Хуучин сургуулийн группээс хасах, аймаг/ангиллыг оноох нь service-д
+                enrollment.enroll(
+                    user_to_add, school, by=request.user,
+                    level=selected_level if isinstance(selected_level, Level) else None,
+                )
                 messages.success(
                     request,
                     f"'{user_to_add.get_full_name() or user_to_add.username}' хэрэглэгчийг '{school.name}' сургуульд амжилттай нэмлээ."
                 )
 
+            user_to_add.data.refresh_from_db()
             if user_to_add.data.level_id != level_id:
                 level_id = 100
 
@@ -450,18 +426,18 @@ def manage_school_by_level(request, school_id, level_id):
             add_user_form = AddUserForm()
             user_id = request.POST.get('user_id')
             user_to_approve = get_object_or_404(User, id=user_id)
-            if hasattr(user_to_approve, 'data') and user_to_approve.data.school == school:
-                group.user_set.add(user_to_approve)
+            if enrollment.approve(user_to_approve, school, by=request.user):
                 messages.success(request, f"'{user_to_approve.last_name} {user_to_approve.first_name}' бүртгэл нийлүүлэгдлээ.")
             return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
         elif 'approve_all_users' in request.POST:
             search_form = UserSearchForm()
             add_user_form = AddUserForm()
-            pending = User.objects.filter(data__school=school).exclude(groups=group)
-            count = pending.count()
-            for u in pending:
-                group.user_set.add(u)
+            pending = list(enrollment.pending_students(school))
+            with transaction.atomic():
+                for u in pending:
+                    enrollment.approve(u, school, by=request.user, note='approve_all')
+            count = len(pending)
             messages.success(request, f"{count} сурагчийн бүртгэл нийлүүлэгдлээ.")
             return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
@@ -470,7 +446,7 @@ def manage_school_by_level(request, school_id, level_id):
             add_user_form = AddUserForm()
             user_id = request.POST.get('user_id')
             user_to_remove = get_object_or_404(User, id=user_id)
-            group.user_set.remove(user_to_remove)
+            enrollment.unenroll(user_to_remove, school, by=request.user)
             messages.info(request, f"'{user_to_remove.get_full_name() or user_to_remove.username}' хэрэглэгчийг сургуулиас хаслаа.")
             return redirect('manage_school_by_level', school_id=school_id, level_id=level_id)
 
@@ -890,8 +866,7 @@ def add_student_to_group_view(request, school_id, user_id):
     # Сурагчийг сургуулийн группт нэмэх
     if school.group:
         # Шалгалт: Сурагч үнэхээр энэ сургуулийг сонгосон эсэх
-        if student.data.school == school:
-            school.group.user_set.add(student)
+        if enrollment.approve(student, school, by=request.user):
             messages.success(request, f"'{student.get_full_name()}' сурагчийг сургуулийн бүлэгт амжилттай нэмлээ.")
         else:
             messages.warning(request, f"'{student.get_full_name()}' сурагч энэ сургуулийг сонгоогүй байна.")
