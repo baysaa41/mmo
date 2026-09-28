@@ -1,4 +1,8 @@
-from django.test import SimpleTestCase, TestCase
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
+
+from olympiad.models import Olympiad, Problem
 
 
 class ClassifyStatementTests(SimpleTestCase):
@@ -29,3 +33,73 @@ class ClassifyStatementTests(SimpleTestCase):
         self.assertEqual(self.cat(
             'Эерэг $a, b, c$ тоонуудын хувьд $a+b+c=3$ бол '
             '\\[\\dfrac{a+b}{2ab+1}+\\dfrac{b+c}{2bc+1}\\ge2\\] тэнцэтгэл биш биелэхийг батал.'), 'ALG')
+
+
+@override_settings(
+    STORAGES={
+        'default': {'BACKEND': 'django.core.files.storage.InMemoryStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    },
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class ProblemVisibilityBeforeFinishTests(TestCase):
+    """Дуусаагүй олимпиадын бодлогын нөхцөл staff/координатороос бусдад задрахгүй."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from datetime import timedelta
+        from django.utils import timezone
+        now = timezone.now()
+        cls.upcoming = Olympiad.objects.create(
+            name='Удахгүй', start_time=now + timedelta(days=30),
+            end_time=now + timedelta(days=30, hours=2))
+        cls.finished = Olympiad.objects.create(
+            name='Дууссан', start_time=now - timedelta(days=30),
+            end_time=now - timedelta(days=30) + timedelta(hours=2))
+        cls.secret = Problem.objects.create(
+            olympiad=cls.upcoming, order=1, statement='НУУЦ_НӨХЦӨЛ')
+        cls.public = Problem.objects.create(
+            olympiad=cls.finished, order=1, statement='НЭЭЛТТЭЙ_НӨХЦӨЛ')
+        cls.student = User.objects.create_user('student', password='x')
+        cls.staff = User.objects.create_user('staff', password='x', is_staff=True)
+        cls.coord = User.objects.create_user('coord', password='x')
+        cls.secret.coordinators.add(cls.coord)
+
+    def topics_html(self):
+        response = self.client.get(reverse('problem_list_with_topics'))
+        self.assertEqual(response.status_code, 200)
+        return response.content.decode()
+
+    def test_topic_list_hides_unfinished_for_anonymous_and_students(self):
+        for user in (None, self.student):
+            if user:
+                self.client.force_login(user)
+            html = self.topics_html()
+            self.assertNotIn('НУУЦ_НӨХЦӨЛ', html)
+            self.assertIn('НЭЭЛТТЭЙ_НӨХЦӨЛ', html)
+
+    def test_topic_list_search_does_not_leak(self):
+        response = self.client.get(reverse('problem_list_with_topics'), {'q': 'НУУЦ'})
+        self.assertNotIn('НУУЦ_НӨХЦӨЛ', response.content.decode())
+
+    def test_topic_list_shows_unfinished_to_staff_and_coordinator(self):
+        for user in (self.staff, self.coord):
+            self.client.force_login(user)
+            self.assertIn('НУУЦ_НӨХЦӨЛ', self.topics_html())
+
+    def test_problem_stats_forbidden_before_finish(self):
+        self.client.force_login(self.student)
+        url = reverse('problem_stats', kwargs={'problem_id': self.secret.id})
+        self.assertEqual(self.client.get(url).status_code, 403)
+        url = reverse('olympiad_problem_stats', kwargs={'olympiad_id': self.upcoming.id})
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+    def test_problem_stats_allowed_after_finish_and_for_staff(self):
+        self.client.force_login(self.student)
+        url = reverse('problem_stats', kwargs={'problem_id': self.public.id})
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.client.force_login(self.staff)
+        url = reverse('problem_stats', kwargs={'problem_id': self.secret.id})
+        self.assertEqual(self.client.get(url).status_code, 200)

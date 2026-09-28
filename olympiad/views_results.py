@@ -1,5 +1,6 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Avg, Max, Min
 from django.core.paginator import Paginator
@@ -240,6 +241,8 @@ def student_result_view(request, olympiad_id, contestant_id):
 @login_required
 def problem_stats_view(request, problem_id):
     problem = get_object_or_404(Problem, pk=problem_id)
+    if not (problem.olympiad and problem.olympiad.problems_visible_to(request.user)):
+        return HttpResponseForbidden("Олимпиад дуусаагүй тул бодлогыг харах боломжгүй.")
     results = Result.objects.filter(problem=problem, score__isnull=False)
 
     grouped = (results.values('score')

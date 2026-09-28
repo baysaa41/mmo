@@ -476,6 +476,9 @@ def problem_list_with_topics(request):
         else:
             problems = problems.filter(olympiad__is_problems_confidential=False)
 
+    # Дуусаагүй олимпиадын бодлогыг staff/координатороос бусдад харуулахгүй
+    problems = problems.filter(Problem.visible_q(user))
+
     # Хэрэв хайлтын үг орж ирсэн бол queryset-г шүүх
     if query:
         problems = problems.filter(
