@@ -325,3 +325,77 @@ class PendingStudentsTests(SchoolAccessTestBase):
         pending = set(response.context['pending_students'])
         self.assertIn(active, pending)
         self.assertNotIn(stale, pending)
+
+
+class ImportAnswerSheetTests(SchoolAccessTestBase):
+    def setUp(self):
+        from olympiad.models import Olympiad, Problem, Result
+        self.olympiad = Olympiad.objects.create(name='ММО-I', level=self.level)
+        self.p1 = Problem.objects.create(olympiad=self.olympiad, order=1)
+        self.p2 = Problem.objects.create(olympiad=self.olympiad, order=2)
+        self.student2 = make_user('student_b2', school=self.school_b, province=self.province_b)
+        self.school_b.group.user_set.add(self.student2)
+        self.existing = Result.objects.create(
+            contestant=self.student_b, olympiad=self.olympiad, problem=self.p1, answer=99, score=3,
+        )
+        self.url = reverse('import_school_answer_sheet', args=[self.school_b.id, self.olympiad.id])
+
+    def make_excel(self, rows):
+        import io
+        import pandas as pd
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine='openpyxl') as writer:
+            pd.DataFrame({'Түлхүүр': ['olympiad_id', 'school_id'],
+                          'Утга': [self.olympiad.id, self.school_b.id]}).to_excel(
+                writer, sheet_name='Мэдээлэл', index=False)
+            pd.DataFrame(rows, columns=['ID', '№1', '№2']).to_excel(writer, sheet_name='Хариулт', index=False)
+        buf.seek(0)
+        buf.name = 'sheet.xlsx'
+        return buf
+
+    def test_import_creates_and_updates_results(self):
+        from olympiad.models import Result
+        self.client.force_login(self.moderator_b)
+        rows = [
+            [self.student_b.id, 12, 'abc'],       # p1 шинэчлэгдэнэ, p2 буруу формат -> None
+            [self.student2.id, 5, 7.0],           # шинээр үүснэ
+            [self.student_a_like().id, 1, 1],     # өөр сургууль -> алгасна
+            [None, 1, 1],                         # хоосон ID -> алгасна
+            [self.student2.id, 6, None],          # давхардсан мөр: сүүлийнх нь хүчинтэй
+        ]
+        response = self.client.post(self.url, {'file': self.make_excel(rows)}, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        self.existing.refresh_from_db()
+        self.assertEqual(self.existing.answer, 12)
+        self.assertEqual(self.existing.score, 3)  # бусад талбар хөндөгдөхгүй
+        answers = dict(Result.objects.filter(olympiad=self.olympiad, contestant=self.student2)
+                       .values_list('problem_id', 'answer'))
+        self.assertEqual(answers, {self.p1.id: 6, self.p2.id: None})
+        self.assertIsNone(Result.objects.get(contestant=self.student_b, problem=self.p2).answer)
+        self.assertEqual(Result.objects.filter(olympiad=self.olympiad).count(), 4)
+
+        msg = [str(m) for m in response.context['messages']][-1]
+        self.assertIn('Үүссэн: 3', msg)
+        self.assertIn('Шинэчлэгдсэн: 3', msg)
+        self.assertIn('Буруу форматтай: 1', msg)
+        self.assertIn('Алгассан: 2', msg)
+
+    def test_query_count_does_not_grow_with_rows(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        self.client.force_login(self.moderator_b)
+        students = [make_user(f'bulk_{i}', school=self.school_b) for i in range(40)]
+        self.school_b.group.user_set.add(*students)
+
+        def run(n):
+            rows = [[s.id, 1, 2] for s in students[:n]]
+            with CaptureQueriesContext(connection) as ctx:
+                self.client.post(self.url, {'file': self.make_excel(rows)})
+            return len(ctx.captured_queries)
+
+        self.assertLess(run(40), 20)  # бүгд шинээр үүснэ
+        self.assertEqual(run(5), run(40))  # бүгд шинэчлэгдэнэ
+
+    def student_a_like(self):
+        return make_user('other_school_student', school=self.school_a)

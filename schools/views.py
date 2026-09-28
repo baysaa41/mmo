@@ -33,7 +33,7 @@ from olympiad.models import Olympiad, SchoolYear, Problem, Result
 from olympiad.utils.round2_quota import round2_avg_quota_by_school, round2_additional_quota_by_school
 
 import pandas as pd
-from django.db import transaction
+from django.db import connection, transaction
 from .forms import UploadExcelForm
 
 from django.contrib.admin.views.decorators import staff_member_required
@@ -579,6 +579,27 @@ def generate_school_answer_sheet(request, school_id, olympiad_id):
 import time
 # ... (бусад import-ууд хэвээрээ) ...
 
+def _bulk_update_result_answers(results, now, batch_size=1000):
+    """Result-уудын answer, date-г UPDATE ... FROM (VALUES ...)-ээр шинэчилнэ.
+
+    Django-гийн bulk_update нь CASE WHEN бүхий том query үүсгэдэг тул хэдэн мянган
+    мөр дээр маш удаан (216 сурагч × 12 бодлогод ~17 сек) — энэ нь хэдхэн query.
+    """
+    table = Result._meta.db_table
+    with connection.cursor() as cursor:
+        for start in range(0, len(results), batch_size):
+            batch = results[start:start + batch_size]
+            values_sql = ', '.join(['(%s::integer, %s::bigint)'] * len(batch))
+            params = [now]
+            for r in batch:
+                params.extend([r.pk, r.answer])
+            cursor.execute(
+                f'UPDATE {table} AS r SET answer = v.answer, date = %s '
+                f'FROM (VALUES {values_sql}) AS v(id, answer) WHERE r.id = v.id',
+                params,
+            )
+
+
 @login_required
 def import_school_answer_sheet(request, school_id, olympiad_id):
     """Excel-ээс бөглөсөн хариултын хуудсыг уншиж, Result руу импортлоно."""
@@ -597,7 +618,10 @@ def import_school_answer_sheet(request, school_id, olympiad_id):
             uploaded_excel = form.save(commit=False)
             uploaded_excel.uploaded_by = request.user
             uploaded_excel.save()
-            excel_file = uploaded_excel.file.path
+            # Storage нь S3 тул .path байхгүй — upload хийсэн файлыг санах ойгоос уншина
+            uploaded_file = form.cleaned_data['file']
+            uploaded_file.seek(0)
+            excel_file = io.BytesIO(uploaded_file.read())
 
             # --- Хугацаа хэмжиж эхлэх ---
             start_time = time.time()
@@ -622,53 +646,83 @@ def import_school_answer_sheet(request, school_id, olympiad_id):
 
                 updated_count = created_count = skipped_rows = invalid_format_count = 0
 
+                # Мөр бүрийн ID-г уншина (хоосон/буруу ID-тай мөрийг алгасна)
+                row_user_ids = []
                 for index, row in df.iterrows():
                     user_id = row.get('ID')
-                    if pd.isna(user_id):
-                        skipped_rows += 1
-                        continue
-
                     try:
-                        user = User.objects.get(pk=int(user_id))
-                    except (User.DoesNotExist, ValueError, TypeError):
+                        row_user_ids.append(None if pd.isna(user_id) else int(user_id))
+                    except (ValueError, TypeError):
+                        row_user_ids.append(None)
+
+                # Сургуулийн group-д багтсан сурагчдыг нэг query-ээр шалгана
+                valid_user_ids = set(
+                    User.objects.filter(
+                        pk__in={uid for uid in row_user_ids if uid is not None},
+                        groups__pk=school.group.id,
+                    ).values_list('pk', flat=True)
+                )
+
+                active_problems = [(f'№{order}', problem) for order, problem in problems_map.items()
+                                   if f'№{order}' in df.columns]
+
+                # Байгаа Result-уудыг нэг query-ээр уншина: (сурагч, бодлого) -> [Result, ...]
+                existing = {}
+                for r in Result.objects.filter(
+                    olympiad=olympiad,
+                    contestant_id__in=valid_user_ids,
+                    problem__in=[p for _, p in active_problems],
+                ):
+                    existing.setdefault((r.contestant_id, r.problem_id), []).append(r)
+
+                # Нэг сурагч хэд дахин орсон бол сүүлийн мөр нь хүчинтэй (хуучин update_or_create шиг)
+                to_create = {}
+                for (index, row), user_id in zip(df.iterrows(), row_user_ids):
+                    if user_id not in valid_user_ids:
                         skipped_rows += 1
                         continue
 
-                    # Сурагч зөв сургуулийн group-д багтсан эсэх
-                    if not user.groups.filter(pk=school.group.id).exists():
-                        skipped_rows += 1
-                        continue
+                    for col, problem in active_problems:
+                        answer = row[col]
+                        db_value = None
+                        valid = False
 
-                    with transaction.atomic():
-                        for order, problem in problems_map.items():
-                            col = f'№{order}'
-                            if col not in df.columns:
-                                continue
+                        if pd.notna(answer) and str(answer).strip() != '':
+                            try:
+                                fa = float(answer)
+                                if fa > 0 and fa.is_integer():
+                                    db_value = int(fa)
+                                    valid = True
+                            except (ValueError, TypeError):
+                                pass
 
-                            answer = row[col]
-                            db_value = None
-                            valid = False
+                        if not valid and pd.notna(answer) and str(answer).strip() != '':
+                            invalid_format_count += 1
 
-                            if pd.notna(answer) and str(answer).strip() != '':
-                                try:
-                                    fa = float(answer)
-                                    if fa > 0 and fa.is_integer():
-                                        db_value = int(fa)
-                                        valid = True
-                                except (ValueError, TypeError):
-                                    pass
-
-                            if not valid and pd.notna(answer) and str(answer).strip() != '':
-                                invalid_format_count += 1
-
-                            obj, created = Result.objects.update_or_create(
-                                contestant=user, olympiad=olympiad, problem=problem,
-                                defaults={'answer': db_value}
+                        key = (user_id, problem.id)
+                        if key in existing:
+                            for r in existing[key]:
+                                r.answer = db_value
+                            updated_count += 1
+                        elif key in to_create:
+                            to_create[key].answer = db_value
+                            updated_count += 1
+                        else:
+                            to_create[key] = Result(
+                                contestant_id=user_id, olympiad=olympiad, problem=problem,
+                                answer=db_value,
                             )
-                            if created:
-                                created_count += 1
-                            else:
-                                updated_count += 1
+                            created_count += 1
+
+                # update_or_create нь auto_now талбар date-г мөн шинэчилдэг байсан
+                now = timezone.now()
+                to_update = [r for rows in existing.values() for r in rows]
+                for r in to_update:
+                    r.date = now
+
+                with transaction.atomic():
+                    _bulk_update_result_answers(to_update, now)
+                    Result.objects.bulk_create(to_create.values(), batch_size=1000)
 
 
                 # --- Хугацаа хэмжиж дуусгах ---
