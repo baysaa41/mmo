@@ -252,10 +252,11 @@ def command_guide_view(request):
                 {
                     'name': 'classify_problems',
                     'description': 'Бодлогын statement-г keyword-д суурилж ангилна.',
-                    'usage': 'python manage.py classify_problems [--dry-run]',
-                    'args': '--dry-run',
+                    'usage': 'python manage.py classify_problems [--dry-run] [--overwrite] [--include-low] [--olympiad ID] [--report FILE]',
+                    'args': '--dry-run, --overwrite (хуучин ангиллыг дарж бичих), --include-low (эргэлзээтэйг бас хадгалах), --olympiad ID, --report FILE.csv',
                     'examples': [
-                        'python manage.py classify_problems --dry-run',
+                        'python manage.py classify_problems --dry-run --report /tmp/classify.csv',
+                        'python manage.py classify_problems --dry-run --overwrite',
                     ],
                     'danger': False,
                 },
