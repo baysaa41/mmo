@@ -1,8 +1,47 @@
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
-from olympiad.models import Olympiad, Problem
+from olympiad.models import Olympiad, OlympiadGroup, Problem, Result
+
+
+@override_settings(
+    STORAGES={
+        'default': {'BACKEND': 'django.core.files.storage.InMemoryStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    },
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class OlympiadGroupResultViewTests(TestCase):
+    """pandas 3 + django-pandas read_frame-ийн TypeError-ийн регресс."""
+
+    @classmethod
+    def setUpTestData(cls):
+        olympiad = Olympiad.objects.create(name='Туршилтын олимпиад')
+        p1 = Problem.objects.create(olympiad=olympiad, order=1)
+        p2 = Problem.objects.create(olympiad=olympiad, order=2)
+        cls.group = Group.objects.create(name='Оролцогчид')
+        cls.og = OlympiadGroup.objects.create(name='Нэгдсэн', group=cls.group)
+        cls.og.olympiads.add(olympiad)
+
+        cls.winner = User.objects.create_user('winner', first_name='Тэмүүлэн', last_name='Бат')
+        cls.other = User.objects.create_user('other', first_name='Номин', last_name='Дорж')
+        cls.group.user_set.add(cls.winner, cls.other)
+        Result.objects.create(contestant=cls.winner, olympiad=olympiad, problem=p1, score=7)
+        Result.objects.create(contestant=cls.winner, olympiad=olympiad, problem=p2, score=5)
+        Result.objects.create(contestant=cls.other, olympiad=olympiad, problem=p1, score=3)
+        Result.objects.create(contestant=cls.other, olympiad=olympiad, problem=p2, score=None)
+
+    def test_group_results_render_sorted_by_total(self):
+        self.client.force_login(self.other)
+        response = self.client.get(reverse('olympiad_group_result_view', args=[self.og.id]))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('Тэмүүлэн', html)
+        self.assertIn('Номин', html)
+        self.assertLess(html.index('Тэмүүлэн'), html.index('Номин'))
 
 
 class ClassifyStatementTests(SimpleTestCase):

@@ -6,7 +6,6 @@ from django.db.models import Count, Avg, Max, Min
 from django.core.paginator import Paginator
 from datetime import datetime, timezone
 from .models import Olympiad, Problem, Result, SchoolYear, ScoreSheet, OlympiadGroup
-from django_pandas.io import read_frame
 from accounts.models import Province
 from schools.models import School
 from django.contrib.auth.models import User
@@ -322,8 +321,10 @@ def olympiad_group_result_view(request, group_id):
         users = olympiad_group.group.user_set.all()
     else:
         users = User.objects.all()
-    answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
-    users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id', 'data__school'], verbose=False)
+    answer_fields = ['contestant_id', 'problem_id', 'score']
+    answers_df = pd.DataFrame.from_records(list(answers.values_list(*answer_fields)), columns=answer_fields)
+    user_fields = ['last_name', 'first_name', 'id', 'data__school']
+    users_df = pd.DataFrame.from_records(list(users.values_list(*user_fields)), columns=user_fields)
     answers_df['score'] = answers_df['score'].fillna(0)
     pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
     pivot["Дүн"] = pivot.sum(axis=1)

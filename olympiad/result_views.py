@@ -9,7 +9,6 @@ from django.forms import modelformset_factory
 from .forms import ResultsForm, ChangeScoreSheetSchoolForm
 import pandas as pd
 import numpy as np
-from django_pandas.io import read_frame
 from django.db import connection
 from django.contrib.auth.models import User, Group
 from datetime import datetime, timezone
