@@ -5,10 +5,10 @@ from .models import FileUpload, FileAccessLog
 
 @admin.register(FileUpload)
 class FileUploadAdmin(admin.ModelAdmin):
-    list_display = ['file', 'description_short', 'school_year', 'uploader', 'uploaded_at', 'download_count']
+    list_display = ['file', 'kind', 'title', 'teachers', 'description_short', 'school_year', 'uploader', 'uploaded_at', 'download_count']
     list_select_related = ['school_year', 'uploader']
-    list_filter = ['school_year', 'uploaded_at']
-    search_fields = ['description', 'file', 'uploader__username']
+    list_filter = ['kind', 'school_year', 'uploaded_at']
+    search_fields = ['title', 'teachers', 'description', 'file', 'uploader__username']
     autocomplete_fields = ['uploader']
     readonly_fields = ['uploaded_at', 'download_count']
     ordering = ['-uploaded_at']
