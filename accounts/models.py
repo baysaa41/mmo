@@ -55,6 +55,9 @@ class UserMeta(models.Model):
     address2 = models.CharField(max_length=240, null=True, blank=True)
     mobile = models.IntegerField(null=True)
     is_valid = models.BooleanField(default=False)
+    # Сүүлд системд хандсан хугацаа (LastActivityMiddleware ~15 минут тутамд шинэчилнэ).
+    # last_login нь зөвхөн нууц үгээр нэвтрэх үед шинэчлэгддэг тул бодит хэрэглээг харуулдаггүй.
+    last_activity = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
         indexes = [
