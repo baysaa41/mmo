@@ -6,6 +6,7 @@ from django.contrib.auth import views as auth_views
 from accounts.views.auth import CustomPasswordResetView, RegistrationViewWithCaptcha
 import accounts.views as accounts_views
 from olympiad import api_views as olympiad_api
+from posts.urls import static_pages
 
 
 urlpatterns = ([
@@ -14,6 +15,7 @@ urlpatterns = ([
     path('provinces/', include('provinces.urls')),
     path('files/', include('file_management.urls')),
     path('', include('posts.urls')),  # Homepage now points to the posts app
+    *static_pages,  # /about/, /terms/, /privacy/
     path('emails/', include('emails.urls')),
     path('admin/clearcache/', include('clearcache.urls')),
     path('admin/', admin.site.urls),
