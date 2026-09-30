@@ -3,7 +3,9 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db.models import Count, Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from .email_service import SchoolEmailService
@@ -33,14 +35,18 @@ from olympiad.models import Olympiad, SchoolYear, Problem, Result
 from olympiad.utils.round2_quota import round2_avg_quota_by_school, round2_additional_quota_by_school
 
 import pandas as pd
-from django.db import transaction
+from django.db import connection, transaction
 from .forms import UploadExcelForm
+from .moderator import blocked_emails, change_moderator, email_problem, norm_email
 
 from django.contrib.admin.views.decorators import staff_member_required
-from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm
+from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm, SchoolManagerAccountForm
 
 # "Бүх сурагчид" хэсгээс шинээр нэмсэн сурагчид оноох "Бусад" ангилал
 OTHER_LEVEL_ID = 8
+
+# Бүх сургуулийг удирдах хуудасны нэг хуудсанд харуулах сургуулийн тоо
+MANAGE_ALL_SCHOOLS_PER_PAGE = 100
 
 
 def _student_schools(target_user):
@@ -579,6 +585,27 @@ def generate_school_answer_sheet(request, school_id, olympiad_id):
 import time
 # ... (бусад import-ууд хэвээрээ) ...
 
+def _bulk_update_result_answers(results, now, batch_size=1000):
+    """Result-уудын answer, date-г UPDATE ... FROM (VALUES ...)-ээр шинэчилнэ.
+
+    Django-гийн bulk_update нь CASE WHEN бүхий том query үүсгэдэг тул хэдэн мянган
+    мөр дээр маш удаан (216 сурагч × 12 бодлогод ~17 сек) — энэ нь хэдхэн query.
+    """
+    table = Result._meta.db_table
+    with connection.cursor() as cursor:
+        for start in range(0, len(results), batch_size):
+            batch = results[start:start + batch_size]
+            values_sql = ', '.join(['(%s::integer, %s::bigint)'] * len(batch))
+            params = [now]
+            for r in batch:
+                params.extend([r.pk, r.answer])
+            cursor.execute(
+                f'UPDATE {table} AS r SET answer = v.answer, date = %s '
+                f'FROM (VALUES {values_sql}) AS v(id, answer) WHERE r.id = v.id',
+                params,
+            )
+
+
 @login_required
 def import_school_answer_sheet(request, school_id, olympiad_id):
     """Excel-ээс бөглөсөн хариултын хуудсыг уншиж, Result руу импортлоно."""
@@ -597,7 +624,10 @@ def import_school_answer_sheet(request, school_id, olympiad_id):
             uploaded_excel = form.save(commit=False)
             uploaded_excel.uploaded_by = request.user
             uploaded_excel.save()
-            excel_file = uploaded_excel.file.path
+            # Storage нь S3 тул .path байхгүй — upload хийсэн файлыг санах ойгоос уншина
+            uploaded_file = form.cleaned_data['file']
+            uploaded_file.seek(0)
+            excel_file = io.BytesIO(uploaded_file.read())
 
             # --- Хугацаа хэмжиж эхлэх ---
             start_time = time.time()
@@ -622,53 +652,83 @@ def import_school_answer_sheet(request, school_id, olympiad_id):
 
                 updated_count = created_count = skipped_rows = invalid_format_count = 0
 
+                # Мөр бүрийн ID-г уншина (хоосон/буруу ID-тай мөрийг алгасна)
+                row_user_ids = []
                 for index, row in df.iterrows():
                     user_id = row.get('ID')
-                    if pd.isna(user_id):
-                        skipped_rows += 1
-                        continue
-
                     try:
-                        user = User.objects.get(pk=int(user_id))
-                    except (User.DoesNotExist, ValueError, TypeError):
+                        row_user_ids.append(None if pd.isna(user_id) else int(user_id))
+                    except (ValueError, TypeError):
+                        row_user_ids.append(None)
+
+                # Сургуулийн group-д багтсан сурагчдыг нэг query-ээр шалгана
+                valid_user_ids = set(
+                    User.objects.filter(
+                        pk__in={uid for uid in row_user_ids if uid is not None},
+                        groups__pk=school.group.id,
+                    ).values_list('pk', flat=True)
+                )
+
+                active_problems = [(f'№{order}', problem) for order, problem in problems_map.items()
+                                   if f'№{order}' in df.columns]
+
+                # Байгаа Result-уудыг нэг query-ээр уншина: (сурагч, бодлого) -> [Result, ...]
+                existing = {}
+                for r in Result.objects.filter(
+                    olympiad=olympiad,
+                    contestant_id__in=valid_user_ids,
+                    problem__in=[p for _, p in active_problems],
+                ):
+                    existing.setdefault((r.contestant_id, r.problem_id), []).append(r)
+
+                # Нэг сурагч хэд дахин орсон бол сүүлийн мөр нь хүчинтэй (хуучин update_or_create шиг)
+                to_create = {}
+                for (index, row), user_id in zip(df.iterrows(), row_user_ids):
+                    if user_id not in valid_user_ids:
                         skipped_rows += 1
                         continue
 
-                    # Сурагч зөв сургуулийн group-д багтсан эсэх
-                    if not user.groups.filter(pk=school.group.id).exists():
-                        skipped_rows += 1
-                        continue
+                    for col, problem in active_problems:
+                        answer = row[col]
+                        db_value = None
+                        valid = False
 
-                    with transaction.atomic():
-                        for order, problem in problems_map.items():
-                            col = f'№{order}'
-                            if col not in df.columns:
-                                continue
+                        if pd.notna(answer) and str(answer).strip() != '':
+                            try:
+                                fa = float(answer)
+                                if fa > 0 and fa.is_integer():
+                                    db_value = int(fa)
+                                    valid = True
+                            except (ValueError, TypeError):
+                                pass
 
-                            answer = row[col]
-                            db_value = None
-                            valid = False
+                        if not valid and pd.notna(answer) and str(answer).strip() != '':
+                            invalid_format_count += 1
 
-                            if pd.notna(answer) and str(answer).strip() != '':
-                                try:
-                                    fa = float(answer)
-                                    if fa > 0 and fa.is_integer():
-                                        db_value = int(fa)
-                                        valid = True
-                                except (ValueError, TypeError):
-                                    pass
-
-                            if not valid and pd.notna(answer) and str(answer).strip() != '':
-                                invalid_format_count += 1
-
-                            obj, created = Result.objects.update_or_create(
-                                contestant=user, olympiad=olympiad, problem=problem,
-                                defaults={'answer': db_value}
+                        key = (user_id, problem.id)
+                        if key in existing:
+                            for r in existing[key]:
+                                r.answer = db_value
+                            updated_count += 1
+                        elif key in to_create:
+                            to_create[key].answer = db_value
+                            updated_count += 1
+                        else:
+                            to_create[key] = Result(
+                                contestant_id=user_id, olympiad=olympiad, problem=problem,
+                                answer=db_value,
                             )
-                            if created:
-                                created_count += 1
-                            else:
-                                updated_count += 1
+                            created_count += 1
+
+                # update_or_create нь auto_now талбар date-г мөн шинэчилдэг байсан
+                now = timezone.now()
+                to_update = [r for rows in existing.values() for r in rows]
+                for r in to_update:
+                    r.date = now
+
+                with transaction.atomic():
+                    _bulk_update_result_answers(to_update, now)
+                    Result.objects.bulk_create(to_create.values(), batch_size=1000)
 
 
                 # --- Хугацаа хэмжиж дуусгах ---
@@ -966,8 +1026,7 @@ def manage_all_schools_view(request):
 
         if form.is_valid():
             new_moderator = form.cleaned_data['user']
-            school_to_change.user = new_moderator
-            school_to_change.save()
+            change_moderator(school_to_change, new_moderator, request.user)
             messages.success(request, f"'{school_to_change.name}' сургуулийн модераторыг амжилттай солилоо.")
         else:
             messages.error(request, "Модератор солиход алдаа гарлаа.")
@@ -976,9 +1035,7 @@ def manage_all_schools_view(request):
 
     # Сургуулиудын жагсаалтыг бүх мэдээлэлтэй нь авах
     all_schools = School.objects.select_related(
-        'province', 'user', 'user__data'
-    ).annotate(
-        student_count=Count('group__user')
+        'province', 'user', 'user__data', 'manager__data'
     ).order_by('province__name', 'name')
 
     # Аймгийн manager бол зөвхөн өөрийн аймгийн сургуулиудыг харуулах
@@ -1014,13 +1071,44 @@ def manage_all_schools_view(request):
             Q(user__last_login__gt=seven_days_ago)
         )
 
+    # Бүртгэгч багш эсвэл менежерийн имэйл хүргэхэд алдаа гарсан (bounce/татгалзсан) сургуулиуд
+    blocked = blocked_emails()
+    blocked_filter = request.GET.get('blocked', '')
+    if blocked_filter == '1':
+        all_schools = all_schools.annotate(
+            moderator_email_lower=Lower('user__email'), manager_email_lower=Lower('manager__email'),
+        ).filter(Q(moderator_email_lower__in=blocked) | Q(manager_email_lower__in=blocked))
+
     # Эрэмбэлэх
     all_schools = all_schools.order_by('province__name', 'name')
+
+    # 829 сургуулийг хоёр табд зэрэг render хийхэд ~5 сек зарцуулдаг тул хуудаслана
+    page = Paginator(all_schools, MANAGE_ALL_SCHOOLS_PER_PAGE).get_page(request.GET.get('page'))
+    # Сурагчдын тоог зөвхөн энэ хуудасны сургуулиудад тооцно (бүх сургуулийг GROUP BY хийх нь удаан)
+    group_ids = [school.group_id for school in page if school.group_id]
+    student_counts = dict(
+        User.groups.through.objects.filter(group_id__in=group_ids)
+        .values('group_id').annotate(n=Count('id')).values_list('group_id', 'n')
+    )
+    for school in page:
+        school.student_count = student_counts.get(school.group_id, 0)
+        school.moderator_email_problem = email_problem(school.user, blocked) if school.user else None
+        school.manager_email_problem = email_problem(school.manager, blocked) if school.manager else None
+        # Удирдлага багштай ижил имэйлтэй бол багш солигдох мэдэгдэл удирдлагад очихгүй
+        manager_email = norm_email(school.manager.email) if school.manager else ''
+        school.manager_email_same_as_moderator = bool(
+            manager_email and school.user and manager_email == norm_email(school.user.email))
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
 
     change_form = SchoolModeratorChangeForm()
 
     context = {
-        'schools': all_schools,
+        'schools': page,
+        'page_obj': page,
+        'querystring': query_params.urlencode(),
+        'blocked_filter': blocked_filter == '1',
         'change_form': change_form,
         'managed_province': managed_province,
         'is_staff': is_staff,
@@ -1047,8 +1135,7 @@ def change_school_admin_view(request, school_id):
         if 'assign_admin' in request.POST:
             user_id = request.POST.get('user_id')
             new_admin = get_object_or_404(User, id=user_id)
-            school.user = new_admin
-            school.save()
+            change_moderator(school, new_admin, request.user)
             messages.success(request, f"'{school.name}' сургуулийн бүртгэгч багшийг '{new_admin.get_full_name()}' хэрэглэгчээр амжилттай солилоо.")
             if request.user.is_staff:
                 return redirect('manage_all_schools')
@@ -1083,6 +1170,11 @@ def edit_school_admin_view(request, user_id):
             messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
             return redirect('my_managed_schools')
 
+    # Сургуулийн удирдлагын албан аккаунт (хувь хүний биш) бол зөвхөн албан тушаал, имэйл, утсыг засна
+    managed_school = School.objects.filter(manager=target_user).select_related('province', 'user').first()
+    if managed_school and not School.objects.filter(user=target_user).exists():
+        return _edit_school_manager_account(request, target_user, managed_school)
+
     user_meta, created = UserMeta.objects.get_or_create(user=target_user)
 
     if request.method == 'POST':
@@ -1105,6 +1197,22 @@ def edit_school_admin_view(request, user_id):
         'target_user': target_user,
     }
     return render(request, 'schools/edit_school_admin.html', context)
+
+
+def _edit_school_manager_account(request, account, school):
+    if request.method == 'POST':
+        form = SchoolManagerAccountForm(request.POST, account=account, school=school)
+        if form.is_valid():
+            form.save(changed_by=request.user)
+            messages.success(request, f"'{school.name}' сургуулийн удирдлагын мэдээллийг шинэчиллээ.")
+            if request.user.is_staff:
+                return redirect('manage_all_schools')
+            return redirect('school_dashboard', school_id=school.id)
+    else:
+        form = SchoolManagerAccountForm(account=account, school=school)
+    return render(request, 'schools/edit_school_manager.html', {
+        'form': form, 'account': account, 'school': school, 'target_user': account,
+    })
 
 
 @login_required
@@ -1220,8 +1328,7 @@ def manager_change_moderator_view(request, school_id):
         if 'assign_moderator' in request.POST:
             user_id = request.POST.get('user_id')
             new_moderator = get_object_or_404(User, id=user_id)
-            school.user = new_moderator
-            school.save()
+            change_moderator(school, new_moderator, request.user)
             messages.success(request, f"'{school.name}' сургуулийн модераторыг '{new_moderator.get_full_name()}' хэрэглэгчээр амжилттай солилоо.")
             return redirect('school_dashboard', school_id=school_id)
 

@@ -1,0 +1,16 @@
+{% autoescape off %}Сайн байна уу,
+
+{{ organization }} албан аккаунтын ({{ account.username }}) имэйл солигдлоо.
+  Өмнөх: {{ old_email }}
+  Шинэ:  {{ new_email }}
+  Сольсон: {% if changed_by %}{{ changed_by.get_full_name|default:changed_by.username }} ({{ changed_by.email|default:"имэйлгүй" }}){% else %}систем{% endif %}, {{ changed_at|date:"Y-m-d H:i" }}
+{% if audience == 'province' %}
+Өмнөх имэйл бүртгэгдээгүй эсвэл түүн рүү имэйл хүргэхэд алдаа гарсан тул танд илгээв. Анхаарна уу.
+{% else %}
+Хэрэв та энэ аккаунтыг хариуцахаа больсон бол энэ мэдэгдлийг үл хэрэгсэж болно.
+{% endif %}
+Хэрэв энэ өөрчлөлтийг зөвшөөрөөгүй бол энэ имэйлд хариу бичиж бидэнд яаралтай мэдэгдэнэ үү: {{ from_email }}
+
+Хүндэтгэсэн,
+Монголын Математикийн Олимпиадын Хороо
+{% endautoescape %}

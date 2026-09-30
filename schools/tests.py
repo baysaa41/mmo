@@ -325,3 +325,406 @@ class PendingStudentsTests(SchoolAccessTestBase):
         pending = set(response.context['pending_students'])
         self.assertIn(active, pending)
         self.assertNotIn(stale, pending)
+
+
+class ImportAnswerSheetTests(SchoolAccessTestBase):
+    def setUp(self):
+        from olympiad.models import Olympiad, Problem, Result
+        self.olympiad = Olympiad.objects.create(name='ММО-I', level=self.level)
+        self.p1 = Problem.objects.create(olympiad=self.olympiad, order=1)
+        self.p2 = Problem.objects.create(olympiad=self.olympiad, order=2)
+        self.student2 = make_user('student_b2', school=self.school_b, province=self.province_b)
+        self.school_b.group.user_set.add(self.student2)
+        self.existing = Result.objects.create(
+            contestant=self.student_b, olympiad=self.olympiad, problem=self.p1, answer=99, score=3,
+        )
+        self.url = reverse('import_school_answer_sheet', args=[self.school_b.id, self.olympiad.id])
+
+    def make_excel(self, rows):
+        import io
+        import pandas as pd
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine='openpyxl') as writer:
+            pd.DataFrame({'Түлхүүр': ['olympiad_id', 'school_id'],
+                          'Утга': [self.olympiad.id, self.school_b.id]}).to_excel(
+                writer, sheet_name='Мэдээлэл', index=False)
+            pd.DataFrame(rows, columns=['ID', '№1', '№2']).to_excel(writer, sheet_name='Хариулт', index=False)
+        buf.seek(0)
+        buf.name = 'sheet.xlsx'
+        return buf
+
+    def test_import_creates_and_updates_results(self):
+        from olympiad.models import Result
+        self.client.force_login(self.moderator_b)
+        rows = [
+            [self.student_b.id, 12, 'abc'],       # p1 шинэчлэгдэнэ, p2 буруу формат -> None
+            [self.student2.id, 5, 7.0],           # шинээр үүснэ
+            [self.student_a_like().id, 1, 1],     # өөр сургууль -> алгасна
+            [None, 1, 1],                         # хоосон ID -> алгасна
+            [self.student2.id, 6, None],          # давхардсан мөр: сүүлийнх нь хүчинтэй
+        ]
+        response = self.client.post(self.url, {'file': self.make_excel(rows)}, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        self.existing.refresh_from_db()
+        self.assertEqual(self.existing.answer, 12)
+        self.assertEqual(self.existing.score, 3)  # бусад талбар хөндөгдөхгүй
+        answers = dict(Result.objects.filter(olympiad=self.olympiad, contestant=self.student2)
+                       .values_list('problem_id', 'answer'))
+        self.assertEqual(answers, {self.p1.id: 6, self.p2.id: None})
+        self.assertIsNone(Result.objects.get(contestant=self.student_b, problem=self.p2).answer)
+        self.assertEqual(Result.objects.filter(olympiad=self.olympiad).count(), 4)
+
+        msg = [str(m) for m in response.context['messages']][-1]
+        self.assertIn('Үүссэн: 3', msg)
+        self.assertIn('Шинэчлэгдсэн: 3', msg)
+        self.assertIn('Буруу форматтай: 1', msg)
+        self.assertIn('Алгассан: 2', msg)
+
+    def test_query_count_does_not_grow_with_rows(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        self.client.force_login(self.moderator_b)
+        students = [make_user(f'bulk_{i}', school=self.school_b) for i in range(40)]
+        self.school_b.group.user_set.add(*students)
+
+        def run(n):
+            rows = [[s.id, 1, 2] for s in students[:n]]
+            with CaptureQueriesContext(connection) as ctx:
+                self.client.post(self.url, {'file': self.make_excel(rows)})
+            return len(ctx.captured_queries)
+
+        self.assertLess(run(40), 20)  # бүгд шинээр үүснэ
+        self.assertEqual(run(5), run(40))  # бүгд шинэчлэгдэнэ
+
+    def student_a_like(self):
+        return make_user('other_school_student', school=self.school_a)
+
+
+@override_settings(
+    STORAGES=TEST_STORAGES,
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+)
+class ModeratorChangeNoticeTests(TestCase):
+    """Бүртгэгч багш солигдоход удирдлага эсвэл аймгийн админд мэдэгдэл очих."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = make_user('padmin', email='admin@aimag.mn')
+        cls.province = Province.objects.create(name='Аймаг', contact_person=cls.admin)
+        cls.old = make_user('old_teacher', email='old@school.mn')
+        cls.new = make_user('new_teacher', email='new@school.mn')
+        cls.manager = make_user('manager', email='director@school.mn')
+        cls.school = School.objects.create(
+            name='Сургууль', province=cls.province, user=cls.old, manager=cls.manager,
+            group=Group.objects.create(name='School_notice'),
+        )
+
+    def setUp(self):
+        # Celery-г тойрч task-ийг шууд ажиллуулна
+        from unittest import mock
+        from schools.tasks import send_moderator_changed_notice_task as task
+        patcher = mock.patch.object(task, 'delay', side_effect=lambda *args: task(*args))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def change(self, by=None):
+        from django.core import mail
+        from schools.moderator import change_moderator
+        with self.captureOnCommitCallbacks(execute=True):
+            change_moderator(self.school, self.new, by or self.manager)
+        return mail.outbox
+
+    def test_manager_with_own_email_is_notified(self):
+        outbox = self.change()
+        self.school.refresh_from_db()
+        self.assertEqual(self.school.user, self.new)
+        self.assertEqual(len(outbox), 1)
+        self.assertEqual(outbox[0].to, ['director@school.mn'])
+        self.assertEqual(outbox[0].from_email, 'registration@mmo.mn')
+        self.assertIn('old@school.mn', outbox[0].body)
+        self.assertIn('new@school.mn', outbox[0].body)
+
+    def test_manager_sharing_moderator_email_goes_to_province(self):
+        self.manager.email = 'old@school.mn'
+        self.manager.save()
+        outbox = self.change()
+        self.assertEqual(outbox[0].to, ['admin@aimag.mn'])
+        self.assertIn('Анхаарна уу', outbox[0].body)
+
+    def test_blacklisted_manager_email_goes_to_province(self):
+        from emails.models import EmailBounce
+        EmailBounce.objects.create(email='director@school.mn', bounce_type='hard')
+        outbox = self.change()
+        self.assertEqual(outbox[0].to, ['admin@aimag.mn'])
+
+    def test_no_reachable_admin_falls_back_to_registration(self):
+        self.manager.email = ''
+        self.manager.save()
+        self.admin.email = ''
+        self.admin.save()
+        outbox = self.change()
+        self.assertEqual(outbox[0].to, ['registration@mmo.mn'])
+
+    def test_same_moderator_sends_nothing(self):
+        from django.core import mail
+        from schools.moderator import change_moderator
+        with self.captureOnCommitCallbacks(execute=True):
+            change_moderator(self.school, self.old, self.manager)
+        self.assertEqual(mail.outbox, [])
+
+    def test_manager_view_uses_notice(self):
+        from django.core import mail
+        self.client.force_login(self.manager)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse('manager_change_moderator', args=[self.school.id]),
+                             {'assign_moderator': '1', 'user_id': self.new.id})
+        self.school.refresh_from_db()
+        self.assertEqual(self.school.user, self.new)
+        self.assertEqual(len(mail.outbox), 1)
+
+
+@override_settings(
+    STORAGES=TEST_STORAGES,
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class ManageAllSchoolsBlockedEmailTests(SchoolAccessTestBase):
+    def setUp(self):
+        from emails.models import EmailBounce
+        self.moderator_a.email = 'Bounced@School.mn'
+        self.moderator_a.save()
+        EmailBounce.objects.create(email='bounced@school.mn', bounce_type='hard')
+        self.client.force_login(self.staff)
+
+    def test_blocked_badge_shown(self):
+        response = self.client.get(reverse('manage_all_schools'))
+        self.assertContains(response, 'Имэйлд алдаа гарсан</span>', count=1)
+
+    def test_manager_same_email_warning(self):
+        manager = make_user('mgr_a', email='bounced@school.mn')
+        self.school_a.manager = manager
+        self.school_a.save()
+        response = self.client.get(reverse('manage_all_schools'))
+        self.assertContains(response, 'Бүртгэгч багшийн имэйлтэй ижил', count=1)
+
+    def test_blocked_filter(self):
+        response = self.client.get(reverse('manage_all_schools'), {'blocked': '1'})
+        self.assertContains(response, 'Сургууль А')
+        self.assertNotContains(response, 'Сургууль Б')
+
+
+@override_settings(
+    STORAGES=TEST_STORAGES,
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class AccessNoticeTests(SchoolAccessTestBase):
+    def test_moderator_sees_own_role(self):
+        self.client.force_login(self.moderator_a)
+        response = self.client.get(reverse('school_dashboard', args=[self.school_a.id]))
+        self.assertContains(response, 'Сургууль А-ийн бүртгэгч багш</strong> эрхээр')
+        self.assertContains(response, 'зөвхөн албан хэрэгцээнд')
+
+    def test_staff_sees_staff_role(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse('school_dashboard', args=[self.school_a.id]))
+        self.assertContains(response, '<strong>Staff</strong> эрхээр')
+
+    def test_province_contact_sees_province_role(self):
+        self.client.force_login(self.province_manager_b)
+        response = self.client.get(reverse('school_dashboard', args=[self.school_b.id]))
+        self.assertContains(response, 'Аймаг Б-ийн удирдах ажилтан')
+
+
+@override_settings(
+    STORAGES=TEST_STORAGES,
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class EditSchoolManagerAccountTests(SchoolAccessTestBase):
+    """Сургуулийн удирдлагын албан аккаунтад зөвхөн албан тушаал, имэйл, утас засна."""
+
+    def setUp(self):
+        self.moderator_a.email = 'teacher@school.mn'
+        self.moderator_a.save()
+        self.manager = make_user('s0001', school=self.school_a, province=self.province_a,
+                                 first_name='Менежер', last_name='Аймаг А Сургууль А', email='')
+        self.school_a.manager = self.manager
+        self.school_a.save()
+        self.url = reverse('edit_school_admin', args=[self.manager.id])
+        self.client.force_login(self.moderator_a)
+        from unittest import mock
+        from schools.tasks import send_account_email_changed_notice_task as task
+        patcher = mock.patch.object(task, 'delay', side_effect=lambda *args: task(*args))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_shows_restricted_form(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, 'сургуулийн албан аккаунт')
+        self.assertContains(response, 'name="email"')
+        self.assertContains(response, 'name="mobile"')
+        for field in ('title', 'first_name', 'last_name', 'province'):
+            self.assertNotContains(response, f'name="{field}"')
+
+    def test_updates_only_email_mobile_and_restores_name(self):
+        self.manager.first_name, self.manager.last_name = 'Энхмэнд', 'Баттулга'
+        self.manager.save()
+        response = self.client.post(self.url, {
+            'email': 'Director@School.mn', 'mobile': '99112233',
+            'first_name': 'Хакер', 'last_name': 'Хакер', 'province': self.province_b.id,
+        })
+        self.assertRedirects(response, reverse('school_dashboard', args=[self.school_a.id]))
+        self.manager.refresh_from_db()
+        self.assertEqual((self.manager.first_name, self.manager.last_name), ('Менежер', 'Аймаг А Сургууль А'))
+        self.assertEqual(self.manager.email, 'director@school.mn')
+        self.assertEqual(self.manager.data.mobile, 99112233)
+        self.assertEqual(self.manager.data.province, self.province_a)
+
+    def test_rejects_moderator_email(self):
+        response = self.client.post(self.url, {'email': 'TEACHER@school.mn', 'mobile': '99112233'})
+        self.assertContains(response, 'Бүртгэгч багшийн имэйлтэй ижил байж болохгүй')
+        self.manager.refresh_from_db()
+        self.assertEqual(self.manager.email, '')
+
+    def test_rejects_invalid_mobile(self):
+        response = self.client.post(self.url, {'email': 'd@school.mn', 'mobile': '185734'})
+        self.assertContains(response, '8 оронтой утасны дугаар')
+
+    def test_personal_moderator_account_keeps_full_form(self):
+        response = self.client.get(reverse('edit_school_admin', args=[self.moderator_a.id]))
+        self.assertContains(response, 'name="last_name"')
+
+
+@override_settings(
+    STORAGES=TEST_STORAGES,
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class EditProvinceAdminAccountTests(SchoolAccessTestBase):
+    """Аймгийн удирдах ажилтны албан аккаунтад зөвхөн албан тушаал, имэйл, утас засна."""
+
+    def setUp(self):
+        self.contact = self.province_manager_b
+        self.contact.first_name = 'Удирдах ажилтан'
+        self.contact.last_name = 'Аймаг Б'
+        self.contact.save()
+        self.url = reverse('edit_province_admin', args=[self.contact.id])
+        self.client.force_login(self.contact)
+
+    def test_shows_restricted_form(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, 'Аймаг Б-ийн албан аккаунт')
+        self.assertNotContains(response, 'name="title"')
+        self.assertNotContains(response, 'name="last_name"')
+
+    def test_updates_only_email_mobile_and_restores_name(self):
+        self.contact.first_name, self.contact.last_name = 'Ариунжаргал', 'Зандраа'
+        self.contact.save()
+        response = self.client.post(self.url, {
+            'email': 'aimag@edu.mn', 'mobile': '88112233', 'last_name': 'Хакер',
+        })
+        self.assertRedirects(response, reverse('province_dashboard', args=[self.province_b.id]),
+                             fetch_redirect_response=False)
+        self.contact.refresh_from_db()
+        self.assertEqual((self.contact.first_name, self.contact.last_name, self.contact.email),
+                         ('Удирдах ажилтан', 'Аймаг Б', 'aimag@edu.mn'))
+        self.assertEqual(self.contact.data.mobile, 88112233)
+
+    def test_registrar_keeps_full_form(self):
+        registrar = make_user('registrar_b', province=self.province_b)
+        self.province_b.registrar = registrar
+        self.province_b.save()
+        response = self.client.get(reverse('edit_province_admin', args=[registrar.id]))
+        self.assertContains(response, 'name="last_name"')
+
+
+@override_settings(
+    STORAGES=TEST_STORAGES,
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+)
+class AccountEmailChangedNoticeTests(SchoolAccessTestBase):
+    """Албан аккаунтын имэйл солигдоход хуучин хаяг (эсвэл аймгийн админ) руу мэдэгдэл очих."""
+
+    def setUp(self):
+        from unittest import mock
+        from schools.tasks import send_account_email_changed_notice_task as task
+        patcher = mock.patch.object(task, 'delay', side_effect=lambda *args: task(*args))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.province_manager_a = make_user('pm_a', email='aimag@edu.mn')
+        self.province_a.contact_person = self.province_manager_a
+        self.province_a.save()
+        self.manager = make_user('s0001', school=self.school_a, province=self.province_a,
+                                 first_name='Менежер', last_name='Аймаг А Сургууль А', email='old@director.mn')
+        self.school_a.manager = self.manager
+        self.school_a.save()
+        self.url = reverse('edit_school_admin', args=[self.manager.id])
+        self.client.force_login(self.moderator_a)
+
+    def post(self, email):
+        from django.core import mail
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(self.url, {'email': email, 'mobile': '99112233'})
+        return mail.outbox
+
+    def test_old_address_is_notified(self):
+        outbox = self.post('new@director.mn')
+        self.assertEqual(len(outbox), 1)
+        self.assertEqual(outbox[0].to, ['old@director.mn'])
+        self.assertIn('new@director.mn', outbox[0].body)
+        self.assertIn('mod_a', outbox[0].body)
+
+    def test_unchanged_email_sends_nothing(self):
+        self.assertEqual(self.post('OLD@director.mn'), [])
+
+    def test_missing_old_email_goes_to_province_admin(self):
+        self.manager.email = ''
+        self.manager.save()
+        outbox = self.post('new@director.mn')
+        self.assertEqual(outbox[0].to, ['aimag@edu.mn'])
+        self.assertIn('Анхаарна уу', outbox[0].body)
+
+    def test_blocked_old_email_goes_to_province_admin(self):
+        from emails.models import EmailBounce
+        EmailBounce.objects.create(email='old@director.mn', bounce_type='hard')
+        outbox = self.post('new@director.mn')
+        self.assertEqual(outbox[0].to, ['aimag@edu.mn'])
+
+
+
+class RestoreInstitutionalNamesTests(SchoolAccessTestBase):
+    def test_restores_personal_and_stale_names_only_for_institutional_accounts(self):
+        from io import StringIO
+        from django.core.management import call_command
+        manager = make_user('s0001', first_name='Энхмэнд', last_name='Баттулга')
+        personal = make_user('teacher_mgr', first_name='Бат', last_name='Дорж')
+        self.school_a.manager = manager
+        self.school_a.save()
+        self.school_b.manager = personal
+        self.school_b.save()
+        self.province_manager_b.username = 'padmin02'
+        self.province_manager_b.first_name = 'Ариунжаргал'
+        self.province_manager_b.save()
+
+        call_command('restore_institutional_names', stdout=StringIO())  # dry-run
+        manager.refresh_from_db()
+        self.assertEqual(manager.first_name, 'Энхмэнд')
+
+        call_command('restore_institutional_names', '--apply', stdout=StringIO())
+        manager.refresh_from_db(); personal.refresh_from_db(); self.province_manager_b.refresh_from_db()
+        self.assertEqual((manager.first_name, manager.last_name), ('Менежер', 'Аймаг А Сургууль А'))
+        self.assertEqual((personal.first_name, personal.last_name), ('Бат', 'Дорж'))
+        self.assertEqual((self.province_manager_b.first_name, self.province_manager_b.last_name),
+                         ('Удирдах ажилтан', 'Аймаг Б'))

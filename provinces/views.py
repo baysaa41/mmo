@@ -11,7 +11,7 @@ from olympiad.models import Olympiad, Award, ScoreSheet, Result, Problem, School
 from olympiad.utils.group_management import ensure_olympiad_has_group, get_or_create_round2_group
 from olympiad.utils.round2_quota import compute_school_quota_table
 from schools.models import School
-from schools.forms import UserForm, UserMetaForm
+from schools.forms import ProvinceAdminAccountForm, UserForm, UserMetaForm
 from django.contrib.auth.models import User, Group
 
 import pandas as pd
@@ -82,6 +82,24 @@ def edit_province_admin_view(request, user_id):
         if not province or not province.user_has_access(request.user):
             messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
             return redirect('my_managed_provinces')
+
+    # Удирдах ажилтны (contact_person) аккаунт нь аймгийн албан аккаунт — хувь хүний биш.
+    # Зөвхөн албан тушаал, имэйл, утсыг засна. Бүртгэгч багш (registrar) хувь хүн тул бүрэн засна.
+    contact_province = Province.objects.filter(contact_person=target_user).first()
+    if contact_province:
+        if request.method == 'POST':
+            form = ProvinceAdminAccountForm(request.POST, account=target_user, province=contact_province)
+            if form.is_valid():
+                form.save(changed_by=request.user)
+                messages.success(request, f"'{contact_province.name}'-ийн удирдах ажилтны мэдээллийг шинэчиллээ.")
+                if request.user.is_staff:
+                    return redirect('province_contacts')
+                return redirect('province_dashboard', province_id=contact_province.id)
+        else:
+            form = ProvinceAdminAccountForm(account=target_user, province=contact_province)
+        return render(request, 'provinces/edit_province_account.html', {
+            'form': form, 'account': target_user, 'province': contact_province, 'target_user': target_user,
+        })
 
     user_meta, created = UserMeta.objects.get_or_create(user=target_user)
 
