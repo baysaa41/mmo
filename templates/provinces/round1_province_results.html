@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 
 {% block title %}1-р давааны дүн - {{ round2_olympiad.name }}{% endblock %}
 
 {% block content %}
+{% access_notice %}
 <div class="container-fluid mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">

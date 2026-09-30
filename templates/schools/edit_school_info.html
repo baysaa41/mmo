@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 {% load crispy_forms_tags %}
 
 {% block content %}
+{% access_notice %}
 <div class="container">
     <h2 class="mb-4">"{{ school.name }}" сургуулийн удирдлага шинэчлэх</h2>
     <a href="{% url 'manage_all_schools' %}" class="btn btn-secondary btn-sm mb-4">&larr; Бүх сургуулийн жагсаалт</a>

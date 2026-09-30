@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 
 {% block title %}Сургуулиудын албан ёсны оролцоо{% endblock %}
 
 {% block content %}
+{% access_notice %}
 <div class="container-fluid py-4">
     <h2 class="mb-3">
         <i class="fas fa-school"></i> Сургуулиудын албан ёсны оролцооны түвшингүүд

@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 
 {% block content %}
+{% access_notice %}
     <div class="container">
         <h2 class="mb-1">{{ olympiad.name }}
             {% if request.user.is_staff %}

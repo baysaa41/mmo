@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 
 {% block title %}Миний аймгууд{% endblock %}
 
 {% block content %}
+{% access_notice %}
 <div class="container mt-4">
     <h2>Миний удирддаг аймгууд</h2>
     <p class="text-muted">Таны удирдлагад байгаа аймаг дүүргүүд</p>

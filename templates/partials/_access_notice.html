@@ -1,0 +1,9 @@
+{% if roles %}
+<div class="alert alert-secondary d-flex align-items-start gap-2 py-2 px-3 small mb-3" role="note">
+    <i class="fas fa-lock mt-1"></i>
+    <div>
+        Та энэ хуудсыг <strong>{{ roles|join:", " }}</strong> эрхээр харж байна.
+        Энд буй хувийн мэдээллийг зөвхөн албан хэрэгцээнд ашиглаж, гуравдагч этгээдэд дамжуулахгүй байна уу.
+    </div>
+</div>
+{% endif %}

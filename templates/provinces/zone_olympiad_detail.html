@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 {% load static %}
 
 {% block title %}{{ olympiad.name}} - {{ zone.name }}{% endblock %}
 
 {% block content %}
+{% access_notice %}
 <div class="container mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">

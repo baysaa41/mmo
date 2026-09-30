@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 
 {% block title %}
     Сургуулиудын жагсаалт
 {% endblock %}
 {% block content %}
+{% access_notice %}
     <div class="container mt-4">
         <h2>Сургуулиудын жагсаалт</h2>
         <p class="lead">Сургуулийн админы имэйл хаягаар хайлт хийнэ үү.</p>
