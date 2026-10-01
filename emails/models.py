@@ -126,3 +126,28 @@ class EmailBounce(models.Model):
 
     def __str__(self):
         return f"{self.email} - {self.bounce_type}"
+
+class EmailEvent(models.Model):
+    """
+    SES configuration set-ээс SNS-ээр ирсэн имэйлийн үйл явдал (хүргэгдсэн, нээгдсэн, холбоос дарсан).
+    message_id нь илгээлтийн лог (logs/registration_notice_*.csv) болон EmailRecipient-тэй холбогдоно.
+    """
+    DELIVERY = 'delivery'
+    OPEN = 'open'
+    CLICK = 'click'
+    EVENT_TYPE_CHOICES = [(DELIVERY, 'Хүргэгдсэн'), (OPEN, 'Нээсэн'), (CLICK, 'Холбоос дарсан')]
+
+    message_id = models.CharField(max_length=255, db_index=True)
+    email = models.EmailField(db_index=True)
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPE_CHOICES)
+    occurred_at = models.DateTimeField()
+    link = models.URLField(max_length=2000, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    subject = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['message_id', 'event_type'])]
+
+    def __str__(self):
+        return f'{self.event_type} {self.email} {self.occurred_at:%Y-%m-%d %H:%M}'
