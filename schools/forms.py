@@ -175,7 +175,7 @@ class SchoolManagerAccountForm(InstitutionalAccountForm):
 
 
 class ProvinceAdminAccountForm(InstitutionalAccountForm):
-    """Аймаг/дүүргийн удирдах ажилтны албан аккаунт (Province.contact_person)."""
+    """Аймаг/дүүргийн удирдах ажилтны албан аккаунт (Province.contact_person, contact_person2)."""
     EMAIL_HELP = ('Аймаг/дүүргийн хариуцсан ажилтны имэйл. Сургуулиудын бүртгэлийн тайлан, '
                   'бүртгэгч багш солигдсон мэдэгдэл энэ хаяг руу очно.')
 

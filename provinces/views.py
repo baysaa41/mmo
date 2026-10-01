@@ -40,7 +40,7 @@ def my_managed_provinces(request):
 
     if request.user.is_staff:
         # Staff бол бүх аймгийг харуулна
-        managed_provinces = Province.objects.all().select_related('zone', 'contact_person', 'registrar').order_by('name')
+        managed_provinces = Province.objects.all().select_related('zone', 'contact_person', 'contact_person2', 'registrar').order_by('name')
         is_staff_access = True
     else:
         # Province_{id}_Managers group-д байгаа аймгуудын ID-г олох
@@ -55,8 +55,8 @@ def my_managed_provinces(request):
 
         # Удирдах ажилтан, бүртгэгч багш эсвэл Province_{id}_Managers group-д байгаа аймгууд
         managed_provinces = Province.objects.filter(
-            Q(contact_person=request.user) | Q(registrar=request.user) | Q(id__in=province_ids)
-        ).select_related('zone', 'contact_person', 'registrar').distinct().order_by('name')
+            Q(contact_person=request.user) | Q(contact_person2=request.user) | Q(registrar=request.user) | Q(id__in=province_ids)
+        ).select_related('zone', 'contact_person', 'contact_person2', 'registrar').distinct().order_by('name')
 
     context = {
         'provinces': managed_provinces,
@@ -75,7 +75,7 @@ def edit_province_admin_view(request, user_id):
     target_user = get_object_or_404(User, id=user_id)
 
     province = Province.objects.filter(
-        Q(contact_person=target_user) | Q(registrar=target_user)
+        Q(contact_person=target_user) | Q(contact_person2=target_user) | Q(registrar=target_user)
     ).first()
 
     if not request.user.is_staff:
@@ -83,9 +83,9 @@ def edit_province_admin_view(request, user_id):
             messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
             return redirect('my_managed_provinces')
 
-    # Удирдах ажилтны (contact_person) аккаунт нь аймгийн албан аккаунт — хувь хүний биш.
+    # Удирдах ажилтны (contact_person, contact_person2) аккаунт нь аймгийн албан аккаунт — хувь хүний биш.
     # Зөвхөн албан тушаал, имэйл, утсыг засна. Бүртгэгч багш (registrar) хувь хүн тул бүрэн засна.
-    contact_province = Province.objects.filter(contact_person=target_user).first()
+    contact_province = Province.objects.filter(Q(contact_person=target_user) | Q(contact_person2=target_user)).first()
     if contact_province:
         if request.method == 'POST':
             form = ProvinceAdminAccountForm(request.POST, account=target_user, province=contact_province)
@@ -131,7 +131,7 @@ def province_change_registrar(request, province_id):
     """Аймгийн бүртгэгч багшийг солих (staff эсвэл тухайн аймгийн удирдах ажилтан)"""
     province = get_object_or_404(Province, id=province_id)
 
-    if not (request.user.is_staff or province.contact_person == request.user):
+    if not (request.user.is_staff or province.is_contact_person(request.user)):
         messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
         return redirect('province_dashboard', province_id=province_id)
 
@@ -240,6 +240,7 @@ def province_dashboard(request, province_id):
 
     context = {
         'province': province,
+        'is_province_contact': province.is_contact_person(request.user),
         'teacher_olympiads': teacher_olympiads,
         'student_olympiads': student_olympiads,
         'teacher_levels': ', '.join(teacher_levels),

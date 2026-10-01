@@ -69,7 +69,7 @@ def send_account_email_changed_notice_task(self, account_id, old_email, changed_
 
     User = get_user_model()
     users = User.objects.in_bulk([i for i in (account_id, changed_by_id) if i])
-    province = Province.objects.filter(id=province_id).select_related('contact_person', 'registrar').first()
+    province = Province.objects.filter(id=province_id).select_related('contact_person', 'contact_person2', 'registrar').first()
     try:
         return send_account_email_changed_notice(
             users[account_id], old_email, users.get(changed_by_id), organization, province,

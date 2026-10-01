@@ -647,6 +647,22 @@ class EditProvinceAdminAccountTests(SchoolAccessTestBase):
                          ('Удирдах ажилтан', 'Аймаг Б', 'aimag@edu.mn'))
         self.assertEqual(self.contact.data.mobile, 88112233)
 
+    def test_second_contact_account_has_access_and_restricted_form(self):
+        from schools.moderator import province_admins
+        second = make_user('padmin_b-2', first_name='Удирдах ажилтан', last_name='Аймаг Б', email='second@edu.mn')
+        self.province_b.contact_person2 = second
+        self.province_b.save()
+        self.assertTrue(self.province_b.user_has_access(second))
+        self.assertFalse(self.province_a.user_has_access(second))
+        self.assertIn(second, province_admins(self.province_b))
+        self.client.force_login(second)
+        response = self.client.get(reverse('edit_province_admin', args=[second.id]))
+        self.assertContains(response, 'Аймаг Б-ийн албан аккаунт')
+        self.assertNotContains(response, 'name="last_name"')
+        response = self.client.get(reverse('province_dashboard', args=[self.province_b.id]))
+        self.assertContains(response, reverse('edit_province_admin', args=[second.id]))
+        self.assertContains(response, reverse('edit_province_admin', args=[self.contact.id]))
+
     def test_registrar_keeps_full_form(self):
         registrar = make_user('registrar_b', province=self.province_b)
         self.province_b.registrar = registrar

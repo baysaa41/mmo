@@ -16,7 +16,7 @@ def _province_roles(user, province):
     roles = []
     if province is None:
         return roles
-    if province.contact_person_id == user.id:
+    if province.is_contact_person(user):
         roles.append(f'{province.name}-ийн удирдах ажилтан')
     if province.registrar_id == user.id:
         roles.append(f'{province.name}-ийн бүртгэгч багш')

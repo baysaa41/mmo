@@ -1009,7 +1009,7 @@ def province_contacts(request):
     from ..models import Province, Zone
     from django.contrib.auth.models import User
 
-    provinces = Province.objects.select_related('zone', 'contact_person', 'registrar').order_by('zone__name', 'name')
+    provinces = Province.objects.select_related('zone', 'contact_person', 'contact_person2', 'registrar').order_by('zone__name', 'name')
     zones = Zone.objects.select_related('contact_person').order_by('name')
 
     if request.method == 'POST':

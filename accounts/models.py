@@ -107,6 +107,12 @@ class Province(models.Model):
     name = models.CharField(max_length=120, null=True)
     zone = models.ForeignKey('Zone', on_delete=models.SET_NULL, null=True)
     contact_person = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Аймгийн удирдах ажилтан')
+    # Нэгээс олон дүүргийг хамарсан аймаг/дүүрэгт (жишээ нь Багануур, Багахангай, Налайх) хоёр дахь албан аккаунт
+    contact_person2 = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='second_contact_provinces',
+        verbose_name='Аймгийн удирдах ажилтан 2'
+    )
     registrar = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='registering_provinces',
@@ -121,15 +127,23 @@ class Province(models.Model):
     def __str__(self):
         return '{}'.format(self.name)
 
+    @property
+    def contact_persons(self):
+        """Удирдах ажилтны албан аккаунтууд (contact_person, contact_person2) — хоосныг алгасна."""
+        return [u for u in (self.contact_person, self.contact_person2) if u]
+
+    def is_contact_person(self, user):
+        return user is not None and user.pk is not None and user.pk in (self.contact_person_id, self.contact_person2_id)
+
     def user_has_access(self, user):
         """
         Хэрэглэгч энэ аймаг/дүүргийг удирдах эрхтэй эсэхийг шалгана.
-        Staff, удирдах ажилтан (contact_person), бүртгэгч багш (registrar),
+        Staff, удирдах ажилтан (contact_person, contact_person2), бүртгэгч багш (registrar),
         эсвэл Province_{id}_Managers группд байгаа бол эрхтэй.
         """
         if user.is_staff:
             return True
-        if self.contact_person == user:
+        if self.is_contact_person(user):
             return True
         if self.registrar == user:
             return True

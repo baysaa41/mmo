@@ -85,24 +85,25 @@
                         <td><strong>{{ province.name }}</strong></td>
                         <td>{{ province.zone.name|default:"-" }}</td>
                         <td>
-                            {% if province.contact_person %}
-                                {{ province.contact_person.last_name }} {{ province.contact_person.first_name }}
-                                <span class="text-muted">(ID: {{ province.contact_person.id }})</span>
-                                {% if province.contact_person.email %}
-                                    <br><small class="text-muted">{{ province.contact_person.email }}</small>
+                            {% for contact in province.contact_persons %}
+                                {% if not forloop.first %}<hr class="my-1">{% endif %}
+                                {{ contact.last_name }} {{ contact.first_name }}
+                                <span class="text-muted">(ID: {{ contact.id }})</span>
+                                {% if contact.email %}
+                                    <br><small class="text-muted">{{ contact.email }}</small>
                                 {% endif %}
-                            {% else %}
+                            {% empty %}
                                 <span class="text-danger">Тодорхойгүй</span>
-                            {% endif %}
+                            {% endfor %}
                         </td>
                         <td>
-                            {% if province.contact_person %}
-                                <a href="{% url 'edit_province_admin' province.contact_person.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                    <i class="fas fa-pen fa-xs"></i> Засах
+                            {% for contact in province.contact_persons %}
+                                <a href="{% url 'edit_province_admin' contact.id %}" class="btn btn-sm btn-outline-secondary mb-1" target="_blank">
+                                    <i class="fas fa-pen fa-xs"></i> Засах{% if province.contact_person2 %} ({{ contact.username }}){% endif %}
                                 </a>
-                            {% else %}
+                            {% empty %}
                                 <span class="text-muted">-</span>
-                            {% endif %}
+                            {% endfor %}
                         </td>
                         <td>
                             {% if province.registrar %}

@@ -3,7 +3,7 @@
 
 Бүртгэгч багш солигдоход бие даасан хүнд мэдэгдэл очно:
   - сургуулийн удирдлага (manager) хуучин/шинэ багшаас өөр имэйлтэй бол удирдлагад,
-  - үгүй бол аймаг/дүүргийн админуудад (contact_person, registrar, Province_{id}_Managers),
+  - үгүй бол аймаг/дүүргийн админуудад (contact_person, contact_person2, registrar, Province_{id}_Managers),
   - тэд ч имэйлгүй бол registration@mmo.mn руу.
 """
 import logging
@@ -74,7 +74,7 @@ def manager_has_own_email(school):
 def province_admins(province, blocked=frozenset()):
     if province is None:
         return []
-    admins = {u for u in (province.contact_person, province.registrar) if u}
+    admins = {u for u in (*province.contact_persons, province.registrar) if u}
     admins |= set(User.objects.filter(groups__name=f'Province_{province.id}_Managers'))
     return [u for u in admins if email_problem(u, blocked) is None]
 

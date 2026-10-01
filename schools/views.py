@@ -80,7 +80,7 @@ def my_managed_schools_view(request):
 
     # Аймгийн удирдах ажилтан/бүртгэгч багш эсвэл Province manager эсэхийг шалгах
     managed_province = Province.objects.filter(
-        Q(contact_person=request.user) | Q(registrar=request.user)
+        Q(contact_person=request.user) | Q(contact_person2=request.user) | Q(registrar=request.user)
     ).first()
     if not managed_province:
         import re as _re

@@ -4,8 +4,8 @@
         Танд сургууль бүртгэгдээгүй байна. <a href="{% url 'profile_edit' %}">Профайл</a> хэсэгт сургуулиа сонгоно уу.
         {% if province %}
             Хэрэв таны сургууль жагсаалтад алга бол, шинээр бүртгүүлэхийн тулд
-            {% if province.contact_person %}
-                <strong>{{ province.name }}</strong> аймаг/дүүргийн админ <strong>{{ province.contact_person.get_full_name|default:province.contact_person.username }}</strong>{% if province.contact_person.email %} ({{ province.contact_person.email }}){% endif %}
+            {% if province.contact_persons %}
+                <strong>{{ province.name }}</strong> аймаг/дүүргийн админ {% for contact in province.contact_persons %}{% if not forloop.first %}, {% endif %}<strong>{{ contact.get_full_name|default:contact.username }}</strong>{% if contact.email %} ({{ contact.email }}){% endif %}{% endfor %}
             {% else %}
                 <strong>{{ province.name }}</strong> аймаг/дүүргийн админтай
             {% endif %}

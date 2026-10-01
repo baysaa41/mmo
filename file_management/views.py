@@ -200,7 +200,7 @@ def is_manager(user_id):
         return True
 
     # Аймгийн удирдах ажилтан/бүртгэгч багш эрх
-    if Province.objects.filter(Q(contact_person=user) | Q(registrar=user)).exists():
+    if Province.objects.filter(Q(contact_person=user) | Q(contact_person2=user) | Q(registrar=user)).exists():
         return True
 
     # Province_{id}_Managers group эрх

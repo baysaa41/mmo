@@ -238,7 +238,7 @@ class Command(BaseCommand):
         return '; '.join(issues)
 
     def _collect_provinces(self, province_ids):
-        provinces = Province.objects.select_related('contact_person', 'registrar').order_by('name')
+        provinces = Province.objects.select_related('contact_person', 'contact_person2', 'registrar').order_by('name')
         if province_ids:
             provinces = provinces.filter(id__in=province_ids)
         by_province = defaultdict(list)
@@ -270,7 +270,7 @@ class Command(BaseCommand):
                 self.skipped['province']['имэйлтэй админгүй аймаг'] += 1
                 if self.redirect_to:  # урьдчилан харахын тулд админгүй аймгийн мэдэгдлийг ч үүсгэнэ
                     entry = self.recipients[f'(админгүй) {p.name}']
-                    entry['users'] += [u for u in (p.contact_person, p.registrar) if u and u not in entry['users']]
+                    entry['users'] += [u for u in (*p.contact_persons, p.registrar) if u and u not in entry['users']]
                     entry['province'].append(item)
             for u in admins:
                 self._add('province', u, item)
