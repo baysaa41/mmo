@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from .models import Olympiad, ScoreSheet, Result, SchoolYear, Upload, Problem, Topic, Award
 from .forms import ChangeScoreSheetSchoolForm, ResultsGraderForm, UploadForm, ProblemEditForm
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
@@ -84,6 +84,8 @@ def olympiad_scores(request, olympiad_id):
 @login_required
 def problem_stats_view(request, problem_id):
     problem = get_object_or_404(Problem, pk=problem_id)
+    if not (problem.olympiad and problem.olympiad.problems_visible_to(request.user)):
+        return HttpResponseForbidden("Олимпиад дуусаагүй тул бодлогыг харах боломжгүй.")
     results = Result.objects.filter(problem=problem, score__isnull=False)
 
     grouped = (results.values('score')
@@ -106,6 +108,8 @@ def problem_stats_view(request, problem_id):
 
 @login_required
 def olympiad_problem_stats(request, olympiad_id):
+    if not get_object_or_404(Olympiad, pk=olympiad_id).problems_visible_to(request.user):
+        return HttpResponseForbidden("Олимпиад дуусаагүй тул бодлогыг харах боломжгүй.")
     cache_key = f"olympiad_stats_{olympiad_id}"
     data = cache.get(cache_key)
 

@@ -1,7 +1,8 @@
 # olympiad/management/commands/generate_scoresheets.py
 
 from datetime import datetime
-from django.core.cache import cache
+from django.core.cache import cache, caches
+from django.core.cache.backends.redis import RedisCache
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Case, When, Value, IntegerField, OuterRef, Subquery, BooleanField
 from olympiad.models import ScoreSheet, Award, Olympiad
@@ -55,6 +56,8 @@ class Command(BaseCommand):
             'errors': [],  # Алдаанууд
         }
 
+        years_to_warm = set()
+
         # Олимпиад бүрээр боловсруулах
         for i, olympiad_id in enumerate(olympiad_ids, 1):
             self.stdout.write(f'\n[{i}/{len(olympiad_ids)}] Олимпиад ID={olympiad_id} боловсруулж байна...')
@@ -70,6 +73,9 @@ class Command(BaseCommand):
                 self.process_olympiad(olympiad_id, force_delete, total_stats, olympiad_detail)
                 if clear_cache:
                     self.clear_olympiad_cache(olympiad_id)
+                    year_id = Olympiad.objects.filter(pk=olympiad_id).values_list('school_year_id', flat=True).first()
+                    if year_id:
+                        years_to_warm.add(year_id)
                 total_stats['processed'] += 1
                 olympiad_detail['success'] = True
                 self.stdout.write(self.style.SUCCESS(f'✅ Олимпиад ID={olympiad_id} амжилттай боловсруулагдлаа.'))
@@ -83,6 +89,11 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f'❌ Олимпиад ID={olympiad_id} алдаа: {e}'))
             finally:
                 total_stats['olympiad_details'].append(olympiad_detail)
+
+        # Квотын хуудсуудыг энд (timeout-гүй) дахин тооцоолж кэшлэнэ — эс бөгөөс эхний
+        # зочны хүсэлт дээр тооцоологдож gunicorn-ы 90с timeout-оос хэтэрдэг
+        for year_id in sorted(years_to_warm):
+            self.warm_quota_cache(year_id)
 
         # Эцсийн тайлан
         self.stdout.write('\n' + '=' * 80)
@@ -240,19 +251,48 @@ class Command(BaseCommand):
             f'cheating_analysis_{olympiad_id}',
             f'cheating_analysis_pro_{olympiad_id}',
         ]
+        year_id = Olympiad.objects.filter(pk=olympiad_id).values_list('school_year_id', flat=True).first()
+        if year_id:
+            cache_keys += [f'round2_quota_summary_{year_id}', f'round3_district_quota_{year_id}']
 
-        # scores_ prefix-тэй cache key-үүдийг устгах
-        # scores_{olympiad_id}_{province_id}_{zone_id}_{page}_{show_all}_{official}_{show_zero}
-        # LocMemCache нь key pattern-аар устгах боломжгүй тул бүх cache-г устгана
-        cache.delete_many(cache_keys)
-
-        # scores_ cache нь олон parameter-тэй учир бүгдийг нь тодорхойлох боломжгүй
-        # Тиймээс бүх cache-г цэвэрлэнэ
         try:
-            cache.clear()
+            cache.delete_many(cache_keys)
+            # scores_{olympiad_id}_{province_id}_{zone_id}_{page}_{show_all}_{official}_{show_zero}
+            # олон parameter-тэй тул Redis дээр pattern-аар устгана; бусад backend
+            # (тестийн LocMemCache г.м.) pattern дэмждэггүй тул бүх cache-г цэвэрлэнэ
+            backend = caches['default']  # `cache` нь proxy тул isinstance ажиллахгүй
+            if isinstance(backend, RedisCache):
+                client = backend._cache.get_client(write=True)
+                pattern = backend.make_key(f'scores_{olympiad_id}_') + '*'
+                keys = list(client.scan_iter(match=pattern, count=1000))
+                if keys:
+                    client.delete(*keys)
+            else:
+                cache.clear()
             self.stdout.write(self.style.SUCCESS(f'  🗑️ Олимпиад ID={olympiad_id}-ийн cache амжилттай устгагдлаа.'))
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'  ⚠️ Cache устгахад алдаа: {e}'))
+
+    def warm_quota_cache(self, year_id):
+        """Квотын дэвтэр, Хотын эрхийн дэвтрийн кэшийг урьдчилан тооцоолно"""
+        from django.contrib.auth.models import AnonymousUser
+        from django.test import RequestFactory
+        from olympiad.models import SchoolYear
+        from olympiad.views_public import get_capital_quota_tables, round2_quota_summary_view
+
+        year = SchoolYear.objects.filter(pk=year_id).first()
+        if not year:
+            return
+        try:
+            start = datetime.now()
+            get_capital_quota_tables(year, force_update=True)
+            request = RequestFactory().get('/', {'year': year_id, 'clean': '1'})
+            request.user = AnonymousUser()
+            round2_quota_summary_view(request)
+            seconds = (datetime.now() - start).total_seconds()
+            self.stdout.write(self.style.SUCCESS(f'  🔥 {year}: квотын кэш дахин тооцоологдлоо ({seconds:.1f} сек).'))
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'  ⚠️ Квотын кэш тооцоолоход алдаа: {e}'))
 
     def write_log_file(self, log_file, olympiad_ids, total_stats, force_delete):
         """Log файл бичих"""

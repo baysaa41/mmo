@@ -1,0 +1,17 @@
+{% autoescape off %}Сайн байна уу,
+
+{{ school.name }} ({{ school.province.name }}) сургуулийн ММО бүртгэгч багш солигдлоо.
+  Өмнөх: {% if old %}{{ old.get_full_name|default:old.username }} ({{ old.email|default:"имэйлгүй" }}){% else %}—{% endif %}
+  Шинэ:  {{ new.get_full_name|default:new.username }} ({{ new.email|default:"имэйлгүй" }})
+  Сольсон: {% if changed_by %}{{ changed_by.get_full_name|default:changed_by.username }} ({{ changed_by.email|default:"имэйлгүй" }}){% else %}систем{% endif %}, {{ changed_at|date:"Y-m-d H:i" }}
+{% if audience == 'province' %}
+Энэ сургуулийн удирдлагын имэйл бүртгэгдээгүй, багшийнхтай ижил, эсвэл имэйл хүргэхэд алдаа гарсан тул танд илгээв. Анхаарна уу.
+Зөвшөөрөгдөөгүй өөрчлөлт бол: {{ site }}/schools/{{ school.id }}/change-admin/
+{% else %}
+Та энэ өөрчлөлтийг хийгээгүй, зөвшөөрөөгүй бол буцааж солино уу: {{ site }}/schools/{{ school.id }}/change-moderator/
+{% endif %}
+Асуух зүйл байвал: {{ from_email }}
+
+Хүндэтгэсэн,
+Монголын Математикийн Олимпиадын Хороо
+{% endautoescape %}

@@ -1,11 +1,11 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponseForbidden
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Avg, Max, Min
 from django.core.paginator import Paginator
 from datetime import datetime, timezone
 from .models import Olympiad, Problem, Result, SchoolYear, ScoreSheet, OlympiadGroup
-from django_pandas.io import read_frame
 from accounts.models import Province
 from schools.models import School
 from django.contrib.auth.models import User
@@ -240,6 +240,8 @@ def student_result_view(request, olympiad_id, contestant_id):
 @login_required
 def problem_stats_view(request, problem_id):
     problem = get_object_or_404(Problem, pk=problem_id)
+    if not (problem.olympiad and problem.olympiad.problems_visible_to(request.user)):
+        return HttpResponseForbidden("Олимпиад дуусаагүй тул бодлогыг харах боломжгүй.")
     results = Result.objects.filter(problem=problem, score__isnull=False)
 
     grouped = (results.values('score')
@@ -319,8 +321,10 @@ def olympiad_group_result_view(request, group_id):
         users = olympiad_group.group.user_set.all()
     else:
         users = User.objects.all()
-    answers_df = read_frame(answers, fieldnames=['contestant_id', 'problem_id', 'score'], verbose=False)
-    users_df = read_frame(users, fieldnames=['last_name', 'first_name', 'id', 'data__school'], verbose=False)
+    answer_fields = ['contestant_id', 'problem_id', 'score']
+    answers_df = pd.DataFrame.from_records(list(answers.values_list(*answer_fields)), columns=answer_fields)
+    user_fields = ['last_name', 'first_name', 'id', 'data__school']
+    users_df = pd.DataFrame.from_records(list(users.values_list(*user_fields)), columns=user_fields)
     answers_df['score'] = answers_df['score'].fillna(0)
     pivot = answers_df.pivot_table(index='contestant_id', columns='problem_id', values='score')
     pivot["Дүн"] = pivot.sum(axis=1)

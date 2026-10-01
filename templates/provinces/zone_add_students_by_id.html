@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 
 {% block title %}ID-гаар нэмэх - {{ zone.name }}{% endblock %}
 
 {% block content %}
+{% access_notice %}
 <div class="container mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">

@@ -11,6 +11,7 @@ from django.utils.decorators import method_decorator
 
 from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, BulkAddUsersToSchoolForm, RegistrationFormWithCaptcha
 from ..models import UserMeta
+from schools import enrollment
 import re
 
 from oauth2_provider.decorators import protected_resource
@@ -88,8 +89,10 @@ def profile_edit(request):
 
         # <<< 2. Формууд зөв бөглөгдсөн эсэхийг шалгах
         if form1.is_valid() and form2.is_valid():
+            old_school = UserMeta.objects.get(pk=user_meta.pk).school
             form1.save()
             form2.save()
+            enrollment.record_school_request(request.user, old_school, user_meta.school, by=request.user)
             # <<< 3. Амжилттай болсон тухай мэдээлэл нэмэх
             messages.success(request, 'Таны мэдээлэл амжилттай шинэчлэгдлээ.')
             return redirect('user_profile')
@@ -114,8 +117,10 @@ def user_profile_edit(request, user_id):
 
         # <<< 2. Формууд зөв бөглөгдсөн эсэхийг шалгах
         if form1.is_valid() and form2.is_valid():
+            old_school = UserMeta.objects.get(pk=user_meta.pk).school
             form1.save()
             form2.save()
+            enrollment.record_school_request(user, old_school, user_meta.school, by=request.user)
             # <<< 3. Амжилттай болсон тухай мэдээлэл нэмэх
             messages.success(request, 'Хэрэглэгчийн мэдээлэл амжилттай шинэчлэгдлээ.')
             return redirect('user_profile_edit', user_id=user_id)
@@ -261,13 +266,11 @@ def bulk_add_users_to_school_view(request):
             added_count = 0
             if school.group:
                 for user in users_to_add:
-                    # Хэрэглэгчийн сургууль тодорхойлогдоогүй бол тодорхойлох
-                    if not user.data.school:
-                        user.data.school = school
-                        user.data.save()
-                    # Хэрэглэгч аль хэдийн гишүүн биш бол нэмэх
-                    if not user.groups.filter(pk=school.group.id).exists() and user.data.school.id == school.id:
-                        school.group.user_set.add(user)
+                    # Өөр сургууль сонгосон хэрэглэгчийг энэ хуудсаар шилжүүлэхгүй
+                    meta = getattr(user, 'data', None)
+                    if meta and meta.school_id and meta.school_id != school.id:
+                        continue
+                    if enrollment.enroll(user, school, by=request.user, note='bulk_add_users'):
                         added_count += 1
 
             found_ids = users_to_add.values_list('id', flat=True)

@@ -89,6 +89,108 @@ class UserMetaForm(forms.ModelForm):
         }
 
 
+class InstitutionalAccountForm(forms.Form):
+    """
+    Байгууллагын албан аккаунт (сургуулийн удирдлага, аймаг/дүүргийн удирдах ажилтан) —
+    хувь хүний биш. Нэр нь сургууль/аймгийн нэрээс тогтоогддог (schools.institutional);
+    зөвхөн имэйл, гар утсыг тухайн үед хариуцаж буй хүнээр шинэчилнэ.
+    """
+    EMAIL_HELP = ''
+
+    email = forms.EmailField(label='Имэйл', max_length=254,
+                             widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    mobile = forms.RegexField(label='Гар утас', regex=r'^\d{8}$',
+                              error_messages={'invalid': '8 оронтой утасны дугаар оруулна уу.'},
+                              widget=forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'numeric',
+                                                            'maxlength': 8}))
+
+    def __init__(self, *args, account, **kwargs):
+        self.account = account
+        meta = getattr(account, 'data', None)
+        kwargs.setdefault('initial', {
+            'email': account.email,
+            'mobile': str(meta.mobile) if meta and meta.mobile else '',
+        })
+        super().__init__(*args, **kwargs)
+        self.fields['email'].help_text = self.EMAIL_HELP
+
+    def clean_email(self):
+        return self.cleaned_data['email'].strip().lower()
+
+    def organization(self):
+        """Мэдэгдэлд харуулах байгууллагын нэр ба аймаг (дэд классууд тодорхойлно)."""
+        return self.account.get_full_name(), None
+
+    def canonical_names(self):
+        """Аккаунтын байх ёстой (first_name, last_name) (дэд классууд тодорхойлно)."""
+        return self.account.first_name, self.account.last_name
+
+    def save(self, changed_by=None):
+        from schools.moderator import notify_account_email_changed
+        account = self.account
+        old_email = account.email
+        account.first_name, account.last_name = self.canonical_names()
+        account.email = self.cleaned_data['email']
+        account.save(update_fields=['first_name', 'last_name', 'email'])
+        meta, _ = UserMeta.objects.get_or_create(user=account)
+        meta.mobile = int(self.cleaned_data['mobile'])
+        meta.save(update_fields=['mobile'])
+        organization, province = self.organization()
+        notify_account_email_changed(account, old_email, changed_by, organization, province)
+        return account
+
+
+class SchoolManagerAccountForm(InstitutionalAccountForm):
+    """Сургуулийн удирдлагын (менежер) албан аккаунт."""
+    EMAIL_HELP = 'Сургуулийн удирдлагын өөрийн имэйл. Бүртгэгч багш солигдоход энэ хаяг руу мэдэгдэл очно.'
+
+    role = forms.ChoiceField(label='Аккаунт эзэмшигч', widget=forms.Select(attrs={'class': 'form-select'}),
+                             help_text='Аккаунтын нэр "{аймаг} {сургууль} — {сонголт}" хэлбэрээр харагдана.')
+
+    def __init__(self, *args, school, **kwargs):
+        from schools.institutional import SCHOOL_MANAGER_FIRST_NAME, SCHOOL_MANAGER_ROLES
+        self.school = school
+        super().__init__(*args, **kwargs)
+        self.fields['role'].choices = [(r, r) for r in SCHOOL_MANAGER_ROLES]
+        current = self.account.first_name
+        self.fields['role'].initial = current if current in SCHOOL_MANAGER_ROLES else SCHOOL_MANAGER_FIRST_NAME
+        # Эзэмшигчийн сонголтыг эхэнд харуулна
+        self.order_fields(['role', 'email', 'mobile'])
+
+    def organization(self):
+        return f'{self.school.name} ({self.school.province.name}) сургуулийн удирдлагын', self.school.province
+
+    def canonical_names(self):
+        from schools.institutional import school_manager_names
+        return school_manager_names(self.school, role=self.cleaned_data.get('role'))
+
+    def clean_email(self):
+        from schools.moderator import norm_email
+        email = super().clean_email()
+        moderator = self.school.user if self.school else None
+        if moderator and moderator.pk != self.account.pk and norm_email(moderator.email) == email:
+            raise forms.ValidationError(
+                'Бүртгэгч багшийн имэйлтэй ижил байж болохгүй. Сургуулийн удирдлагын өөрийн имэйлийг оруулна уу.')
+        return email
+
+
+class ProvinceAdminAccountForm(InstitutionalAccountForm):
+    """Аймаг/дүүргийн удирдах ажилтны албан аккаунт (Province.contact_person)."""
+    EMAIL_HELP = ('Аймаг/дүүргийн хариуцсан ажилтны имэйл. Сургуулиудын бүртгэлийн тайлан, '
+                  'бүртгэгч багш солигдсон мэдэгдэл энэ хаяг руу очно.')
+
+    def __init__(self, *args, province, **kwargs):
+        self.province = province
+        super().__init__(*args, **kwargs)
+
+    def organization(self):
+        return f'{self.province.name}-ийн удирдах ажилтны', self.province
+
+    def canonical_names(self):
+        from schools.institutional import province_contact_names
+        return province_contact_names(self.province)
+
+
 class ExcelUploadForm(forms.Form):
     file = forms.FileField()
 

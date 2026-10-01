@@ -1,11 +1,23 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 {% load static %}
 
 {% block content %}
+{% access_notice %}
     <div class="container-fluid">
         <h2 class="mb-4">Сургуулиудын нэгдсэн удирдлага</h2>
         <p>Сургуулийн нэр, аймаг/дүүрэг, бүртгэгч багш болон менежерийг засах, шинэчлэх боломжтой.</p>
         {% include 'selection_menu.html' %}
+
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            {% if blocked_filter %}
+                <a href="?{{ querystring|cut:'blocked=1'|cut:'&&' }}" class="btn btn-danger btn-sm">⛔ Имэйлд алдаа гарсан сургуулиуд ✕</a>
+            {% else %}
+                <a href="?{% if querystring %}{{ querystring }}&{% endif %}blocked=1" class="btn btn-outline-danger btn-sm">⛔ Имэйлд алдаа гарсныг шүүх</a>
+            {% endif %}
+            <span class="text-muted small">Нийт {{ page_obj.paginator.count }} сургууль{% if page_obj.paginator.num_pages > 1 %}, {{ page_obj.start_index }}–{{ page_obj.end_index }}{% endif %}</span>
+        </div>
+        {% include 'schools/partials/_manage_all_pagination.html' %}
 
         <!-- Tabs Navigation -->
         <ul class="nav nav-tabs mb-4" id="schoolManagementTabs" role="tablist">
@@ -55,7 +67,7 @@
                                         <div><label>Хэрэглэгчийн нэр:</label> {{ school.user.username }}</div>
                                         <div><label>Овог, нэр:</label> {{ school.user.last_name }} {{ school.user.first_name|upper }}</div>
                                         <div><label>Гар утас:</label> {{ school.user.data.mobile|default:"-" }}</div>
-                                        <div><label>И-мэйл:</label> {{ school.user.email }}</div>
+                                        <div><label>И-мэйл:</label> {{ school.user.email }}{% include 'schools/partials/_email_problem_badge.html' with problem=school.moderator_email_problem %}</div>
                                     {% else %}
                                         <span class="text-muted">Тодорхойгүй</span>
                                     {% endif %}
@@ -63,6 +75,7 @@
                                 <td>
                                     {% if school.user %}
                                         {{ school.user.last_login|date:"Y-m-d" }}
+                                        <div class="small text-muted">Идэвх: {{ school.user.data.last_activity|date:"Y-m-d H:i"|default:"-" }}</div>
                                     {% else %}
                                         -
                                     {% endif %}
@@ -136,7 +149,12 @@
                                         <div><label>Хэрэглэгчийн нэр:</label> {{ school.manager.username }}</div>
                                         <div><label>Овог, нэр:</label> {{ school.manager.last_name }} {{ school.manager.first_name|upper }}</div>
                                         <div><label>Гар утас:</label> {{ school.manager.data.mobile|default:"-" }}</div>
-                                        <div><label>И-мэйл:</label> {{ school.manager.email }}</div>
+                                        <div><label>И-мэйл:</label> {{ school.manager.email }}{% include 'schools/partials/_email_problem_badge.html' with problem=school.manager_email_problem %}</div>
+                                        {% if school.manager_email_same_as_moderator %}
+                                            <div class="alert alert-warning py-1 px-2 mt-1 mb-0 small">
+                                                ⚠ Бүртгэгч багшийн имэйлтэй ижил. Удирдлагын өөрийн имэйлийг оруулна уу — эс бөгөөс бүртгэгч багш солигдоход удирдлагад мэдэгдэл очихгүй.
+                                            </div>
+                                        {% endif %}
                                     {% else %}
                                         <span class="text-muted">Тодорхойгүй</span>
                                     {% endif %}
@@ -144,6 +162,7 @@
                                 <td>
                                     {% if school.manager %}
                                         {{ school.manager.last_login|date:"Y-m-d" }}
+                                        <div class="small text-muted">Идэвх: {{ school.manager.data.last_activity|date:"Y-m-d H:i"|default:"-" }}</div>
                                     {% else %}
                                         -
                                     {% endif %}
@@ -175,5 +194,6 @@
                 </div>
             </div>
         </div>
+        {% include 'schools/partials/_manage_all_pagination.html' %}
     </div>
 {% endblock %}

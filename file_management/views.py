@@ -8,7 +8,7 @@ from schools.models import School
 from olympiad.models import SchoolYear
 from accounts.models import Province
 from .models import FileUpload, FileAccessLog
-from .forms import FileUploadForm
+from .forms import FileUploadForm, TrainingMaterialForm
 from django.contrib.auth.models import User
 import mimetypes
 import os
@@ -33,8 +33,10 @@ def upload_file(request):
 
 @login_required
 def download_file(request, file_id):
-    if is_manager(request.user.id):
-        file_instance = get_object_or_404(FileUpload, id=file_id)
+    file_instance = get_object_or_404(FileUpload, id=file_id)
+    # Бэлтгэлийн материалыг нэвтэрсэн бүх хэрэглэгч татаж болно,
+    # бусад (заавар) файлыг зөвхөн сургууль/аймгийн ажилтнууд
+    if file_instance.kind == FileUpload.Kind.TRAINING or is_manager(request.user.id):
         file_name = os.path.basename(file_instance.file.name)
         mime_type, _ = mimetypes.guess_type(file_name)
 
@@ -78,6 +80,9 @@ def file_list(request):
         # (тухайн файл нийтлэл дээрээ өөрөө хавсралтаар харагдана)
         files = files.filter(posts__isnull=True)
 
+        # Бэлтгэлийн материал тусдаа хуудсанд (training_materials) харагдана
+        files = files.filter(kind=FileUpload.Kind.GENERAL)
+
         # Файл бүрийн татагдсан тоог тооцоолох
         files = files.annotate(download_count=Count('access_logs'))
 
@@ -97,9 +102,79 @@ def file_list(request):
 @require_POST
 def delete_file(request, file_id):
     file_instance = get_object_or_404(FileUpload, id=file_id)
+    is_training = file_instance.kind == FileUpload.Kind.TRAINING
     file_instance.file.delete(save=False)
     file_instance.delete()
-    return redirect('file_list')
+    return redirect('training_materials' if is_training else 'file_list')
+
+
+def training_materials(request):
+    """
+    Олимпиадын бэлтгэлийн материалын жагсаалт (жишээ нь: EGMO бэлтгэл 2026).
+    Жагсаалтыг хэн ч харж болно, татахын тулд нэвтэрсэн байх шаардлагатай.
+    """
+    materials = (
+        FileUpload.objects.filter(kind=FileUpload.Kind.TRAINING)
+        .select_related('school_year')
+        .annotate(download_count=Count('access_logs'))
+        .order_by('-school_year__name', 'title')
+    )
+
+    school_years = SchoolYear.objects.filter(uploaded_files__kind=FileUpload.Kind.TRAINING).distinct()
+    selected_year = None
+    selected_year_id = request.GET.get('year')
+    if selected_year_id:
+        selected_year = get_object_or_404(SchoolYear, id=selected_year_id)
+        materials = materials.filter(school_year=selected_year)
+
+    return render(request, 'file_management/training_materials.html', {
+        'materials': materials,
+        'school_years': school_years,
+        'selected_year': selected_year,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def edit_file(request, file_id):
+    """Файлын мэдээлэл (тайлбар, хичээлийн жил, бэлтгэлийн гарчиг/багш нар) засах. Файлыг солих нь заавал биш."""
+    file_instance = get_object_or_404(FileUpload, id=file_id)
+    is_training = file_instance.kind == FileUpload.Kind.TRAINING
+    form_class = TrainingMaterialForm if is_training else FileUploadForm
+    back_url = 'training_materials' if is_training else 'file_list'
+
+    if request.method == 'POST':
+        old_file = file_instance.file.name
+        form = form_class(request.POST, request.FILES, instance=file_instance)
+        if form.is_valid():
+            form.save()
+            # Шинэ файл оруулсан бол хуучныг storage-оос устгана
+            if 'file' in request.FILES and old_file and old_file != file_instance.file.name:
+                file_instance.file.storage.delete(old_file)
+            return redirect(back_url)
+    else:
+        form = form_class(instance=file_instance)
+
+    return render(request, 'file_management/edit_file.html', {
+        'form': form,
+        'file': file_instance,
+        'back_url': back_url,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def upload_training_material(request):
+    if request.method == 'POST':
+        form = TrainingMaterialForm(request.POST, request.FILES)
+        if form.is_valid():
+            material = form.save(commit=False)
+            material.uploader = request.user
+            material.save()
+            return redirect('training_materials')
+    else:
+        form = TrainingMaterialForm()
+    return render(request, 'file_management/upload_training_material.html', {'form': form})
 
 
 def is_manager(user_id):

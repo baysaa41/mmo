@@ -68,3 +68,34 @@ class MaintenanceModeMiddleware:
             return render(request, 'maintenance.html', status=503)
 
         return self.get_response(request)
+
+
+LAST_ACTIVITY_INTERVAL = 15 * 60  # секунд
+
+
+class LastActivityMiddleware:
+    """
+    Нэвтэрсэн хэрэглэгчийн UserMeta.last_activity-г шинэчилнэ.
+    Өгөгдлийн сан руу хэт олон бичихгүйн тулд хэрэглэгч бүрт
+    LAST_ACTIVITY_INTERVAL секундэд нэг л удаа бичнэ (cache.add атомар).
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        user = getattr(request, 'user', None)
+        if user is not None and user.is_authenticated and not request.path.startswith(('/static/', '/media/')):
+            try:
+                from django.core.cache import cache
+                if cache.add(f'last_activity:{user.pk}', 1, LAST_ACTIVITY_INTERVAL):
+                    from django.utils import timezone
+                    from accounts.models import UserMeta
+                    UserMeta.objects.filter(user_id=user.pk).update(last_activity=timezone.now())
+            except Exception:
+                # Идэвх бүртгэх алдаа хүсэлтийг унагах ёсгүй
+                logger.exception("last_activity шинэчлэхэд алдаа гарлаа")
+
+        return response

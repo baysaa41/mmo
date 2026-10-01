@@ -120,6 +120,18 @@ class Olympiad(models.Model):
         threshold = timezone.now() - timedelta(seconds=300)
         return bool(self.end_time and self.end_time < threshold)
 
+    def problems_visible_to(self, user):
+        """Бодлогын нөхцөлийг харуулж болох эсэх.
+
+        Олимпиад дуусахаас өмнө зөвхөн staff болон тухайн олимпиадын
+        бодлогын координаторууд харна (олимпиадын өмнө/үеэр задрахаас сэргийлнэ).
+        """
+        if self.is_finished():
+            return True
+        if not user.is_authenticated:
+            return False
+        return user.is_staff or self.problem_set.filter(coordinators=user).exists()
+
     def get_access_status(self, user):
         """Тухайн хэрэглэгчийн энэ олимпиадад оролцох төлөв (OlympiadAccessMixin-тэй ижил дүрэм)."""
         if self.group and not self.group.user_set.filter(id=user.id).exists():
@@ -251,6 +263,16 @@ class Problem(models.Model):
         permissions = [
             ("edit_problem", "Can edit problem"),
         ]
+
+    @staticmethod
+    def visible_q(user):
+        """Нөхцөлийг нь харуулж болох бодлогуудын шүүлтүүр (Olympiad.problems_visible_to-тай ижил дүрэм)."""
+        if user.is_authenticated and user.is_staff:
+            return models.Q()
+        q = models.Q(olympiad__end_time__lt=timezone.now())
+        if user.is_authenticated:
+            q |= models.Q(olympiad__in=Olympiad.objects.filter(problem__coordinators=user))
+        return q
 
     def get_results(self):
         return self.result_set.filter().order_by('score')

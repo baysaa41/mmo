@@ -1,0 +1,193 @@
+{% autoescape on %}<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{{ olympiad.name }}</title>
+</head>
+<body style="margin:0;padding:0;background:#eef2f7;">
+<div style="display:none;max-height:0;overflow:hidden;">{{ olympiad.name }}: {{ olympiad.date }}, танхимаар, сургууль дээр.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:10px;overflow:hidden;font-family:Arial,Helvetica,sans-serif;color:#1f2937;font-size:15px;line-height:1.55;">
+
+  <!-- Толгой -->
+  <tr><td style="background:#1f3b63;padding:22px 28px;">
+    <div style="color:#9fb6d6;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Монголын Математикийн Олимпиадын Хороо</div>
+    <div style="color:#ffffff;font-size:22px;font-weight:bold;margin-top:4px;">{{ olympiad.name }}</div>
+  </td></tr>
+
+  <!-- Мэндчилгээ, тов -->
+  <tr><td style="padding:24px 28px 8px;">
+    <p style="margin:0 0 18px;">Сайн байна уу{% if name %}, <strong>{{ name }}</strong>{% endif %},</p>
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">📅 Олимпиадын тов</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:9px 12px;background:#f3f7fc;border:1px solid #d8e3f2;color:#5b6b82;font-size:13px;width:38%;vertical-align:top;">Хэзээ</td><td style="padding:9px 12px;border:1px solid #d8e3f2;font-weight:bold;color:#1f2937;vertical-align:top;">{{ olympiad.date }}</td></tr>
+      <tr><td style="padding:9px 12px;background:#f3f7fc;border:1px solid #d8e3f2;color:#5b6b82;font-size:13px;width:38%;vertical-align:top;">Зохион байгуулах хэлбэр</td><td style="padding:9px 12px;border:1px solid #d8e3f2;font-weight:bold;color:#1f2937;vertical-align:top;">Танхимаар, сургууль дээр</td></tr>
+      <tr><td style="padding:9px 12px;background:#f3f7fc;border:1px solid #d8e3f2;color:#5b6b82;font-size:13px;width:38%;vertical-align:top;">Ангилал</td><td style="padding:9px 12px;border:1px solid #d8e3f2;font-weight:bold;color:#1f2937;vertical-align:top;">{{ olympiad.levels_display }}</td></tr>
+    </table>
+    {% if olympiad.last_year_participants %}
+    <p style="margin:18px 0 8px;color:#374151;">
+      Өнгөрсөн жил I даваанд <strong>{{ olympiad.last_year_participants }} мянга гаруй сурагч</strong> оролцож,
+      ЭЕШ-ээс ч олон сурагчийг хамарсан томоохон арга хэмжээ болсон билээ.
+    </p>
+    {% endif %}
+    <p style="margin:{% if olympiad.last_year_participants %}0{% else %}18px{% endif %} 0 0;color:#374151;">
+      {% if mod_schools %}Авьяас чадвартай сурагчдыг илрүүлэн хөгжүүлэх, тэдний мэдлэг чадварыг сорих энэхүү үйлсэд хамтран ажиллаж,
+      дэмжин оролцож буй танд чин сэтгэлээсээ талархаж байна.{% else %}Бидэнтэй хамтран ажиллаж, авьяас чадвартай сурагчдыг
+      илрүүлэн хөгжүүлэх үйлсэд үнэтэй хувь нэмэр оруулж буй танд чин сэтгэлээсээ талархаж байна.{% endif %}
+    </p>
+  </td></tr>
+
+  {% if mod_schools %}
+  <!-- Бүртгэгч багш -->
+  <tr><td style="padding:22px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">👩‍🏫 Бүртгэгч багш</div>
+    <p style="margin:0 0 8px;">Та дараах {% if mod_schools|length > 1 %}сургуулиудын{% else %}сургуулийн{% endif %} <strong>бүртгэгч багш</strong> байна:</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+      {% for s in mod_schools %}
+      <tr><td style="padding:8px 0;border-top:1px solid #e5e7eb;">
+        <strong>{{ s.name }}</strong> <span style="color:#6b7280;">· {{ s.province }}</span><br>
+        <span style="color:#6b7280;">Нэвтрэх нэр:</span> <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;">{{ s.username }}</code>{% if s.manager_username %} <span style="color:#6b7280;">· удирдлагын аккаунт:</span> <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;">{{ s.manager_username }}</code>{% endif %}
+      </td></tr>
+      {% endfor %}
+    </table>
+  </td></tr>
+
+  <tr><td style="padding:22px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">📋 Бүртгэл, хариу илгээх дараалал</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:10px 12px;border:1px solid #e5e7eb;background:#f3f7fc;font-weight:bold;color:#1f3b63;text-align:center;vertical-align:top;width:34px;">1</td><td style="padding:10px 12px;border:1px solid #e5e7eb;vertical-align:top;"><strong>Системд нэвтрэх:</strong> «Миний сургуулиуд» цэс рүү орно.</td></tr>
+      <tr><td style="padding:10px 12px;border:1px solid #e5e7eb;background:#f3f7fc;font-weight:bold;color:#1f3b63;text-align:center;vertical-align:top;width:34px;">2</td><td style="padding:10px 12px;border:1px solid #e5e7eb;vertical-align:top;"><strong>Олимпиадаас өмнө сурагчдаа бүртгэнэ.</strong> Ангиллын нэр дээр дарж, тухайн сургуулийг сонгосон сурагчийг <strong>«Бүртгэх»</strong>, бүртгэлгүй сурагчийг <strong>«Бүртгэл үүсгэх»</strong> үйлдлээр бүртгэнэ. <strong>Хариуны нэгтгэлд зөвхөн бүртгэгдсэн сурагчдын дүн орно.</strong></td></tr>
+      <tr><td style="padding:10px 12px;border:1px solid #e5e7eb;background:#f3f7fc;font-weight:bold;color:#1f3b63;text-align:center;vertical-align:top;width:34px;">3</td><td style="padding:10px 12px;border:1px solid #e5e7eb;vertical-align:top;"><strong>Олимпиадын дараа:</strong> «I давааны тестүүд» → «Загвар татах» хэсгээс загварыг татаж, сурагчдын хариултыг оруулаад <strong>«Системд хуулах»</strong> товчийг дарна{% if answers_deadline %} (<strong>{{ answers_deadline }}</strong>-ны дотор){% endif %}. Хариу илгээхээс өмнө <strong>удирдамж, зааварчилгаатай сайтар танилцана уу.</strong></td></tr>
+    </table>
+  </td></tr>
+
+  <tr><td style="padding:22px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">🔗 Холбогдох хэсгүүд</div>
+    <table role="presentation" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="border-radius:6px;background:#2563eb;"><a href="{{ site }}/accounts/login/" style="display:inline-block;padding:10px 18px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:14px;">Системд нэвтрэх</a></td>
+        {% if guideline_url %}<td style="width:10px;"></td>
+        <td style="border-radius:6px;border:1px solid #2563eb;"><a href="{{ guideline_url }}" style="display:inline-block;padding:9px 16px;color:#2563eb;text-decoration:none;font-weight:bold;font-size:14px;">Удирдамж унших</a></td>{% endif %}
+      </tr>
+    </table>
+  </td></tr>
+
+  {% if needs_manager_email %}
+  <tr><td style="padding:22px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">⚠️ Анхаарах шаардлага</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff7e6;border:1px solid #f5c26b;border-radius:8px;font-size:14px;">
+      <tr><td style="padding:14px 16px;">
+        <p style="margin:0 0 8px;">
+          {% for s in needs_manager_email %}<strong>{{ s.name }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}
+          сургуулийн хувьд сургуулийн удирдлагын имэйл бүртгэгдээгүй эсвэл таны имэйлтэй ижил бүртгэгдсэн байна.
+        </p>
+        <p style="margin:0 0 8px;">Иймд сургуулийн удирдлагын (<strong>захирал/менежер</strong>) өөрийн ашигладаг имэйл хаягийг бүртгүүлнэ үү.</p>
+        <p style="margin:0 0 10px;"><strong>Бүртгэх зам:</strong><br>Сургуулийн самбар → <strong>«Сургуулийн мэдээлэл»</strong> → Менежерийн хэсгийн <strong>✎</strong> товч</p>
+        <div style="padding:8px 12px;border-left:3px solid #d97706;background:#fffbeb;color:#78350f;">
+          <strong>Анхаар:</strong> Бүртгэгч багш солигдсон тохиолдолд холбогдох мэдэгдэл сургуулийн удирдлагын бүртгэлтэй имэйл хаяг руу илгээгдэнэ.
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+  {% endif %}
+  {% endif %}
+
+  {% if mgr_schools %}
+  <!-- Сургуулийн удирдлага -->
+  <tr><td style="padding:20px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">🏫 Сургуулийн удирдлага</div>
+    <p style="margin:0 0 10px;">Та дараах сургуулийн удирдлага. Сурагч бүртгэх, хариу оруулах ажлыг бүртгэгч багш хийнэ. Багш солигдсон, ажлаас гарсан бол <strong>яаралтай солино уу</strong>.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;">
+      {% for s in mgr_schools %}
+      <tr>
+        <td style="padding:10px 0;border-top:1px solid #e5e7eb;">
+          <strong>{{ s.name }}</strong><br>
+          {% if s.moderator %}<span style="color:#374151;">Бүртгэгч багш: {{ s.moderator }}</span><br>
+          <span style="color:#6b7280;">Сүүлд нэвтэрсэн: {{ s.last_seen }} · Таны нэвтрэх нэр: <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px;">{{ s.username }}</code></span>
+          {% else %}<span style="color:#b91c1c;font-weight:bold;">Бүртгэгч багшгүй</span>{% endif %}
+        </td>
+        <td align="right" valign="middle" style="padding:10px 0 10px 10px;border-top:1px solid #e5e7eb;white-space:nowrap;">
+          <a href="{{ site }}/schools/{{ s.id }}/change-moderator/" style="display:inline-block;padding:7px 12px;border:1px solid #2563eb;border-radius:6px;color:#2563eb;text-decoration:none;font-size:13px;font-weight:bold;">Багш солих</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p style="margin:10px 0 0;font-size:13px;color:#6b7280;">Шинэ багшийг хайгаад «Бүртгэгч багш болгох» дарна. Багш системд бүртгэлгүй бол эхлээд mmo.mn-д бүртгүүлнэ.</p>
+  </td></tr>
+  {% endif %}
+
+  {% if provinces %}
+  <!-- Аймаг/дүүргийн админ -->
+  {% for p in provinces %}
+  <tr><td style="padding:22px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">🏫 {{ p.genitive }} сургуулиудын бүртгэл</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="padding:9px 12px;background:#f3f7fc;border:1px solid #d8e3f2;color:#5b6b82;font-size:13px;text-align:center;">Нийт сургууль</td><td style="padding:9px 12px;background:#f3f7fc;border:1px solid #d8e3f2;color:#5b6b82;font-size:13px;text-align:center;">Энэ жил нэвтэрсэн</td><td style="padding:9px 12px;background:#f3f7fc;border:1px solid #d8e3f2;color:#5b6b82;font-size:13px;text-align:center;">Нэвтрээгүй</td>{% if p.no_moderator %}<td style="padding:9px 12px;background:#f3f7fc;border:1px solid #d8e3f2;color:#5b6b82;font-size:13px;text-align:center;">Бүртгэгч багшгүй</td>{% endif %}
+      </tr>
+      <tr>
+        <td style="padding:10px 12px;border:1px solid #d8e3f2;text-align:center;font-size:22px;font-weight:bold;color:#1f3b63;">{{ p.total }}</td><td style="padding:10px 12px;border:1px solid #d8e3f2;text-align:center;font-size:22px;font-weight:bold;color:#047857;">{{ p.active }}</td><td style="padding:10px 12px;border:1px solid #d8e3f2;text-align:center;font-size:22px;font-weight:bold;color:#b91c1c;">{{ p.inactive }}</td>{% if p.no_moderator %}<td style="padding:10px 12px;border:1px solid #d8e3f2;text-align:center;font-size:22px;font-weight:bold;color:#92400e;">{{ p.no_moderator }}</td>{% endif %}
+      </tr>
+    </table>
+  </td></tr>
+  {% if p.issues %}
+  <tr><td style="padding:22px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">⚠️ Имэйлээр холбогдох боломжгүй сургуулиуд</div>
+    <p style="margin:0 0 8px;">Дараах <strong>{{ p.issues|length }} сургуультай утсаар холбогдож</strong>, багш болон сургуулийн удирдлагын имэйл хаягийг шалган шинэчлүүлнэ үү.</p>
+    <ul style="margin:0 0 8px;padding-left:20px;">
+      {% for i in p.issues|slice:":10" %}<li style="margin:3px 0;"><strong>{{ i.name }}</strong> — {{ i.issue }}.</li>{% endfor %}
+      {% if p.issues|length > 10 %}<li style="margin:3px 0;color:#6b7280;">… бусад {{ p.issues|length|add:"-10" }} сургууль хавсралтад</li>{% endif %}
+    </ul>
+  </td></tr>
+  {% endif %}
+  {% endfor %}
+  <tr><td style="padding:8px 28px 4px;">
+    <p style="margin:0;font-size:14px;color:#374151;">Хавсралтад сургууль тус бүрийн <strong>багшийн нэр, утасны дугаар, имэйл хаяг</strong> багтсан болно. Асуудалтай болон системд нэвтрээгүй сургуулиудыг жагсаалтын эхэнд байрлуулсан.</p>
+  </td></tr>
+  <tr><td style="padding:22px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">📌 Таны анхаарах зүйлс</div>
+    <ol style="margin:0;padding-left:20px;font-size:14px;">
+      <li style="margin:4px 0;"><strong>Системд нэвтрээгүй сургуулиудын багш нарт сануулж</strong>, олимпиадын бүртгэлээ хийхийг анхааруулна уу.</li>
+      <li style="margin:4px 0;"><strong>Багш солигдсон тохиолдолд</strong> «Миний аймгууд» → «Сургуулийн бүртгэл» хэсгээс бүртгэгч багшийн мэдээллийг шинэчилнэ үү.</li>
+      <li style="margin:4px 0;"><strong>Олимпиадын дараа</strong> сургуулиуд сурагчдынхаа хариуг системд бүрэн оруулсан эсэхэд хяналт тавина уу.</li>
+    </ol>
+  </td></tr>
+  {% if not mod_schools %}
+  <tr><td style="padding:22px 28px 4px;">
+    <div style="margin:0 0 10px;font-size:17px;font-weight:bold;color:#1f3b63;">🔗 Системд нэвтрэх</div>
+    <table role="presentation" cellpadding="0" cellspacing="0">
+      <tr><td style="border-radius:6px;background:#2563eb;"><a href="{{ site }}/accounts/login/" style="display:inline-block;padding:10px 18px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:14px;">Системд нэвтрэх</a></td></tr>
+    </table>
+  </td></tr>
+  {% endif %}
+  {% endif %}
+
+  <!-- Нууц үг -->
+  <tr><td style="padding:18px 28px 0;">
+    <div style="background:#f9fafb;border-radius:8px;padding:12px 14px;font-size:13px;color:#4b5563;">
+      <strong>Нууц үгээ мартсан бол:</strong> <a href="{{ site }}/password_reset/" style="color:#2563eb;">энд дарж нууц үг сэргээх</a>
+      хэсэгт орж{% if usernames %}, <code>{{ usernames|join:", " }}</code>{% endif %} хэрэглэгчийн нэрээр шинэ нууц үг үүсгэнэ үү.
+    </div>
+  </td></tr>
+
+  <!-- Гарын үсэг -->
+  <tr><td style="padding:20px 28px 26px;">
+    <p style="margin:0;">Хүндэтгэсэн,<br><strong>Монголын Математикийн Олимпиадын Хороо</strong></p>
+  </td></tr>
+
+  <!-- Хөл -->
+  <tr><td style="background:#f3f4f6;padding:14px 28px;font-size:12px;color:#6b7280;">
+    Асуулт байвал энэ имэйлд хариу бичнэ үү: <a href="mailto:{{ from_email }}" style="color:#6b7280;">{{ from_email }}</a><br>
+    <a href="{{ site }}/" style="color:#6b7280;">mmo.mn</a> ·
+    <a href="{{ site }}/about/" style="color:#6b7280;">Бидний тухай</a> ·
+    <a href="{{ site }}/privacy/" style="color:#6b7280;">Нууцлалын бодлого</a>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>{% endautoescape %}

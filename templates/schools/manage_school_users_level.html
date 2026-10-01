@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 {% load crispy_forms_tags %}
 
 {% block content %}
+{% access_notice %}
 <div class="container">
     <h2 class="mb-1">{{ school.name }}: {{ selected_level.name }} ангилал</h2>
     <p class="lead text-muted">{{ school.province.name }}</p>

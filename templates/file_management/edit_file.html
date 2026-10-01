@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 720px;">
+    <h2 class="mb-3">Файлын мэдээлэл засах</h2>
+    <p class="text-muted">
+        Одоогийн файл: <strong>{{ file.filename }}</strong>
+        (<a href="{% url 'download_file' file.id %}">татах</a>)
+    </p>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.name == 'file' %}<div class="form-text">Файлыг солих бол шинэ файл сонгоно уу. Хоосон үлдээвэл хуучин файл хэвээр үлдэнэ.</div>{% endif %}
+                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Хадгалах</button>
+        <a href="{% url back_url %}" class="btn btn-secondary">Буцах</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 
 {% block content %}
+{% access_notice %}
 <div class="container">
     {% if user.is_staff %}
         {# Staff хэрэглэгчийн дэлгэц #}

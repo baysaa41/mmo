@@ -3,6 +3,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from django.conf import settings
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
@@ -13,6 +14,7 @@ import requests  # <--- ЭНЭ МӨРИЙГ НЭМЭЭРЭЙ
 import logging
 
 from .models import EmailCampaign, EmailUnsubscribe, EmailRecipient, EmailBounce
+from .sns import is_sns_url, record_ses_event, verify_sns_message
 from .forms import EmailCampaignForm
 from .tasks import (
     create_recipients_from_filters,
@@ -256,12 +258,23 @@ def handle_sns_notification(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
 
+        # Гарын үсэггүй эсвэл зөвшөөрөгдөөгүй topic-оос ирсэн мессежийг хүлээж авахгүй.
+        # AWS_SNS_VERIFY = 'log' үед зөвхөн логт бичнэ (нэвтрүүлэх үеийн шилжилтийн горим).
+        verified = verify_sns_message(data)
+        if getattr(settings, 'AWS_SNS_VERIFY', 'enforce') == 'log':
+            # gunicorn-error.log-д харагдахаар WARNING түвшинд бичнэ
+            logger.warning("SNS_VERIFY_CHECK verified=%s type=%s topic=%s",
+                           verified, data.get('Type'), data.get('TopicArn'))
+        elif not verified:
+            logger.warning("Rejected unverified SNS message (topic=%s)", data.get('TopicArn'))
+            return HttpResponse("Invalid signature", status=403)
+
         # 1️⃣ SNS Subscription Confirm
         if data.get('Type') == 'SubscriptionConfirmation':
             subscribe_url = data.get('SubscribeURL')
             token = data.get('Token')
 
-            if not subscribe_url or not token:
+            if not subscribe_url or not token or not is_sns_url(subscribe_url):
                 logger.error("SNS confirmation missing SubscribeURL or Token")
                 return HttpResponse("Missing Token", status=400)
 
@@ -281,6 +294,12 @@ def handle_sns_notification(request):
         # 2️⃣ Notification event
         if data.get('Type') == 'Notification':
             message = json.loads(data.get('Message', '{}'))
+
+            # Configuration set-ийн event (Open, Click, Delivery ...) — "eventType" талбартай
+            if 'eventType' in message:
+                record_ses_event(message)
+                return HttpResponse("Event processed", status=200)
+
             notification_type = message.get('notificationType')
 
             if notification_type in ['Bounce', 'Complaint']:

@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
+{% load access_tags %}
 {% load crispy_forms_tags %}
 
 {% block content %}
+{% access_notice %}
 <div class="container my-4">
     <a href="{% url 'manage_all_schools' %}" class="btn btn-outline-secondary btn-sm mb-3">
         &laquo; Бүх сургуулийн жагсаалт руу буцах

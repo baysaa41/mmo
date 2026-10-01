@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 import re
 
-from django_pandas.io import read_frame
 
 # --- Pandas Dataframe Service ---
 
@@ -30,7 +29,9 @@ def generate_styled_user_dataframe_html(users_queryset, is_staff=False):
         }
 
     pd.options.display.float_format = '{:,.0f}'.format
-    users_df = read_frame(users_queryset, fieldnames=fieldnames, verbose=False)
+    users_df = pd.DataFrame.from_records(
+        list(users_queryset.values_list(*fieldnames)), columns=fieldnames
+    )
     if 'data__mobile' in users_df.columns:
         users_df['data__mobile'] = users_df['data__mobile'].astype(pd.Int64Dtype())
 
