@@ -14,7 +14,7 @@
     <div class="alert alert-info small">
         <i class="fas fa-building me-1"></i>
         Энэ нь <strong>сургуулийн албан аккаунт</strong> — хувь хүний аккаунт биш. Захирал, менежер солигдоход
-        аккаунтыг шинээр үүсгэхгүй; аккаунтын нэр сургууль/аймгийн нэрээр тогтмол байх бөгөөд зөвхөн имэйл, утсыг тухайн үед хариуцаж буй хүнийхээр шинэчилнэ.
+        аккаунтыг шинээр үүсгэхгүй; аккаунт эзэмшигчийн албан тушаал, имэйл, утсыг тухайн үед хариуцаж буй хүнийхээр шинэчилнэ. Аккаунтын нэр сургуулийн нэр болон албан тушаалаас бүрдэнэ.
     </div>
 
     {% if messages %}
@@ -32,7 +32,7 @@
             <dl class="row mb-0">
                 <dt class="col-sm-4">Сургууль</dt><dd class="col-sm-8">{{ school.name }}</dd>
                 <dt class="col-sm-4">Аймаг/дүүрэг</dt><dd class="col-sm-8">{{ school.province.name }}</dd>
-                <dt class="col-sm-4">Аккаунтын нэр</dt><dd class="col-sm-8">{{ school.province.name }} {{ school.name }} — Менежер</dd>
+                <dt class="col-sm-4">Аккаунтын нэр</dt><dd class="col-sm-8">{{ school.province.name }} {{ school.name }} — {{ account_role }}</dd>
                 <dt class="col-sm-4">Нэвтрэх нэр</dt><dd class="col-sm-8"><code>{{ account.username }}</code></dd>
                 <dt class="col-sm-4">Бүртгэгч багш</dt>
                 <dd class="col-sm-8 mb-0">{% if school.user %}{{ school.user.get_full_name|default:school.user.username }} ({{ school.user.email|default:"имэйлгүй" }}){% else %}—{% endif %}</dd>

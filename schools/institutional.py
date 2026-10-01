@@ -9,6 +9,8 @@
 import re
 
 SCHOOL_MANAGER_FIRST_NAME = 'Менежер'
+# Сургуулийн удирдлагын аккаунтын эзэмшигч өөрийн албан тушаалыг сонгоно (first_name-д хадгална)
+SCHOOL_MANAGER_ROLES = ['Захирал', 'Менежер', 'Бусад']
 PROVINCE_CONTACT_FIRST_NAME = 'Удирдах ажилтан'
 
 
@@ -20,9 +22,13 @@ def is_province_contact_account(user):
     return (user.username or '').startswith('padmin')
 
 
-def school_manager_names(school):
-    """(first_name, last_name) — create_school_managers-ийн тогтоосон хэлбэр."""
-    return SCHOOL_MANAGER_FIRST_NAME, f'{school.province.name} {school.name}'[:150]
+def school_manager_names(school, role=None):
+    """(first_name, last_name): овог нь "{аймаг} {сургууль}", нэр нь сонгосон албан тушаал.
+
+    Албан тушаал жагсаалтад байхгүй (хувь хүний нэр гэх мэт) бол "Менежер".
+    """
+    first_name = role if role in SCHOOL_MANAGER_ROLES else SCHOOL_MANAGER_FIRST_NAME
+    return first_name, f'{school.province.name} {school.name}'[:150]
 
 
 def province_contact_names(province):

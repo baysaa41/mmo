@@ -35,7 +35,7 @@ class Command(BaseCommand):
             if not is_school_manager_account(user) or user.id in moderator_ids:
                 continue  # хувь хүний аккаунт менежерээр томилогдсон
             old = (user.first_name, user.last_name)
-            if apply_names(user, school_manager_names(school)):
+            if apply_names(user, school_manager_names(school, role=user.first_name)):
                 changes.append((user, *old, f'сургууль #{school.id}'))
 
         for province in Province.objects.select_related('contact_person').exclude(contact_person=None):

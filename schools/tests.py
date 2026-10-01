@@ -571,6 +571,8 @@ class EditSchoolManagerAccountTests(SchoolAccessTestBase):
         self.assertContains(response, 'сургуулийн албан аккаунт')
         self.assertContains(response, 'name="email"')
         self.assertContains(response, 'name="mobile"')
+        self.assertContains(response, 'name="role"')
+        self.assertContains(response, 'Аймаг А Сургууль А — Менежер')
         for field in ('title', 'first_name', 'last_name', 'province'):
             self.assertNotContains(response, f'name="{field}"')
 
@@ -578,24 +580,30 @@ class EditSchoolManagerAccountTests(SchoolAccessTestBase):
         self.manager.first_name, self.manager.last_name = 'Энхмэнд', 'Баттулга'
         self.manager.save()
         response = self.client.post(self.url, {
-            'email': 'Director@School.mn', 'mobile': '99112233',
+            'role': 'Захирал', 'email': 'Director@School.mn', 'mobile': '99112233',
             'first_name': 'Хакер', 'last_name': 'Хакер', 'province': self.province_b.id,
         })
         self.assertRedirects(response, reverse('school_dashboard', args=[self.school_a.id]))
         self.manager.refresh_from_db()
-        self.assertEqual((self.manager.first_name, self.manager.last_name), ('Менежер', 'Аймаг А Сургууль А'))
+        self.assertEqual((self.manager.first_name, self.manager.last_name), ('Захирал', 'Аймаг А Сургууль А'))
         self.assertEqual(self.manager.email, 'director@school.mn')
         self.assertEqual(self.manager.data.mobile, 99112233)
         self.assertEqual(self.manager.data.province, self.province_a)
 
+    def test_role_must_be_from_list(self):
+        response = self.client.post(self.url, {'role': 'Энхмэнд', 'email': 'd@school.mn', 'mobile': '99112233'})
+        self.assertEqual(response.status_code, 200)
+        self.manager.refresh_from_db()
+        self.assertEqual((self.manager.first_name, self.manager.email), ('Менежер', ''))
+
     def test_rejects_moderator_email(self):
-        response = self.client.post(self.url, {'email': 'TEACHER@school.mn', 'mobile': '99112233'})
+        response = self.client.post(self.url, {'role': 'Менежер', 'email': 'TEACHER@school.mn', 'mobile': '99112233'})
         self.assertContains(response, 'Бүртгэгч багшийн имэйлтэй ижил байж болохгүй')
         self.manager.refresh_from_db()
         self.assertEqual(self.manager.email, '')
 
     def test_rejects_invalid_mobile(self):
-        response = self.client.post(self.url, {'email': 'd@school.mn', 'mobile': '185734'})
+        response = self.client.post(self.url, {'role': 'Менежер', 'email': 'd@school.mn', 'mobile': '185734'})
         self.assertContains(response, '8 оронтой утасны дугаар')
 
     def test_personal_moderator_account_keeps_full_form(self):
@@ -676,7 +684,7 @@ class AccountEmailChangedNoticeTests(SchoolAccessTestBase):
     def post(self, email):
         from django.core import mail
         with self.captureOnCommitCallbacks(execute=True):
-            self.client.post(self.url, {'email': email, 'mobile': '99112233'})
+            self.client.post(self.url, {'role': 'Захирал', 'email': email, 'mobile': '99112233'})
         return mail.outbox
 
     def test_old_address_is_notified(self):
@@ -722,7 +730,12 @@ class RestoreInstitutionalNamesTests(SchoolAccessTestBase):
         manager.refresh_from_db()
         self.assertEqual(manager.first_name, 'Энхмэнд')
 
+        director = make_user('s0002', first_name='Захирал', last_name='Хуучин нэр')
+        School.objects.create(name='Сургууль В', province=self.province_b, manager=director,
+                              group=Group.objects.create(name='School_C'))
         call_command('restore_institutional_names', '--apply', stdout=StringIO())
+        director.refresh_from_db()
+        self.assertEqual((director.first_name, director.last_name), ('Захирал', 'Аймаг Б Сургууль В'))
         manager.refresh_from_db(); personal.refresh_from_db(); self.province_manager_b.refresh_from_db()
         self.assertEqual((manager.first_name, manager.last_name), ('Менежер', 'Аймаг А Сургууль А'))
         self.assertEqual((personal.first_name, personal.last_name), ('Бат', 'Дорж'))

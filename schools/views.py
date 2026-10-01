@@ -1210,8 +1210,10 @@ def _edit_school_manager_account(request, account, school):
             return redirect('school_dashboard', school_id=school.id)
     else:
         form = SchoolManagerAccountForm(account=account, school=school)
+    from .institutional import school_manager_names
     return render(request, 'schools/edit_school_manager.html', {
         'form': form, 'account': account, 'school': school, 'target_user': account,
+        'account_role': school_manager_names(school, role=account.first_name)[0],
     })
 
 

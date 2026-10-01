@@ -144,16 +144,25 @@ class SchoolManagerAccountForm(InstitutionalAccountForm):
     """Сургуулийн удирдлагын (менежер) албан аккаунт."""
     EMAIL_HELP = 'Сургуулийн удирдлагын өөрийн имэйл. Бүртгэгч багш солигдоход энэ хаяг руу мэдэгдэл очно.'
 
+    role = forms.ChoiceField(label='Аккаунт эзэмшигч', widget=forms.Select(attrs={'class': 'form-select'}),
+                             help_text='Аккаунтын нэр "{аймаг} {сургууль} — {сонголт}" хэлбэрээр харагдана.')
+
     def __init__(self, *args, school, **kwargs):
+        from schools.institutional import SCHOOL_MANAGER_FIRST_NAME, SCHOOL_MANAGER_ROLES
         self.school = school
         super().__init__(*args, **kwargs)
+        self.fields['role'].choices = [(r, r) for r in SCHOOL_MANAGER_ROLES]
+        current = self.account.first_name
+        self.fields['role'].initial = current if current in SCHOOL_MANAGER_ROLES else SCHOOL_MANAGER_FIRST_NAME
+        # Эзэмшигчийн сонголтыг эхэнд харуулна
+        self.order_fields(['role', 'email', 'mobile'])
 
     def organization(self):
         return f'{self.school.name} ({self.school.province.name}) сургуулийн удирдлагын', self.school.province
 
     def canonical_names(self):
         from schools.institutional import school_manager_names
-        return school_manager_names(self.school)
+        return school_manager_names(self.school, role=self.cleaned_data.get('role'))
 
     def clean_email(self):
         from schools.moderator import norm_email
