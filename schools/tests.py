@@ -741,3 +741,30 @@ class RestoreInstitutionalNamesTests(SchoolAccessTestBase):
         self.assertEqual((personal.first_name, personal.last_name), ('Бат', 'Дорж'))
         self.assertEqual((self.province_manager_b.first_name, self.province_manager_b.last_name),
                          ('Удирдах ажилтан', 'Аймаг Б'))
+
+
+class SyncUserSchoolsCommandTests(SchoolAccessTestBase):
+    """sync_user_schools нь зөвхөн аюулгүй тохиолдлыг засна."""
+
+    def test_only_safe_cases_are_changed(self):
+        import tempfile
+        from io import StringIO
+        from django.core.management import call_command
+        empty = make_user('empty_school', province=None)
+        wrong_province = make_user('wrong_province', school=self.school_a, province=self.province_b)
+        chose_other = make_user('chose_other', school=self.school_b, province=self.province_b)
+        two_groups = make_user('two_groups', school=self.school_b, province=self.province_b)
+        for u in (empty, wrong_province, chose_other, two_groups):
+            self.school_a.group.user_set.add(u)
+        self.school_b.group.user_set.add(two_groups)
+
+        with override_settings(BASE_DIR=__import__('pathlib').Path(tempfile.mkdtemp())):
+            call_command('sync_user_schools', stdout=StringIO())  # dry-run
+            self.assertIsNone(UserMeta.objects.get(user=empty).school_id)
+            call_command('sync_user_schools', '--apply', stdout=StringIO())
+
+        meta = lambda u: UserMeta.objects.get(user=u)
+        self.assertEqual((meta(empty).school, meta(empty).province), (self.school_a, self.province_a))
+        self.assertEqual(meta(wrong_province).province, self.province_a)
+        self.assertEqual(meta(chose_other).school, self.school_b)  # сурагчийн сонголтыг дарахгүй
+        self.assertEqual(meta(two_groups).school, self.school_b)   # олон группт — хүрэхгүй

@@ -79,3 +79,52 @@ class LastActivityMiddlewareTests(TestCase):
         other = User.objects.create_user(username='no-meta', password='pw')
         self.client.force_login(other)
         self.assertLess(self.client.get('/').status_code, 500)
+
+
+class AdvanceGradesCommandTests(TestCase):
+    """advance_grades нь хичээлийн жилд нэг л удаа ажиллаж, лог үлдээнэ."""
+
+    def setUp(self):
+        import datetime
+        import tempfile
+        from unittest import mock
+        from olympiad.models import SchoolYear
+        today = datetime.date.today()
+        SchoolYear.objects.create(name='test', start=today - datetime.timedelta(days=30),
+                                  end=today + datetime.timedelta(days=300))
+        from accounts.models import Level
+        for grade_id in range(1, 18):
+            Grade.objects.get_or_create(id=grade_id, defaults={'name': str(grade_id)})
+        for level_id in range(1, 9):
+            Level.objects.get_or_create(id=level_id, defaults={'name': str(level_id)})
+        self.student = User.objects.create_user('student5')
+        UserMeta.objects.create(user=self.student, grade_id=5)
+        self.log = tempfile.NamedTemporaryFile(suffix='.log', delete=False).name
+        patcher = mock.patch('accounts.management.commands.advance_grades.log_path', return_value=self.log)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def run_command(self, *args):
+        from io import StringIO
+        from django.core.management import call_command
+        out = StringIO()
+        call_command('advance_grades', *args, stdout=out)
+        return out.getvalue()
+
+    def test_advances_once_and_logs(self):
+        from django.core.management.base import CommandError
+        self.run_command('--yes')
+        self.assertEqual(UserMeta.objects.get(user=self.student).grade_id, 6)
+        with open(self.log, encoding='utf-8') as f:
+            self.assertIn('"action": "advanced"', f.read())
+        with self.assertRaises(CommandError):
+            self.run_command('--yes')
+        self.assertEqual(UserMeta.objects.get(user=self.student).grade_id, 6)
+
+    def test_check_and_mark_done_do_not_change_grades(self):
+        from django.core.management.base import CommandError
+        self.assertIn('ахиулаагүй', self.run_command('--check'))
+        self.run_command('--mark-done', 'гараар хийсэн')
+        with self.assertRaises(CommandError):
+            self.run_command('--yes')
+        self.assertEqual(UserMeta.objects.get(user=self.student).grade_id, 5)
