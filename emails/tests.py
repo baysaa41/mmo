@@ -135,3 +135,18 @@ class SnsLogOnlyModeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(EmailEvent.objects.exists())
         self.assertIn('verified=False', logs.output[0])
+
+
+class TextEmailTests(TestCase):
+    def test_html_alternative_escapes_and_links(self):
+        from .html import text_email
+        msg = text_email('Гарчиг', 'Сайн байна уу, <багш>\n\nХолбоос: https://www.mmo.mn/post/?id=495&a=1.\nДараагийн мөр',
+                         'registration@mmo.mn', ['a@example.org'])
+        self.assertEqual(msg.body.splitlines()[0], 'Сайн байна уу, <багш>')
+        html, mimetype = msg.alternatives[0]
+        self.assertEqual(mimetype, 'text/html')
+        self.assertIn('&lt;багш&gt;', html)
+        self.assertIn('<a href="https://www.mmo.mn/post/?id=495&amp;a=1">', html)
+        self.assertIn('Холбоос: <a', html)
+        self.assertIn('<br>', html)
+        self.assertEqual(html.count('<p '), 2)

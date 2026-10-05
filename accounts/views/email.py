@@ -9,6 +9,7 @@ from django.core.mail import get_connection, EmailMultiAlternatives, EmailMessag
 from ..models import UserMails
 from ..forms import EmailForm
 from schools.models import School
+from emails.html import text_email
 
 import re
 
@@ -34,7 +35,7 @@ def send_email_to_schools(request):
 
             for school in schools:
                 try:
-                    email = EmailMessage(
+                    email = text_email(
                         subject=cleaned_subject,  # <-- Цэвэрлэсэн хувьсагчийг ашиглана
                         body=cleaned_message,   # <-- Цэвэрлэсэн хувьсагчийг ашиглана
                         from_email='info@mmo.mn',

@@ -11,10 +11,11 @@ import re
 
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.core.mail import EmailMessage
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
+
+from emails.html import text_email
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ def send_moderator_changed_notice(school, old_moderator, new_moderator, changed_
         'site': settings.SITE_URL.rstrip('/'),
         'from_email': NOTICE_FROM_EMAIL,
     })
-    EmailMessage(
+    text_email(
         subject=f'Анхааруулга: {school.name} сургуулийн бүртгэгч багш солигдлоо',
         body=body,
         from_email=NOTICE_FROM_EMAIL,
@@ -159,7 +160,7 @@ def send_account_email_changed_notice(account, old_email, changed_by, organizati
         'audience': audience,
         'from_email': NOTICE_FROM_EMAIL,
     })
-    EmailMessage(
+    text_email(
         subject=f'Анхааруулга: {organization} албан аккаунтын имэйл солигдлоо',
         body=body,
         from_email=NOTICE_FROM_EMAIL,
