@@ -15,7 +15,7 @@
             <strong>Хавсралт файлууд:</strong>
             <ul class="list-unstyled mb-0">
                 {% for attachment in post.attachments.all %}
-                    <li><a href="{{ attachment.file.url }}" target="_blank"><i class="fas fa-paperclip"></i> {{ attachment.description }}</a></li>
+                    <li><a href="{% if attachment.is_link %}{{ attachment.link }}{% else %}{{ attachment.file.url }}{% endif %}" target="_blank"><i class="fas fa-paperclip"></i> {{ attachment.description }}</a></li>
                 {% endfor %}
             </ul>
         </div>

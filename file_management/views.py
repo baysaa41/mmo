@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Count, Q
 from django.views.decorators.http import require_POST
@@ -37,6 +37,11 @@ def download_file(request, file_id):
     # Бэлтгэлийн материалыг нэвтэрсэн бүх хэрэглэгч татаж болно,
     # бусад (заавар) файлыг зөвхөн сургууль/аймгийн ажилтнууд
     if file_instance.kind == FileUpload.Kind.TRAINING or is_manager(request.user.id):
+        if file_instance.is_link:
+            # Гадны холбоос (Google Drive г.м.) — хандалтыг бүртгээд шилжүүлнэ
+            FileAccessLog.objects.create(file=file_instance, user=request.user)
+            return HttpResponseRedirect(file_instance.link)
+
         file_name = os.path.basename(file_instance.file.name)
         mime_type, _ = mimetypes.guess_type(file_name)
 
@@ -103,7 +108,8 @@ def file_list(request):
 def delete_file(request, file_id):
     file_instance = get_object_or_404(FileUpload, id=file_id)
     is_training = file_instance.kind == FileUpload.Kind.TRAINING
-    file_instance.file.delete(save=False)
+    if file_instance.file:
+        file_instance.file.delete(save=False)
     file_instance.delete()
     return redirect('training_materials' if is_training else 'file_list')
 

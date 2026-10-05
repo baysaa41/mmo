@@ -5,6 +5,8 @@
     <h2 class="mb-3">Бэлтгэлийн материал оруулах</h2>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+        <div class="alert alert-light border small">Файл оруулах <strong>эсвэл</strong> Google Drive, YouTube г.м. холбоос оруулна уу.</div>
+        {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
         {% for field in form %}
             <div class="mb-3">
                 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>

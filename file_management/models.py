@@ -10,7 +10,10 @@ class FileUpload(models.Model):
         GENERAL = 'general', 'Заавар (сургуулийн ажилтнуудад)'
         TRAINING = 'training', 'Олимпиадын бэлтгэлийн материал'
 
-    file = models.FileField(upload_to='files/')
+    file = models.FileField(upload_to='files/', blank=True)
+    # Файлын оронд гадны холбоос (Google Drive, YouTube г.м.) байж болно
+    link = models.URLField('Холбоос', max_length=1000, blank=True, default='',
+                           help_text='Google Drive, YouTube г.м. холбоос. Файл оруулахгүй бол заавал бөглөнө.')
     description = models.TextField(default='', blank=True)
     kind = models.CharField('Төрөл', max_length=20, choices=Kind.choices, default=Kind.GENERAL, db_index=True)
     # Бэлтгэлийн материалын талбарууд (жишээ нь: "EGMO бэлтгэл 2026")
@@ -33,7 +36,7 @@ class FileUpload(models.Model):
         ordering = ['-uploaded_at']  # Сүүлд оруулсан эхэнд
 
     def __str__(self):
-        return self.title or self.file.name
+        return self.title or self.file.name or self.link
 
     @property
     def teacher_list(self):
@@ -41,7 +44,11 @@ class FileUpload(models.Model):
 
     @property
     def filename(self):
-        return os.path.basename(self.file.name)
+        return os.path.basename(self.file.name) if self.file else ''
+
+    @property
+    def is_link(self):
+        return bool(self.link) and not self.file
 
     def save(self, *args, **kwargs):
         # Хэрэв school_year заагаагүй бол одоогийн жилийг автоматаар сонго
@@ -61,4 +68,4 @@ class FileAccessLog(models.Model):
         ordering = ['-downloaded_at']
 
     def __str__(self):
-        return f"{self.user.username} accessed {self.file.file.name} at {self.downloaded_at}"
+        return f"{self.user.username} accessed {self.file} at {self.downloaded_at}"
