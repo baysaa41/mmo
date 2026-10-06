@@ -22,6 +22,28 @@
             </div>
         </div>
 
+        {% if round == 5 or round == 6 or round == 7 %}
+            {# Албан ёсны сайтууд iframe-д оруулахыг хориглодог (imo-official.org: X-Frame-Options: DENY) тул холбоос л өгнө #}
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <span><i class="fas fa-history me-1"></i> Монголын багийн өмнөх жилүүдийн дүн — албан ёсны сайтад.</span>
+                {% if round == 5 %}
+                    <a href="https://www.imo-official.org/results/individual/country/MNG/" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">IMO дүн харах <i class="fas fa-external-link-alt fa-xs"></i></a>
+                {% elif round == 6 %}
+                    <a href="https://www.egmo.org/countries/country64/" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">EGMO дүн харах <i class="fas fa-external-link-alt fa-xs"></i></a>
+                {% else %}
+                    <a href="https://www.apmo-official.org/country_report/MNG/all" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">APMO дүн харах <i class="fas fa-external-link-alt fa-xs"></i></a>
+                {% endif %}
+            </div>
+            {% if round == 5 %}
+                <div class="alert alert-info small">
+                    <i class="fas fa-archive me-1"></i>
+                    IMO-ийн албан ёсны сайтад Монголын багт оролцсон зарим багш, сурагчдын (жишээ нь 1968, 1987 оны) нэр дутуу, «?» тэмдэгтэй байна.
+                    IMO-д оролцсон багш, сурагчдын бүтэн нэр, гэрэл зураг, дурсамж зэрэг мэдээлэл байвал
+                    <a href="mailto:history-archive@mmo.mn">history-archive@mmo.mn</a> хаягаар ирүүлнэ үү.
+                </div>
+            {% endif %}
+        {% endif %}
+
         {% if round == 1 and request.user.is_staff %}
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <span><i class="fas fa-chart-bar me-1"></i> Аймаг, дүүргээр оролцсон сургууль, сурагчийн нэгдсэн статистик.</span>

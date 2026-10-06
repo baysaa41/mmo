@@ -11,6 +11,10 @@
         {% endif %}
     </div>
 
+    <div class="alert alert-info">
+        <i class="fas fa-envelope me-1"></i> Сургуулийн бүртгэлтэй холбоотой бүх асуудлыг (бүртгэгч багш солих, сурагч, багшийн бүртгэл, мэдээллийн зөрүү г.м.) <a href="mailto:registration@mmo.mn">registration@mmo.mn</a> хаягаар хүлээн авна.
+    </div>
+
     {% if user.is_staff or managed_province %}
     <div class="mb-3">
         <a href="{% url 'all_schools_registry' %}{% if managed_province %}?p={{ managed_province.id }}{% endif %}" class="btn btn-outline-primary">📋 Сургуулийн бүртгэл</a>
