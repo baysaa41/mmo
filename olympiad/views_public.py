@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta
 from olympiad.models import SchoolYear, ScoreSheet, Olympiad, Problem, Topic, RoundGuideline, Award, OlympiadTimeline
 from olympiad.utils.round2_quota import compute_school_quota_table
 from olympiad.utils.round3_quota import compute_district_quota_table, get_capital_districts
+from olympiad.utils.series_files import series_file_sizes
 from accounts.models import Province
 from django.db.models import Q, Count
 from django.core.cache import cache
@@ -571,7 +572,10 @@ def olympiad_timeline_view(request):
     OlympiadTimeline нь Olympiad-аас тооцоологддоггүй бие даасан хүснэгт —
     staff зөвхөн үүнийг л (Django admin-аар) засварлаж шинэ мөр нэмнэ.
     """
-    rows = OlympiadTimeline.objects.select_related('school_year', 'host').all()
+    rows = list(OlympiadTimeline.objects.select_related('school_year', 'host').all())
+    sizes = series_file_sizes()
+    for row in rows:
+        row.series_file_size = sizes.get(row.series_file_url)
     next_edition = (rows[0].number + 1) if rows else 1
     return render(request, 'olympiad/timeline.html', {
         'rows': rows,

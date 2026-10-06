@@ -18,6 +18,13 @@
     </div>
     <hr class="my-3">
 
+    <div class="alert alert-info small">
+        <i class="fas fa-archive me-1"></i>
+        Олимпиадын түүхийг баяжуулах зорилгоор өмнөх жилүүдийн олимпиадтай холбоотой мэдээлэл, цуврал, дүнгийн жагсаалт,
+        сонин сэтгүүлийн хайчилбар, гэрэл зураг зэрэг баримтуудыг
+        <a href="mailto:history-archive@mmo.mn">history-archive@mmo.mn</a> хаягаар хүлээн авч байна.
+    </div>
+
     <div class="table-responsive">
         <table class="table table-hover table-bordered align-middle">
             <colgroup>
@@ -62,7 +69,7 @@
                     </td>
                     <td>
                         {% if row.series_file_url %}
-                            <a href="{{ row.series_file_url }}" target="_blank" title="Цуврал (PDF)"><i class="fas fa-file-pdf text-danger"></i></a>
+                            <a href="{{ row.series_file_url }}" target="_blank" title="Цуврал (PDF)"><i class="fas fa-file-pdf text-danger"></i></a>{% if row.series_file_size %} <small class="text-muted text-nowrap">({{ row.series_file_size|filesizeformat }})</small>{% endif %}
                         {% else %}
                             —
                         {% endif %}

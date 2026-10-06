@@ -1,7 +1,9 @@
 from django.contrib import admin
+from django.template.defaultfilters import filesizeformat
 
 # Register your models here.
 
+from .utils.series_files import series_file_sizes
 from .models import Olympiad, SchoolYear, Topic, Problem, AnswerChoice, Award, Result, Solution, Team, Upload, Tag, RoundGuideline, OlympiadTimeline
 
 class SchoolYearAdmin(admin.ModelAdmin):
@@ -20,11 +22,17 @@ admin.site.register(RoundGuideline, RoundGuidelineAdmin)
 
 
 class OlympiadTimelineAdmin(admin.ModelAdmin):
-    list_display = ("number", "school_year", "start_date", "end_date", "host", "contestants", "series_file_url")
+    list_display = ("number", "school_year", "start_date", "end_date", "host", "contestants", "series_file_url", "series_file_size")
     list_editable = ("host", "contestants", "series_file_url")
     ordering = ("-number",)
     search_fields = ("number", "description")
     autocomplete_fields = ("school_year", "host")
+    readonly_fields = ("series_file_size",)
+
+    @admin.display(description='Цувралын хэмжээ')
+    def series_file_size(self, obj):
+        size = series_file_sizes().get(obj.series_file_url)
+        return filesizeformat(size) if size else '—'
 
 admin.site.register(OlympiadTimeline, OlympiadTimelineAdmin)
 
