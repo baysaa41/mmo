@@ -1,0 +1,205 @@
+{% load static %}<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Хүсэлтийг баталгаажуулж чадсангүй - ММО</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'fontawesome/css/all.css' %}"/>
+    <link rel="shortcut icon" href="{% static 'logo.png' %}">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .error-container {
+            max-width: 620px;
+            text-align: center;
+            background: white;
+            padding: 50px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-icon {
+            font-size: 80px;
+            color: #f0ad4e;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #f0ad4e;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .info-box p {
+            margin: 0 0 8px 0;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-box p:last-child {
+            margin-bottom: 0;
+        }
+
+        .contact-info {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .contact-info p {
+            color: #777;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .contact-info a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+
+        .debug-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 13px;
+            color: #856404;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+<div class="error-container">
+    <div class="error-icon">
+        <i class="fas fa-shield-halved"></i>
+    </div>
+
+    <h1>Хүсэлтийг баталгаажуулж чадсангүй</h1>
+
+    <div class="description">
+        <p>
+            Аюулгүй байдлын шалгалт амжилтгүй болсон тул таны илгээсэн маягтыг
+            хүлээж авсангүй. <strong>Танд ямар нэгэн алдаа, өөрчлөлт үүсээгүй</strong> —
+            зүгээр л дахин оролдох шаардлагатай.
+        </p>
+    </div>
+
+    {% if no_cookie %}
+        <div class="info-box">
+            <p>
+                <i class="fas fa-cookie-bite"></i>
+                <strong> Шалтгаан:</strong> таны хөтөч энэ сайтын cookie-г
+                хадгалахыг зөвшөөрөхгүй байна. Маягт илгээхэд cookie заавал
+                шаардлагатай.
+            </p>
+            <p>
+                <i class="fas fa-check"></i>
+                Хөтчийнхөө тохиргооноос cookie-г зөвшөөрнө үү. Хэрэв
+                <em>private / incognito</em> горимд байгаа бол гарч, энгийн
+                цонхноос нээнэ үү.
+            </p>
+        </div>
+    {% elif no_referer %}
+        <div class="info-box">
+            <p>
+                <i class="fas fa-link-slash"></i>
+                <strong> Шалтгаан:</strong> таны хөтөч «Referer» мэдээллийг
+                илгээхгүй байна. Энэ нь аюулгүй байдлын үүднээс шаардлагатай.
+            </p>
+            <p>
+                <i class="fas fa-check"></i>
+                Хуудсыг бүрэн дахин ачаалаад (F5) дахин оролдоно уу. Хөтчийн
+                нууцлалын нэмэлт (privacy extension) ажиллаж байгаа бол энэ
+                сайтад зөвшөөрөл өгнө үү.
+            </p>
+        </div>
+    {% else %}
+        {# CSRF_FAILURE_VIEW тохируулагдаагүй орчинд бүх тохиолдол энд ирнэ —
+           тиймээс боломжит бүх шалтгааныг жагсаана. #}
+        <div class="info-box">
+            <p>
+                <i class="fas fa-magnifying-glass"></i>
+                <strong> Боломжит шалтгаан ба шийдэл:</strong>
+            </p>
+            <p>
+                <i class="fas fa-clock-rotate-left"></i>
+                <strong>1.</strong> Маягт хэт удаан нээлттэй байсан (session-ийн
+                хугацаа дууссан). Хуудсыг бүрэн дахин ачаалаад (F5) мэдээллээ
+                дахин бөглөнө үү.
+            </p>
+            <p>
+                <i class="fas fa-cookie-bite"></i>
+                <strong>2.</strong> Хөтөч cookie-г хориглосон, эсвэл та
+                Facebook / Instagram-ийн <em>доторх хөтчөөр</em> нээсэн байна.
+                Цэснээс «Open in browser»-ыг сонгож Chrome/Safari-аар шууд
+                нээнэ үү.
+            </p>
+            <p>
+                <i class="fas fa-globe"></i>
+                <strong>3.</strong> Хуудас хоёр өөр хаягаар (mmo.mn /
+                www.mmo.mn) нээгдсэн байна. Сайтыг үргэлж нэг л хаягаар
+                (<a href="https://www.mmo.mn/">www.mmo.mn</a>) ашиглана уу.
+            </p>
+        </div>
+    {% endif %}
+
+    {% if DEBUG %}
+        <div class="debug-box">
+            <strong>DEBUG (зөвхөн хөгжүүлэлтийн үед харагдана):</strong><br>
+            reason: {{ reason }}
+        </div>
+    {% endif %}
+
+    <div class="contact-info">
+        <p>Асуудал үргэлжилбэл дараах хаягаар холбогдоно уу:</p>
+        <p><a href="mailto:registration@mmo.mn">registration@mmo.mn</a></p>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="{{ request.path|default:'/' }}" class="btn btn-primary">
+            <i class="fas fa-rotate-right"></i> Дахин оролдох
+        </a>
+        <a href="{% url 'posts:home' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-home"></i> Нүүр хуудас
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
