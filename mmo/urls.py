@@ -43,6 +43,11 @@ urlpatterns = ([
     path('api/users/<int:user_id>/profile/', olympiad_api.user_profile, name='api_user_profile'),
 ])
 
+# 403-ыг өөрсдөө боловсруулна: rate-limit-ийн 403 болон эрхийн 403-ыг ялгаж,
+# ойлгомжтой монгол хуудас харуулахын тулд (mmo/views.py-г үзнэ үү).
+handler403 = 'mmo.views.handler403'
+
+
 if settings.DEBUG:
     # Development үед Django өөрөө static болон media файлыг үйлчилнэ
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

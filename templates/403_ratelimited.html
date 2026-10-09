@@ -1,0 +1,144 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Хэт олон оролдлого - ММО</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'fontawesome/css/all.css' %}"/>
+    <link rel="shortcut icon" href="{% static 'logo.png' %}">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .error-container {
+            max-width: 600px;
+            text-align: center;
+            background: white;
+            padding: 50px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-icon {
+            font-size: 80px;
+            color: #f0ad4e;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 30px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #f0ad4e;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .contact-info {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .contact-info p {
+            color: #777;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .contact-info a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="error-container">
+    <div class="error-icon">
+        <i class="fas fa-hourglass-half"></i>
+    </div>
+
+    <h1>Хэт олон удаа оролдлоо</h1>
+
+    <div class="description">
+        <p>
+            Та богино хугацаанд <strong>хэт олон удаа бүртгэл үүсгэх оролдлого</strong>
+            хийсэн тул түр хаагдлаа.
+        </p>
+        <p>
+            Энэ хязгаарлалт нь спам бүртгэлээс сэргийлэх зорилготой бөгөөд
+            <strong>1 цагийн дараа автоматаар арилна</strong>.
+        </p>
+    </div>
+
+    <div class="info-box">
+        <p>
+            <i class="fas fa-lightbulb"></i>
+            <strong> Анхаар:</strong> Хязгаар нь таны интернэт холболтын IP хаягаар
+            тоологддог. Нэг сургуулийн сүлжээнээс хэд хэдэн хүн зэрэг бүртгүүлж
+            байгаа бол энэ хязгаарт хүрэх боломжтой.
+        </p>
+    </div>
+
+    <div class="info-box">
+        <p>
+            <i class="fas fa-clock"></i>
+            <strong> Юу хийх вэ:</strong> 1 цаг хүлээгээд дахин оролдоно уу.
+            Яаралтай бол доорх хаягаар холбогдоно уу.
+        </p>
+    </div>
+
+    <div class="contact-info">
+        <p>Бүртгэлтэй холбоотой асуудлаар:</p>
+        <p><a href="mailto:registration@mmo.mn">registration@mmo.mn</a></p>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'user_login' %}" class="btn btn-primary">
+            <i class="fas fa-sign-in-alt"></i> Нэвтрэх
+        </a>
+        <a href="{% url 'posts:home' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-home"></i> Нүүр хуудас
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

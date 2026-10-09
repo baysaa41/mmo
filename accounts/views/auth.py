@@ -22,13 +22,20 @@ from django_ratelimit.decorators import ratelimit
 from django_registration.backends.activation.views import RegistrationView
 
 
-@method_decorator(ratelimit(key='ip', rate='5/h', method='POST', block=True), name='post')
+@method_decorator(ratelimit(key='ip', rate='30/h', method='POST', block=True), name='post')
 class RegistrationViewWithCaptcha(RegistrationView):
     """
     Стандарт django-registration view дээр нэмэлт хамгаалалт:
     - reCAPTCHA v3 (form_class-аар)
-    - IP хаягаар цагт 5 бүртгэлээр хязгаарласан rate-limit
+    - IP хаягаар цагт 30 бүртгэлээр хязгаарласан rate-limit
     Spam бүртгэлийн урсгалаас сэргийлэх зорилготой.
+
+    Хязгаар нь IP хаягаар тоологддог тул нэг сургуулийн сүлжээ (NAT) болон
+    форм алдаа, давхар даралт зэрэг амжилтгүй оролдлого бүгд квотыг иддэг.
+    Анх 5/цаг байсныг 30/цаг болгов: бүртгэлийн улиралд нэг сургуулиас
+    хэдэн арван хүн бүртгүүлэхэд 5 нь хэт бага байж, багш нар тайлбаргүй
+    403 алдаа авч байсан. Хэтэрвэл mmo.views.handler403 нь
+    templates/403_ratelimited.html-ээр ойлгомжтой монгол хуудас харуулна.
     """
     form_class = RegistrationFormWithCaptcha
 
