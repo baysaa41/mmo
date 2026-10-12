@@ -58,6 +58,12 @@ class UserMeta(models.Model):
     # Сүүлд системд хандсан хугацаа (LastActivityMiddleware ~15 минут тутамд шинэчилнэ).
     # last_login нь зөвхөн нууц үгээр нэвтрэх үед шинэчлэгддэг тул бодит хэрэглээг харуулдаггүй.
     last_activity = models.DateTimeField(null=True, blank=True, db_index=True)
+    # Имэйлээр ямар мэдээлэл авах сонирхол (1-click холбоосоор тэмдэглэнэ). None = асуугаагүй/хариулаагүй.
+    # Нэг имэйлд олон аккаунт байж болох тул тухайн хаягтай бүх аккаунтад хамт хадгална.
+    wants_mmo_news = models.BooleanField(null=True, blank=True, verbose_name='ММО-гийн мэдээлэл авах')
+    wants_other_olympiads = models.BooleanField(null=True, blank=True, verbose_name='Бусад олимпиадын мэдээлэл авах')
+    wants_mathminds = models.BooleanField(null=True, blank=True, verbose_name='MathMinds-ийн санал авах')
+    interests_updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [
