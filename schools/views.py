@@ -32,7 +32,7 @@ from .models import School
 from .forms import UserSearchForm, AddUserForm, UserForm, UserMetaForm, UploadExcelForm
 from accounts.models import UserMeta, Level, Province
 from olympiad.models import Olympiad, SchoolYear, Problem, Result
-from olympiad.utils.round2_quota import round2_avg_quota_by_school, round2_additional_quota_by_school
+from olympiad.utils.round2_quota import round2_avg_quota_by_school, round2_additional_quota_by_school, school_round2_quota_totals
 
 import pandas as pd
 from django.db import connection, transaction
@@ -145,7 +145,26 @@ def all_schools_registry_view(request):
     elif zid and is_staff and not managed_province:
         schools_qs = schools_qs.filter(province__zone_id=zid)
 
-    schools = schools_qs.order_by('province__name', 'name')
+    schools = list(schools_qs.order_by('province__name', 'name'))
+
+    # Сургууль бүрээс аймаг/дүүргийн олимпиадад (round=2) шалгарах сурагчийн тоо ба
+    # тэр тоонөөс квотын дэвтэр рүү очих холбоос. Тооцоо аймаг тус бүрд ~4-9 сек зарцуулдаг
+    # тул (кэшлэгддэг) зөвхөн нэг аймгийн жагсаалтад тооцоолно; олон аймгийн жагсаалтад
+    # кэшэд байгааг л харуулна (кэшийг `manage.py warm_school_round2_quota` бэлддэг).
+    today = date.today()
+    quota_year = SchoolYear.objects.filter(start__lte=today, end__gte=today).first()
+    if quota_year and schools:
+        provinces = {sc.province_id: sc.province for sc in schools}
+        compute = len(provinces) == 1
+        ledger_url = reverse('round2_school_quota')
+        for province_id, province in provinces.items():
+            totals = school_round2_quota_totals(province, quota_year, compute=compute)
+            if totals is None:
+                continue
+            for sc in schools:
+                if sc.province_id == province_id and sc.id in totals:
+                    sc.round2_quota = totals[sc.id]
+                    sc.round2_quota_url = f'{ledger_url}?year={quota_year.id}&province={province_id}'
 
     can_manage = is_staff or managed_province is not None
 

@@ -85,6 +85,11 @@
                         {% if school.group %}
                             <small class="text-muted">Сурагчдын тоо: {{ school.group.user_set.count }}</small>
                         {% endif %}
+                        {% if school.round2_quota is not None %}
+                            <small class="ms-3">Аймаг/дүүргийн олимпиадад шалгарах:
+                                <a href="{{ school.round2_quota_url }}" title="Квотын дэвтэр нээх (C, D, E, F ангилалын нийлбэр)"><strong>{{ school.round2_quota }}</strong> сурагч</a>
+                            </small>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}

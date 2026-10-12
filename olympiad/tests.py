@@ -142,3 +142,52 @@ class ProblemVisibilityBeforeFinishTests(TestCase):
         self.client.force_login(self.staff)
         url = reverse('problem_stats', kwargs={'problem_id': self.secret.id})
         self.assertEqual(self.client.get(url).status_code, 200)
+
+
+@override_settings(
+    STORAGES={
+        'default': {'BACKEND': 'django.core.files.storage.InMemoryStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    },
+    MAINTENANCE_MODE=False,
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class RoundLedgerPlacementTests(TestCase):
+    """Квотын дэвтэр round=1 хуудсанд, Хотын эрхийн дэвтэр round=2 хуудсанд байх ёстой."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from datetime import date, timedelta
+        from olympiad.models import SchoolYear
+        today = date.today()
+        cls.year = SchoolYear.objects.create(
+            name='2099-2100', start=today - timedelta(days=30), end=today + timedelta(days=30))
+
+    def page(self, round):
+        response = self.client.get(reverse('olympiad_round_detail', kwargs={'round': round}))
+        self.assertEqual(response.status_code, 200)
+        return response
+
+    def test_round2_quota_ledger_is_on_round1_page(self):
+        self.assertContains(self.page(1), reverse('round2_quota_summary'))
+
+    def test_round2_page_no_longer_has_round2_quota_ledger(self):
+        self.assertNotContains(self.page(2), reverse('round2_quota_summary'))
+
+    def test_capital_ledger_is_on_round2_page(self):
+        self.assertContains(self.page(2), reverse('round3_district_quota'))
+
+    def test_round3_page_no_longer_has_capital_ledger(self):
+        response = self.page(3)
+        self.assertNotContains(response, reverse('round3_district_quota'))
+        self.assertNotContains(response, 'Хотын эрхийн дэвтэр')
+
+    def test_round1_page_does_not_have_capital_ledger(self):
+        self.assertNotContains(self.page(1), reverse('round3_district_quota'))
+
+    def test_ledger_breadcrumbs_point_to_the_new_pages(self):
+        round1 = reverse('olympiad_round_detail', kwargs={'round': 1})
+        round2 = reverse('olympiad_round_detail', kwargs={'round': 2})
+        self.assertContains(self.client.get(reverse('round2_quota_summary')), round1)
+        self.assertContains(self.client.get(reverse('round2_school_quota')), round1)
+        self.assertContains(self.client.get(reverse('round3_district_quota')), round2)

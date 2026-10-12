@@ -20,6 +20,9 @@ I давааны шинэ зааврын дагуу (2026 оны 4 сарын 22
 import math
 from itertools import groupby
 
+from django.core.cache import cache
+from django.db.models import Q
+
 from olympiad.models import Olympiad, ScoreSheet, SchoolYear
 
 
@@ -239,3 +242,51 @@ def compute_school_quota_table(province, round2_olympiad):
         'total_new_additional': sum(d['new_additional_quota'] for d in schools_data),
         'total_new_quota': sum(d['new_total_quota'] for d in schools_data),
     }
+
+
+ROUND2_SCHOOL_TOTALS_TTL = 3600
+
+
+def school_round2_quota_totals_key(school_year_id, province_id):
+    return f'school_round2_quota_totals_{school_year_id}_{province_id}'
+
+
+def school_round2_quota_totals(province, school_year, compute=True):
+    """Тухайн аймаг/дүүргийн сургууль бүрээс аймаг/дүүргийн олимпиадад (round=2) шалгарах
+    сурагчийн нийт тоог (сурагчийн C, D, E, F ангилал бүрийн суурь + жагсаалтаар эрхийн
+    нийлбэр, багш/ББ ангиллыг оруулахгүй) буцаана: {school_id: тоо}.
+
+    Квотын дэвтэр (round2_school_quota_view)-тэй ижил `compute_school_quota_table`-ийг
+    ашигладаг. Сургууль нэмэгдэж байдаг тул 1 цагийн хугацаатай кэшлэнэ. I даваа энэ жил
+    хараахан бэлдэгдээгүй (round=2 олимпиадад холбогдсон round=1 олимпиад олдоогүй) бол
+    хоосон dict буцаана.
+
+    Тооцоо удаан (аймаг тус бүр ~4-9 сек) тул `compute=False` үед кэшэд байхгүй бол
+    тооцоолохгүй, None буцаана — олон аймгийн жагсаалт харуулах хуудас ашиглана."""
+    if not school_year or not province:
+        return {}
+    key = school_round2_quota_totals_key(school_year.id, province.id)
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    if not compute:
+        return None
+
+    totals = {}
+    student_olympiads = Olympiad.objects.filter(
+        round=2, school_year=school_year
+    ).exclude(
+        Q(level__name__startswith='S') | Q(level__name__startswith='T')
+    ).select_related('level').order_by('level_id')
+    for o in student_olympiads:
+        table = compute_school_quota_table(province, o)
+        if not table:
+            continue
+        for data in table['schools_data']:
+            school = data['school']
+            if school is None:
+                continue
+            totals[school.id] = totals.get(school.id, 0) + data['total_quota']
+
+    cache.set(key, totals, ROUND2_SCHOOL_TOTALS_TTL)
+    return totals

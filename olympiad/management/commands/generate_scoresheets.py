@@ -5,7 +5,9 @@ from django.core.cache import cache, caches
 from django.core.cache.backends.redis import RedisCache
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Case, When, Value, IntegerField, OuterRef, Subquery, BooleanField
+from accounts.models import Province
 from olympiad.models import ScoreSheet, Award, Olympiad
+from olympiad.utils.round2_quota import school_round2_quota_totals_key
 from olympiad.utils.data import to_scoresheet
 from olympiad.utils.ranking import (
     update_rankings_a, update_rankings_b,
@@ -254,6 +256,7 @@ class Command(BaseCommand):
         year_id = Olympiad.objects.filter(pk=olympiad_id).values_list('school_year_id', flat=True).first()
         if year_id:
             cache_keys += [f'round2_quota_summary_{year_id}', f'round3_district_quota_{year_id}']
+            cache_keys += [school_round2_quota_totals_key(year_id, pid) for pid in Province.objects.values_list('id', flat=True)]
 
         try:
             cache.delete_many(cache_keys)

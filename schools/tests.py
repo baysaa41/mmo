@@ -784,3 +784,48 @@ class SyncUserSchoolsCommandTests(SchoolAccessTestBase):
         self.assertEqual(meta(wrong_province).province, self.province_a)
         self.assertEqual(meta(chose_other).school, self.school_b)  # сурагчийн сонголтыг дарахгүй
         self.assertEqual(meta(two_groups).school, self.school_b)   # олон группт — хүрэхгүй
+
+
+class RegistryRound2QuotaTests(SchoolAccessTestBase):
+    """Сургуулийн бүртгэлийн хуудас сургууль бүрээс round=2-д шалгарах сурагчийн тоог
+    квотын дэвтэр рүү холбоостой харуулна."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from datetime import date, timedelta
+        from olympiad.models import SchoolYear
+        today = date.today()
+        cls.year = SchoolYear.objects.create(
+            name='Тест жил', start=today - timedelta(days=30), end=today + timedelta(days=30))
+
+    def get(self, **params):
+        self.client.force_login(self.staff)
+        return self.client.get(reverse('all_schools_registry'), params)
+
+    def test_single_province_shows_number_with_ledger_link_and_computes(self):
+        from unittest import mock
+        with mock.patch('schools.views.school_round2_quota_totals',
+                        return_value={self.school_b.id: 12}) as totals:
+            response = self.get(p=self.province_b.id)
+        self.assertEqual(totals.call_args.kwargs['compute'], True)
+        self.assertContains(response, 'Аймаг/дүүргийн олимпиадад шалгарах')
+        self.assertContains(
+            response,
+            f"{reverse('round2_school_quota')}?year={self.year.id}&amp;province={self.province_b.id}")
+        self.assertContains(response, '<strong>12</strong>')
+
+    def test_many_provinces_only_read_the_cache(self):
+        from unittest import mock
+        with mock.patch('schools.views.school_round2_quota_totals', return_value=None) as totals:
+            response = self.get()
+        self.assertTrue(totals.called)
+        for call in totals.call_args_list:
+            self.assertEqual(call.kwargs['compute'], False)
+        self.assertNotContains(response, 'Аймаг/дүүргийн олимпиадад шалгарах')
+
+    def test_school_without_a_number_shows_nothing(self):
+        from unittest import mock
+        with mock.patch('schools.views.school_round2_quota_totals', return_value={}):
+            response = self.get(p=self.province_b.id)
+        self.assertNotContains(response, 'Аймаг/дүүргийн олимпиадад шалгарах')

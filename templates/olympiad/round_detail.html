@@ -44,6 +44,13 @@
             {% endif %}
         {% endif %}
 
+        {% if round == 1 %}
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <span><i class="fas fa-book me-1"></i> Квотын дэвтэр — бүх аймаг, дүүргийн нэмэлт эрхийг нэг дор харна.</span>
+                <a href="{% url 'round2_quota_summary' %}{% if year %}?year={{ year.id }}{% endif %}" class="btn btn-sm btn-outline-primary">Дэвтэр нээх</a>
+            </div>
+        {% endif %}
+
         {% if round == 1 and request.user.is_staff %}
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <span><i class="fas fa-chart-bar me-1"></i> Аймаг, дүүргээр оролцсон сургууль, сурагчийн нэгдсэн статистик.</span>
@@ -51,17 +58,11 @@
             </div>
         {% endif %}
 
-        {% if round == 2 %}
+        {% if round == 2 and request.user.is_staff %}
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <span><i class="fas fa-book me-1"></i> Квотын дэвтэр — бүх аймаг, дүүргийн нэмэлт эрхийг нэг дор харна.</span>
-                <a href="{% url 'round2_quota_summary' %}{% if year %}?year={{ year.id }}{% endif %}" class="btn btn-sm btn-outline-primary">Дэвтэр нээх</a>
+                <span><i class="fas fa-chart-bar me-1"></i> Аймаг, дүүргээр ангилал тус бүрийн оролцогчдын нэгдсэн статистик.</span>
+                <a href="{% url 'round2_summary' %}{% if year %}?school_year={{ year.id }}{% endif %}" class="btn btn-sm btn-outline-primary" target="_blank">Статистик харах</a>
             </div>
-            {% if request.user.is_staff %}
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                    <span><i class="fas fa-chart-bar me-1"></i> Аймаг, дүүргээр ангилал тус бүрийн оролцогчдын нэгдсэн статистик.</span>
-                    <a href="{% url 'round2_summary' %}{% if year %}?school_year={{ year.id }}{% endif %}" class="btn btn-sm btn-outline-primary" target="_blank">Статистик харах</a>
-                </div>
-            {% endif %}
         {% endif %}
 
         {% if round == 1 and request.user.moderating.exists or round == 1 and request.user.managing.exists %}
@@ -128,13 +129,13 @@
                 </div>
             {% endif %}
             <div class="article">
-                {% autoescape off %}{{ guideline_content_before }}{% endautoescape %}
+                {% autoescape off %}{{ guideline_content }}{% endautoescape %}
             </div>
         {% else %}
             <div class="card p-3 bg-light text-dark">Энэ шатлалын удирдамж оруулаагүй байна.</div>
         {% endif %}
 
-        {% if round == 3 %}
+        {% if round == 2 %}
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 mt-3">
                 <span><i class="fas fa-book me-1"></i> Хотын эрхийн дэвтэр — нийслэлийн 7 дүүргийн эрхийн задаргааг нэг дор харна.</span>
                 <a href="{% url 'round3_district_quota' %}{% if year %}?year={{ year.id }}{% endif %}" class="btn btn-sm btn-outline-primary">Дэвтэр нээх</a>
@@ -174,11 +175,6 @@
             {% endif %}
         {% endif %}
 
-        {% if guideline_content_after %}
-            <div class="article">
-                {% autoescape off %}{{ guideline_content_after }}{% endautoescape %}
-            </div>
-        {% endif %}
     </div>
 
     {% if olympiads %}

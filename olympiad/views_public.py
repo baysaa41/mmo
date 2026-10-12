@@ -158,20 +158,11 @@ def round_guideline_view(request, round):
             student_status = _egmo_student_status(request.user, selected_year)
 
     capital_quota_pivot = None
-    guideline_content_before = guideline.content if guideline else None
-    guideline_content_after = None
-    if round == 3 and selected_year:
-        # "Хотын эрхийн дэвтэр"-ийг удирдамжийн "Бүсийн эрх"-ийн хүснэгтийн ард, харин
-        # "Улсын олимпиадын эрх олгох" хэсгийн өмнө оруулахын тулд удирдамжийн HTML-г
-        # тэр хэсгийн эхлэлээр таслана. Тэмдэглэгээ олдохгүй бол бүх агуулгыг өмнө нь
-        # үзүүлнэ.
-        if guideline and guideline.content:
-            marker = '<p><strong>Улсын олимпиадын эрх олгох'
-            split_idx = guideline.content.find(marker)
-            if split_idx != -1:
-                guideline_content_before = guideline.content[:split_idx]
-                guideline_content_after = guideline.content[split_idx:]
-
+    guideline_content = guideline.content if guideline else None
+    if round == 2 and selected_year:
+        # "Хотын эрхийн дэвтэр" (нийслэлийн дүүрэг тус бүрийн Бүс/Нийслэлийн олимпиадад
+        # шалгарах эрх) нь аймаг/дүүргийн олимпиадаас (round=2) шалгарахтай холбоотой тул
+        # round=2 хуудсанд, удирдамжийн ард харуулна.
         quota_tables = get_capital_quota_tables(selected_year)
         if quota_tables:
             levels = [qt['level'] for qt in quota_tables]
@@ -200,8 +191,7 @@ def round_guideline_view(request, round):
         'next': next_year,
         'student_status': student_status,
         'capital_quota_pivot': capital_quota_pivot,
-        'guideline_content_before': guideline_content_before,
-        'guideline_content_after': guideline_content_after,
+        'guideline_content': guideline_content,
     }
     return render(request, 'olympiad/round_detail.html', context)
 
