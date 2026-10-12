@@ -1,0 +1,61 @@
+"""I давааны имэйлийн нэвтрэлтгүй хувийн хуудас (schools.round1_links)."""
+from django.contrib import messages
+from django.http import HttpResponse
+from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+from . import round1_links as links
+
+MAX_ROWS = 50  # олон аккаунттай (багшийн) хаягт хуудас хэт урт болохгүй
+
+
+def round1_info_view(request, token):
+    email = links.read_token(token)
+    if not email:
+        return render(request, 'schools/round1/invalid.html', status=404)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'request':
+            ids = request.POST.getlist('user_id')
+            n = links.send_requests(email, [int(i) for i in ids if i.isdigit()] if ids else None)
+            if n:
+                messages.success(request, f'{n} хүсэлт сургуулийн бүртгэгч багшид илгээгдлээ. '
+                                          'Багш батлахад таны бүртгэл баталгаажна.')
+            else:
+                messages.info(request, 'Илгээх шинэ хүсэлт алга.')
+        elif action == 'interests':
+            links.set_interests(email, {f: request.POST.get(f) == '1' for f in links.INTERESTS})
+            messages.success(request, 'Таны сонголт хадгалагдлаа.')
+        elif action == 'unsubscribe':
+            links.unsubscribe(email)
+            messages.success(request, 'Танд цаашид мэдээллийн имэйл илгээхгүй.')
+        return redirect('round1_info', token=token)
+
+    users = list(links.accounts_for_email(email))
+    rows = links.account_rows(users)
+    counts = {}
+    for _u, status in rows:
+        counts[status] = counts.get(status, 0) + 1
+    return render(request, 'schools/round1/info.html', {
+        'token': token,
+        'email': email,
+        'rows': rows[:MAX_ROWS],
+        'hidden_count': max(0, len(rows) - MAX_ROWS),
+        'total': len(rows),
+        'counts': counts,
+        'interests': links.current_interests(users),
+        'S': {'registered': links.REGISTERED, 'requested': links.REQUESTED,
+              'not_registered': links.NOT_REGISTERED, 'no_school': links.NO_SCHOOL},
+    })
+
+
+@csrf_exempt
+@require_POST
+def round1_unsubscribe_view(request, token):
+    """RFC 8058 List-Unsubscribe-Post (Gmail/Yahoo-гийн 1-click unsubscribe)."""
+    email = links.read_token(token)
+    if email:
+        links.unsubscribe(email, reason='List-Unsubscribe (1-click)')
+    return HttpResponse('OK')

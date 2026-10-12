@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Холбоос хүчингүй{% endblock %}
+{% block content %}
+<div class="container my-5" style="max-width:640px">
+  <div class="alert alert-warning">
+    Холбоос буруу эсвэл хугацаа нь дууссан байна. Та
+    <a href="{% url 'login' %}">нэвтэрч</a> мэдээллээ шалгана уу. Асуух зүйл байвал
+    <a href="mailto:registration@mmo.mn">registration@mmo.mn</a> хаягаар холбогдоно уу.
+  </div>
+</div>
+{% endblock %}

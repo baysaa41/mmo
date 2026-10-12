@@ -1,4 +1,5 @@
 from django.urls import path
+from .views_round1 import round1_info_view, round1_unsubscribe_view
 from .views import (
     school_moderators_view,
     my_managed_schools_view,
@@ -26,6 +27,9 @@ from .views import (
 )
 
 urlpatterns = [
+    # I давааны имэйлийн нэвтрэлтгүй хувийн хуудас
+    path('r1/<str:token>/', round1_info_view, name='round1_info'),
+    path('r1/<str:token>/unsubscribe/', round1_unsubscribe_view, name='round1_unsubscribe'),
     # New main views
     path('', my_managed_schools_view, name='my_managed_schools'),
     path('registry/', all_schools_registry_view, name='all_schools_registry'),

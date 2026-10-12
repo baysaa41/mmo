@@ -829,3 +829,82 @@ class RegistryRound2QuotaTests(SchoolAccessTestBase):
         with mock.patch('schools.views.school_round2_quota_totals', return_value={}):
             response = self.get(p=self.province_b.id)
         self.assertNotContains(response, 'Аймаг/дүүргийн олимпиадад шалгарах')
+
+
+class Round1LinkTests(SchoolAccessTestBase):
+    """I давааны имэйлийн нэвтрэлтгүй хуудас ба бүртгэгч багшийн өдрийн имэйл."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from schools.round1_links import make_token
+        cls.moderator_a.email = 'mod_a@example.mn'
+        cls.moderator_a.save()
+        # Нэг эцэг эхийн хаягтай хоёр хүүхэд: нэг нь бүртгэлтэй, нэг нь бүртгэлгүй
+        cls.kid1 = make_user('kid1', school=cls.school_a, province=cls.province_a, email='Parent@Example.mn')
+        cls.school_a.group.user_set.add(cls.kid1)
+        cls.kid2 = make_user('kid2', school=cls.school_a, province=cls.province_a, email='parent@example.mn')
+        cls.kid3 = make_user('kid3', email='parent@example.mn')
+        cls.token = make_token('parent@example.mn')
+
+    def url(self, token=None):
+        return reverse('round1_info', args=[token or self.token])
+
+    def test_page_lists_all_accounts_of_email_with_status(self):
+        from schools import round1_links as links
+        resp = self.client.get(self.url())
+        self.assertEqual(resp.status_code, 200)
+        rows = dict(resp.context['rows'])
+        self.assertEqual(rows[self.kid1], links.REGISTERED)
+        self.assertEqual(rows[self.kid2], links.NOT_REGISTERED)
+        self.assertEqual(rows[self.kid3], links.NO_SCHOOL)
+
+    def test_bad_token_404(self):
+        self.assertEqual(self.client.get(self.url('1:abc:def')).status_code, 404)
+
+    def test_get_does_not_change_anything(self):
+        from schools.models import EnrollmentLog
+        self.client.get(self.url())
+        self.assertFalse(EnrollmentLog.objects.filter(user=self.kid2).exists())
+
+    def test_request_shows_up_as_pending_for_moderator_once(self):
+        from schools import enrollment
+        from schools import round1_links as links
+        self.client.post(self.url(), {'action': 'request'})
+        self.client.post(self.url(), {'action': 'request'})  # давхар дарсан ч нэг л хүсэлт
+        self.assertEqual(self.kid2.enrollment_logs.count(), 1)
+        self.assertIn(self.kid2, enrollment.pending_students(self.school_a))
+        rows = dict(links.account_rows(links.accounts_for_email('parent@example.mn')))
+        self.assertEqual(rows[self.kid2], links.REQUESTED)
+
+    def test_interests_saved_on_all_accounts(self):
+        self.client.post(self.url(), {'action': 'interests', 'wants_mmo_news': '1', 'wants_mathminds': '1'})
+        for kid in (self.kid1, self.kid2, self.kid3):
+            kid.data.refresh_from_db()
+            self.assertIs(kid.data.wants_mmo_news, True)
+            self.assertIs(kid.data.wants_other_olympiads, False)
+            self.assertIs(kid.data.wants_mathminds, True)
+            self.assertIsNotNone(kid.data.interests_updated_at)
+
+    def test_one_click_unsubscribe(self):
+        from emails.models import EmailUnsubscribe
+        resp = self.client.post(reverse('round1_unsubscribe', args=[self.token]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(EmailUnsubscribe.objects.filter(email__iexact='parent@example.mn').count(), 3)
+
+    def test_digest_one_email_per_registrar_and_skips_approved(self):
+        from django.core import mail
+        from schools import enrollment
+        from schools.registrar_digest import send_digests
+        self.client.post(self.url(), {'action': 'request'})
+        other = make_user('kid4', school=self.school_a, province=self.province_a, email='other@example.mn')
+        from schools.round1_links import send_requests
+        send_requests('other@example.mn')
+        enrollment.approve(other, self.school_a, by=self.moderator_a)
+
+        sent = send_digests()
+        self.assertEqual([(r, n) for r, n in sent], [(self.moderator_a, 1)])
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['mod_a@example.mn'])
+        self.assertIn(f'ID {self.kid2.pk}', mail.outbox[0].body)
+        self.assertIn(reverse('school_all_users', args=[self.school_a.pk]), mail.outbox[0].body)

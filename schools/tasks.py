@@ -78,3 +78,13 @@ def send_account_email_changed_notice_task(self, account_id, old_email, changed_
     except Exception as exc:
         logger.error(f"Account email change notice failed for user {account_id}: {exc}", exc_info=True)
         raise self.retry(exc=exc)
+
+
+@shared_task
+def send_registrar_digest_task():
+    """Бүртгэгч багш нарт өдөр бүрийн нэгдсэн хүсэлтийн имэйл (schools.registrar_digest)."""
+    from .registrar_digest import send_digests
+    sent = send_digests()
+    logger.info('Бүртгэгч багшийн өдрийн имэйл: %s хүлээн авагч, %s хүсэлт',
+                len(sent), sum(n for _r, n in sent))
+    return len(sent)
