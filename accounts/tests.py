@@ -145,3 +145,67 @@ class RegistrationDoubleSubmitTests(TestCase):
                                         HTTP_X_REAL_IP='127.0.0.1')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'аль хэдийн үүссэн')
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+                   CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}})
+class ResendActivationTests(TestCase):
+    IP = {'HTTP_X_REAL_IP': '127.0.0.1'}
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.url = reverse('resend_activation')
+
+    def _pending(self, username, email='shared@example.com'):
+        u = User.objects.create(username=username, email=email, is_active=False)
+        u.set_password('Xk9!qweRTY12')
+        u.save()
+        return u
+
+    def test_single_pending_account_gets_one_email_with_working_link(self):
+        from django.core import mail
+        self._pending('solo', 'solo@example.com')
+        response = self.client.post(self.url, {'identifier': 'solo@example.com'}, **self.IP)
+        self.assertContains(response, 'илгээлээ')
+        self.assertEqual(len(mail.outbox), 1)
+        msg = mail.outbox[0]
+        self.assertEqual(msg.to, ['solo@example.com'])
+        self.assertTrue(msg.alternatives)
+        link = next(w for w in msg.body.split() if '/accounts/activate/' in w)
+        self.client.get(link.split('testserver', 1)[1], **self.IP)
+        self.assertTrue(User.objects.get(username='solo').is_active)
+
+    def test_shared_email_asks_to_choose_and_sends_only_one(self):
+        from django.core import mail
+        for name in ('kid1', 'kid2', 'kid3'):
+            self._pending(name)
+        response = self.client.post(self.url, {'identifier': 'shared@example.com'}, **self.IP)
+        self.assertContains(response, 'kid2')
+        self.assertEqual(len(mail.outbox), 0)
+        self.client.post(self.url, {'identifier': 'shared@example.com', 'selected_username': 'kid2'}, **self.IP)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('kid2', mail.outbox[0].body)
+
+    def test_repeat_request_within_cooldown_does_not_resend(self):
+        from django.core import mail
+        self._pending('again', 'again@example.com')
+        self.client.post(self.url, {'identifier': 'again'}, **self.IP)
+        self.client.post(self.url, {'identifier': 'again'}, **self.IP)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_active_or_deactivated_accounts_are_not_sent(self):
+        from django.core import mail
+        from django.utils import timezone
+        User.objects.create(username='active1', email='a@example.com', is_active=True)
+        User.objects.create(username='banned', email='b@example.com', is_active=False, last_login=timezone.now())
+        self.assertContains(self.client.post(self.url, {'identifier': 'active1'}, **self.IP), 'аль хэдийн идэвхтэй')
+        self.assertContains(self.client.post(self.url, {'identifier': 'banned'}, **self.IP), 'олдсонгүй')
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_login_with_pending_account_offers_resend(self):
+        self._pending('waiting', 'w@example.com')
+        response = self.client.post(reverse('user_login'),
+                                    {'username': 'waiting', 'password': 'Xk9!qweRTY12'}, **self.IP)
+        self.assertContains(response, 'идэвхжээгүй')
+        self.assertContains(response, reverse('resend_activation') + '?u=waiting')

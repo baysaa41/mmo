@@ -9,9 +9,11 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_protect
 from django.utils.decorators import method_decorator
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 
 from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, BulkAddUsersToSchoolForm, RegistrationFormWithCaptcha
 from ..models import UserMeta
+from .. import activation
 from schools import enrollment
 import re
 
@@ -52,6 +54,48 @@ class RegistrationViewWithCaptcha(RegistrationView):
             form.add_error('username', 'Энэ нэвтрэх нэрээр бүртгэл аль хэдийн үүссэн байна. '
                                        'Имэйлдээ ирсэн идэвхжүүлэх холбоосыг дарна уу.')
             return self.form_invalid(form)
+
+    def send_activation_email(self, user):
+        activation.send_activation_email(self.request, user)
+
+
+@ratelimit(key='ip', rate='20/h', method='POST', block=True)
+def resend_activation_view(request):
+    """
+    Идэвхжүүлэх холбоосыг дахин илгээнэ. Нэвтрэх нэр эсвэл имэйлээр хайна.
+    Нэг имэйлд хэд хэдэн идэвхжээгүй бүртгэл байвал жагсаалтаас нэгийг
+    сонгуулж, зөвхөн тэр нэг аккаунтын холбоосыг илгээнэ (олон имэйл явуулахгүй).
+    """
+    identifier = (request.POST.get('identifier') or request.GET.get('u') or '').strip()
+    context = {'identifier': identifier}
+    if request.method != 'POST' or not identifier:
+        return render(request, 'accounts/resend_activation.html', context)
+
+    pending = activation.pending_activation_users()
+    by_username = pending.filter(username=identifier).first()
+    candidates = [by_username] if by_username else list(
+        pending.filter(email__iexact=identifier).order_by('-date_joined'))
+
+    if not candidates:
+        if User.objects.filter(Q(username=identifier) | Q(email__iexact=identifier), is_active=True).exists():
+            context['already_active'] = True
+        else:
+            context['not_found'] = True
+        return render(request, 'accounts/resend_activation.html', context)
+
+    if len(candidates) > 1:
+        selected = request.POST.get('selected_username', '').strip()
+        chosen = next((u for u in candidates if u.username == selected), None)
+        if chosen is None:
+            context['candidates'] = candidates
+            return render(request, 'accounts/resend_activation.html', context)
+        candidates = [chosen]
+
+    user = candidates[0]
+    if not activation.recently_sent(user):
+        activation.send_activation_email(request, user)
+    context.update(sent_to=user)
+    return render(request, 'accounts/resend_activation.html', context)
 
 @protected_resource(scopes=['profile'])
 @require_http_methods(["GET"])
@@ -178,8 +222,12 @@ def login_view(request):
             if not meta.is_valid:
                 next_url = reverse('profile_edit')
             return redirect(next_url)
-        else:
-            messages.error(request, 'Нэвтрэх нэр эсвэл нууц үг буруу байна.')
+        pending = activation.pending_activation_users().filter(username=username).first()
+        if pending and pending.check_password(password):
+            # authenticate() идэвхгүй хэрэглэгчийг None буцаадаг тул «буруу» гэж
+            # ойлгомжгүй мессеж харуулахын оронд идэвхжүүлэх замыг зааж өгнө.
+            return render(request, 'accounts/login.html', {'form': form, 'pending_activation': pending})
+        messages.error(request, 'Нэвтрэх нэр эсвэл нууц үг буруу байна.')
     return render(request, 'accounts/login.html', {'form': form})
 
 def logout_view(request):

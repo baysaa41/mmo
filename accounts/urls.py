@@ -32,6 +32,7 @@ urlpatterns = [
     path('profile/done/', auth.profile_ready, name='user_profile_done'),
     path('password/<int:user_id>/', change_student_password_view, name='user_password'),
     path('login/', auth.login_view, name='user_login'),
+    path('activation/resend/', auth.resend_activation_view, name='resend_activation'),
     path('logout/', auth.logout_view, name='user_logout'),
     # profile-d surguuli songoh
     path('ajax/load-schools/', ajax.load_schools, name='ajax_load_schools'),

@@ -32,6 +32,16 @@
                 {% endfor %}
             {% endif %}
 
+            {% if pending_activation %}
+                <div class="alert alert-warning" role="alert">
+                    <strong>{{ pending_activation.username }}</strong> бүртгэл хараахан идэвхжээгүй байна.
+                    Бүртгүүлэх үед имэйл рүү тань очсон холбоос дээр дарж идэвхжүүлнэ үү.
+                    <div class="mt-2">
+                        <a href="{% url 'resend_activation' %}?u={{ pending_activation.username|urlencode }}" class="btn btn-sm btn-warning">Идэвхжүүлэх холбоос дахин авах</a>
+                    </div>
+                </div>
+            {% endif %}
+
             <form method="post" novalidate>
                 {% csrf_token %}
                 {{ form|crispy }}
@@ -43,6 +53,8 @@
             <hr class="my-4">
             <div class="text-center">
                 <a href="{% url 'password_reset' %}" class="text-decoration-none">Нууц үгээ мартсан уу?</a>
+                <br>
+                <a href="{% url 'resend_activation' %}" class="text-decoration-none small">Идэвхжүүлэх имэйл ирээгүй юу?</a>
             </div>
         </div>
     </div>
