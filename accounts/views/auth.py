@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_protect
 from django.utils.decorators import method_decorator
+from django.db import IntegrityError, transaction
 
 from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, BulkAddUsersToSchoolForm, RegistrationFormWithCaptcha
 from ..models import UserMeta
@@ -38,6 +39,19 @@ class RegistrationViewWithCaptcha(RegistrationView):
     templates/403_ratelimited.html-ээр ойлгомжтой монгол хуудас харуулна.
     """
     form_class = RegistrationFormWithCaptcha
+
+    def form_valid(self, form):
+        # Давхар даралтаар ижил форм зэрэг ирэхэд хоёулаа username-ийн шалгалтыг
+        # давж, хоёр дахь нь unique constraint дээр 500 алдаа өгдөг байсан.
+        try:
+            with transaction.atomic():
+                return super().form_valid(form)
+        except IntegrityError as e:
+            if 'username' not in str(e):
+                raise
+            form.add_error('username', 'Энэ нэвтрэх нэрээр бүртгэл аль хэдийн үүссэн байна. '
+                                       'Имэйлдээ ирсэн идэвхжүүлэх холбоосыг дарна уу.')
+            return self.form_invalid(form)
 
 @protected_resource(scopes=['profile'])
 @require_http_methods(["GET"])

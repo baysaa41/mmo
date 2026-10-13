@@ -128,3 +128,20 @@ class AdvanceGradesCommandTests(TestCase):
         with self.assertRaises(CommandError):
             self.run_command('--yes')
         self.assertEqual(UserMeta.objects.get(user=self.student).grade_id, 5)
+
+
+class RegistrationDoubleSubmitTests(TestCase):
+    def test_duplicate_username_race_shows_form_error(self):
+        from unittest import mock
+        from django.db import IntegrityError
+        from accounts.views.auth import RegistrationViewWithCaptcha
+
+        data = {'username': 'racetest', 'email': 'racetest@example.com',
+                'password1': 'Xk9!qweRTY12', 'password2': 'Xk9!qweRTY12', 'captcha': 'x'}
+        err = IntegrityError('duplicate key value violates unique constraint "idx_24017_username"')
+        with mock.patch('accounts.forms.ResilientReCaptchaField.validate'), \
+                mock.patch.object(RegistrationViewWithCaptcha, 'create_inactive_user', side_effect=err):
+            response = self.client.post(reverse('django_registration_register'), data,
+                                        HTTP_X_REAL_IP='127.0.0.1')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'аль хэдийн үүссэн')
