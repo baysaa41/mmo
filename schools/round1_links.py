@@ -38,7 +38,12 @@ def make_token(email):
     """Тухайн хаягийн токен. Хаягтай идэвхтэй аккаунт байхгүй бол None."""
     uid = (User.objects.filter(email__iexact=email, is_active=True)
            .order_by('id').values_list('id', flat=True).first())
-    return signing.TimestampSigner(salt=SALT).sign(str(uid)) if uid else None
+    return token_for_uid(uid) if uid else None
+
+
+def token_for_uid(uid):
+    """make_token-той ижил; бөөнөөр илгээхэд хаягийн хамгийн жижиг id-г өөрөө өгнө."""
+    return signing.TimestampSigner(salt=SALT).sign(str(uid))
 
 
 def read_token(token):
