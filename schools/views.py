@@ -55,9 +55,11 @@ def _student_schools(target_user):
     Сурагчийн харьяалагдах сургуулиуд: UserMeta.school болон
     сургуулийн группийн гишүүнчлэлээр.
     """
-    return School.objects.filter(
-        Q(group__user=target_user) | Q(usermeta__user=target_user)
-    ).select_related('province').distinct()
+    # Хоёр JOIN-ийг OR-оор нийлүүлбэл PostgreSQL бүх хүснэгтийг уншаад 20+ секунд
+    # зарцуулдаг тул id-гаар нь тусад нь олно.
+    ids = set(target_user.groups.filter(school__isnull=False).values_list('school__id', flat=True))
+    ids.update(UserMeta.objects.filter(user=target_user, school__isnull=False).values_list('school_id', flat=True))
+    return School.objects.filter(pk__in=ids).select_related('province')
 
 
 def _managed_student_school(request_user, target_user):

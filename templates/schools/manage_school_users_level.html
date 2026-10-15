@@ -211,6 +211,17 @@
 </div>
 
 <script>
+// Хуудас удаан ачаалахад товчийг дахин дарж давхар бүртгэл үүсгэхээс сэргийлнэ.
+// Товчийг disable хийвэл түүний name (add_user г.м.) POST-д орохгүй тул зөвхөн дахин илгээхийг хориглоно.
+document.querySelectorAll('form[method="post"]').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        if (e.defaultPrevented) return;
+        if (form.dataset.submitted) { e.preventDefault(); return; }
+        form.dataset.submitted = '1';
+        form.querySelectorAll('button[type="submit"]').forEach(function(b) { b.classList.add('disabled'); });
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     var mergeBtn = document.getElementById('mergeBtn');
     var selectAll = document.getElementById('selectAllMerge');
