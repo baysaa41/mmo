@@ -6,7 +6,18 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 
+from emails.suppression import is_undeliverable
+
 logger = logging.getLogger(__name__)
+
+UNDELIVERABLE_MESSAGE = 'Энэ имэйл хаяг руу өмнө нь хүргэгдээгүй (bounce) тул илгээсэнгүй.'
+
+
+def _skip_undeliverable(user, what):
+    if is_undeliverable(user.email):
+        logger.warning('%s skipped (undeliverable address): user_id=%s', what, user.pk)
+        return True
+    return False
 
 
 class SchoolEmailService:
@@ -19,6 +30,8 @@ class SchoolEmailService:
         Returns tuple: (success: bool, error_message: str or None)
         """
         try:
+            if _skip_undeliverable(user, 'Password reset link'):
+                return False, UNDELIVERABLE_MESSAGE
             # Generate token
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -73,6 +86,8 @@ class SchoolEmailService:
         Returns tuple: (success: bool, error_message: str or None)
         """
         try:
+            if _skip_undeliverable(user, 'Welcome email'):
+                return False, UNDELIVERABLE_MESSAGE
             # Password reset token үүсгэх
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -128,6 +143,8 @@ class SchoolEmailService:
     def send_password_reset_notification(user, new_password):
         """Send notification when password is reset by admin"""
         try:
+            if _skip_undeliverable(user, 'Password reset notification'):
+                return False, UNDELIVERABLE_MESSAGE
             context = {
                 'user': user,
                 'new_password': new_password,

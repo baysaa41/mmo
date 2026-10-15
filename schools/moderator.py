@@ -65,6 +65,57 @@ def email_problem(user, blocked):
     return None
 
 
+def school_email_problem_users(school):
+    """Сургуулийн бүртгэгч багш, удирдлага болон группийн гишүүдээс имэйл нь
+    хүргэгдэхгүй (hard bounce / complaint) болсон хэрэглэгчид.
+
+    Unsubscribe хийсэн хэрэглэгчийг оруулахгүй — тэд имэйлийн алдаатай биш,
+    өөрсдөө татгалзсан. Мөр бүр: user, role, email, bounce_type, bounced_at,
+    suggestion (домэйны бичгийн алдааны засвар, байвал).
+    """
+    from django.db.models import Q
+    from django.db.models.functions import Lower
+    from emails.models import EmailBounce
+    from emails.suppression import UNDELIVERABLE_BOUNCE_TYPES, email_typo_suggestion
+
+    roles = {}
+    if school.user_id:
+        roles[school.user_id] = 'Бүртгэгч багш'
+    if school.manager_id:
+        roles.setdefault(school.manager_id, 'Сургуулийн удирдлага')
+
+    member_filter = Q(pk__in=list(roles))
+    if school.group_id:
+        member_filter |= Q(groups=school.group_id)
+
+    bounced = EmailBounce.objects.filter(bounce_type__in=UNDELIVERABLE_BOUNCE_TYPES)
+    users = (
+        User.objects.filter(member_filter)
+        .annotate(email_lower=Lower('email'))
+        .filter(email_lower__in=bounced.annotate(e=Lower('email')).values('e'))
+        .distinct()
+        .order_by('last_name', 'first_name', 'username')
+    )
+
+    rows = [(u, (u.email or '').strip()) for u in users]
+    latest = {}
+    for b in bounced.filter(email__in={e.lower() for _, e in rows} | {e for _, e in rows}).order_by('created_at'):
+        latest[b.email.lower()] = b  # хамгийн сүүлийнх нь үлдэнэ
+
+    result = []
+    for user, email in rows:
+        bounce = latest.get(email.lower())
+        result.append({
+            'user': user,
+            'role': roles.get(user.pk, ''),
+            'email': email,
+            'bounce_type': bounce.bounce_type if bounce else '',
+            'bounced_at': bounce.created_at if bounce else None,
+            'suggestion': email_typo_suggestion(email),
+        })
+    return result
+
+
 def manager_has_own_email(school):
     """Удирдлага бүртгэгч багшаас өөр, хүчинтэй имэйлтэй эсэх."""
     manager_email = norm_email(school.manager.email) if school.manager else ''

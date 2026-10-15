@@ -5,6 +5,8 @@
 ашиглана. Нэг аккаунт руу богино хугацаанд олон удаа илгээхгүйн тулд cache-ээр
 хязгаарлана.
 """
+import logging
+
 from django.conf import settings
 from django.core import signing
 from django.core.cache import cache
@@ -12,6 +14,9 @@ from django.urls import reverse
 from django_registration.backends.activation.views import REGISTRATION_SALT
 
 from emails.html import text_email
+from emails.suppression import is_undeliverable
+
+logger = logging.getLogger(__name__)
 
 RESEND_COOLDOWN_SECONDS = 5 * 60
 
@@ -38,7 +43,16 @@ def recently_sent(user):
 
 
 def send_activation_email(request, user):
-    """Идэвхжүүлэх холбоосыг нэг имэйлээр илгээнэ."""
+    """Идэвхжүүлэх холбоосыг нэг имэйлээр илгээнэ. Илгээсэн бол True.
+
+    Өмнө нь hard bounce хийсэн хаяг руу илгээхгүй (SES-ийн bounce хувийг
+    өсгөхөөс сэргийлнэ); cooldown-ийг тавьсан хэвээр үлдээж, давтан
+    дарахад дахин шалгахгүй.
+    """
+    if is_undeliverable(user.email):
+        logger.warning('Activation email skipped (undeliverable address): user_id=%s', user.pk)
+        cache.set(_cooldown_key(user), 1, RESEND_COOLDOWN_SECONDS)
+        return False
     days = settings.ACCOUNT_ACTIVATION_DAYS
     body = (
         'Сайн байна уу,\n\n'
@@ -54,3 +68,4 @@ def send_activation_email(request, user):
     text_email('mmo.mn: бүртгэлээ идэвхжүүлнэ үү', body,
                settings.DEFAULT_FROM_EMAIL, [user.email]).send()
     cache.set(_cooldown_key(user), 1, RESEND_COOLDOWN_SECONDS)
+    return True

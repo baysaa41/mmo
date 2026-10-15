@@ -8,6 +8,7 @@ from schools.models import School
 from schools.models import UploadedExcel
 from django.core.validators import EmailValidator
 from django.core.exceptions import ValidationError
+from emails.suppression import validate_no_email_typo
 import re
 
 class UserForm(forms.ModelForm):
@@ -38,6 +39,7 @@ class UserForm(forms.ModelForm):
             except ValidationError:
                 raise forms.ValidationError('Зөв имэйл хаяг оруулна уу.')
 
+        validate_no_email_typo(email)
         return email
 
 # AddUserForm - Шинэ хэрэглэгч ҮҮСГЭХ зориулалттай
@@ -67,6 +69,7 @@ class AddUserForm(forms.ModelForm):
         except ValidationError:
             raise forms.ValidationError('Зөв имэйл хаяг оруулна уу.')
 
+        validate_no_email_typo(email)
         return email
 
 class UserMetaForm(forms.ModelForm):

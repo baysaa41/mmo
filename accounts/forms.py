@@ -15,6 +15,18 @@ from django_registration.forms import RegistrationForm
 from django_recaptcha.fields import ReCaptchaField
 from django_recaptcha.widgets import ReCaptchaV3
 from urllib.error import URLError
+import logging
+
+from django.core.cache import cache
+
+from emails.suppression import is_undeliverable, validate_no_email_typo
+
+logger = logging.getLogger(__name__)
+
+# Нууц үг сэргээх имэйлийг нэг хэрэглэгчид давтан илгээхгүй хугацаа.
+# Имэйл хүрэхгүй (хайрцаг дүүрсэн, удаан хүргэлт) үед хэрэглэгч дахин дахин
+# дарж, bounce-ыг өсгөдөг байсан. Идэвхжүүлэх имэйлийн cooldown-той ижил.
+RESET_COOLDOWN_SECONDS = 5 * 60
 
 
 class ResilientReCaptchaField(ReCaptchaField):
@@ -36,6 +48,12 @@ class ResilientReCaptchaField(ReCaptchaField):
 
 class RegistrationFormWithCaptcha(RegistrationForm):
     """Spam бүртгэлээс сэргийлэх зорилгоор reCAPTCHA v3 нэмсэн бүртгэлийн форм."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # django-registration нь `clean_email` тодорхойлдоггүй, харин талбарын
+        # validator-уудыг өөрөө угсардаг — манайхыг мөн тэнд нэмнэ.
+        self.fields[User.get_email_field_name()].validators.append(validate_no_email_typo)
+
     captcha = ResilientReCaptchaField(
         widget=ReCaptchaV3(action='register'),
         label='',
@@ -135,6 +153,12 @@ class CustomPasswordResetForm(PasswordResetForm):
 
             for user in (target_users if target_users is not None else self.get_users(email)):
                 user_email = user.email
+                if is_undeliverable(user_email):
+                    logger.warning('Password reset skipped (undeliverable address): user_id=%s', user.pk)
+                    continue
+                if not cache.add(f'password_reset_sent:{user.pk}', 1, RESET_COOLDOWN_SECONDS):
+                    logger.info('Password reset skipped (cooldown): user_id=%s', user.pk)
+                    continue
                 user_name = user.username
                 context = {
                     "email": user_email,

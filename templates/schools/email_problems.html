@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2 class="mb-1">Имэйл хүргэгдэхгүй байгаа хэрэглэгчид</h2>
+    <p class="lead text-muted">{{ school.name }}{% if school.province %} · {{ school.province.name }}{% endif %}</p>
+
+    <a href="{% url 'school_dashboard' school.id %}" class="btn btn-secondary btn-sm mb-4">&larr; Сургуулийн самбар</a>
+
+    <div class="alert alert-info">
+        Доорх хэрэглэгчдийн имэйл хаяг руу илгээсэн захидал хүргэгдээгүй (хаяг буруу эсвэл байхгүй).
+        Нууц үг сэргээх, бүртгэл идэвхжүүлэх зэрэг имэйл тэдэнд очихгүй тул зөв имэйл хаягийг нь шинэчилнэ үү.
+    </div>
+
+    {% if rows %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Нэр</th>
+                    <th>Нэвтрэх нэр</th>
+                    <th>Имэйл</th>
+                    <th>Санал болгох засвар</th>
+                    <th>Сүүлд алдаа гарсан</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td>
+                        {{ row.user.last_name }} {{ row.user.first_name }}
+                        {% if row.role %}<span class="badge bg-secondary ms-1">{{ row.role }}</span>{% endif %}
+                    </td>
+                    <td>{{ row.user.username }}</td>
+                    <td>{{ row.email }}</td>
+                    <td>{% if row.suggestion %}<code>{{ row.suggestion }}</code>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                    <td>{% if row.bounced_at %}{{ row.bounced_at|date:"Y-m-d" }}{% endif %}</td>
+                    <td class="text-end">
+                        {% if row.edit_url %}
+                        <a href="{{ row.edit_url }}" class="btn btn-outline-primary btn-sm">Имэйл засах</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small">Нийт {{ rows|length }} хэрэглэгч.</p>
+    {% else %}
+    <div class="alert alert-success">Имэйл хүргэгдэхгүй байгаа хэрэглэгч алга.</div>
+    {% endif %}
+</div>
+{% endblock %}

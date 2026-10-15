@@ -37,7 +37,7 @@ from olympiad.utils.round2_quota import round2_avg_quota_by_school, round2_addit
 import pandas as pd
 from django.db import connection, transaction
 from .forms import UploadExcelForm
-from .moderator import blocked_emails, change_moderator, email_problem, norm_email
+from .moderator import blocked_emails, change_moderator, email_problem, norm_email, school_email_problem_users
 
 from django.contrib.admin.views.decorators import staff_member_required
 from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm, SchoolManagerAccountForm
@@ -226,6 +226,7 @@ def school_dashboard(request, school_id):
 
     context = {
         'school': school,
+        'email_problem_count': len(school_email_problem_users(school)),
         'is_manager': is_manager,
         'is_province_contact': is_province_contact,
         'student_counts_by_level': student_counts,
@@ -276,6 +277,26 @@ def compute_school_round2_quota(school, level):
         'new_additional_quota': ratio_info['additional_quota'],
         'new_total_quota': base_quota + ratio_info['additional_quota'],
     }
+
+
+@login_required
+def school_email_problems_view(request, school_id):
+    """Сургуулийн хэрэглэгчдээс имэйл нь хүргэгдэхгүй байгаа хүмүүсийн жагсаалт."""
+    school = get_object_or_404(School, id=school_id)
+    if not school.user_has_access(request.user):
+        messages.error(request, 'Та энэ сургуулийг удирдах эрхгүй.')
+        return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
+
+    rows = school_email_problem_users(school)
+    for row in rows:
+        u = row['user']
+        if u.is_staff or u.is_superuser:
+            row['edit_url'] = ''  # staff-ийг энэ замаар засуулахгүй (edit_user_in_group мөн татгалзана)
+        elif row['role']:
+            row['edit_url'] = reverse('edit_school_admin', args=[u.pk])
+        else:
+            row['edit_url'] = reverse('edit_user_in_group', args=[u.pk])
+    return render(request, 'schools/email_problems.html', {'school': school, 'rows': rows})
 
 
 @login_required

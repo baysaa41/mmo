@@ -24,6 +24,7 @@ from .views import (
     change_school_manager_password_view,
     school_official_levels_view,
     merge_school_users,
+    school_email_problems_view,
 )
 
 urlpatterns = [
@@ -55,6 +56,7 @@ urlpatterns = [
     path('<int:school_id>/all-users/', manage_school_by_level, {'level_id': 100}, name='school_all_users'),
     path('<int:school_id>/level/<int:level_id>/', manage_school_by_level, name='manage_school_by_level'),
     path('<int:school_id>/merge-users/', merge_school_users, name='merge_school_users'),
+    path('<int:school_id>/email-problems/', school_email_problems_view, name='school_email_problems'),
 
     # Olympiad management
     path('<int:school_id>/olympiad/<int:olympiad_id>/', school_olympiad_view, name='school_olympiad_view'),
