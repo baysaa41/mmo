@@ -90,3 +90,41 @@ class EnrollmentLog(models.Model):
 
     def __str__(self):
         return f"{self.user_id} {self.action} {self.from_school_id}→{self.to_school_id}"
+
+
+class StudentTransfer(models.Model):
+    """
+    Сурагчийг нэг сургуулиас нөгөөд шилжүүлэх хүсэлт. Илгээгч сургууль
+    үүсгэж, хүлээн авагч сургуулийн бүртгэгч багш зөвшөөрснөөр сурагч
+    шилжинэ. Шийдвэр гартал сурагч хуучин сургуульдаа үлдэнэ.
+    schools.transfers service-ээр удирдагдана.
+    """
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Хүлээгдэж буй'
+        ACCEPTED = 'accepted', 'Хүлээн авсан'
+        REJECTED = 'rejected', 'Татгалзсан'
+        CANCELLED = 'cancelled', 'Цуцалсан'
+
+    user = models.ForeignKey(User, related_name='school_transfers', on_delete=models.CASCADE)
+    from_school = models.ForeignKey(School, related_name='outgoing_transfers', on_delete=models.CASCADE)
+    to_school = models.ForeignKey(School, related_name='incoming_transfers', on_delete=models.CASCADE)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    note = models.CharField(max_length=255, blank=True)
+    requested_by = models.ForeignKey(User, related_name='+', on_delete=models.SET_NULL, null=True, blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    decided_by = models.ForeignKey(User, related_name='+', on_delete=models.SET_NULL, null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-requested_at']
+        constraints = [
+            UniqueConstraint(fields=['user'], condition=models.Q(status='pending'),
+                             name='one_pending_transfer_per_user'),
+        ]
+        indexes = [
+            models.Index(fields=['to_school', 'status']),
+            models.Index(fields=['from_school', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} {self.from_school_id}→{self.to_school_id} ({self.status})"

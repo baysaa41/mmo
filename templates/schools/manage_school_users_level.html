@@ -85,6 +85,9 @@
                 <button type="button" class="btn btn-warning btn-sm" id="mergeBtn" disabled>
                     Бүртгэл нэгтгэх
                 </button>
+                <button type="button" class="btn btn-primary btn-sm" id="transferBtn" disabled>
+                    <i class="fas fa-exchange-alt"></i> Шилжүүлэх
+                </button>
                 <span class="align-self-center text-muted small" id="mergeCount"></span>
                 <form method="post" class="d-inline">
                     {% csrf_token %}
@@ -212,6 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var mergeBtn = document.getElementById('mergeBtn');
     var selectAll = document.getElementById('selectAllMerge');
     var mergeCount = document.getElementById('mergeCount');
+    var transferBtn = document.getElementById('transferBtn');
     if (!mergeBtn) return;
 
     var checkboxes = document.querySelectorAll('.merge-checkbox');
@@ -219,6 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateMerge() {
         var count = document.querySelectorAll('.merge-checkbox:checked').length;
         mergeBtn.disabled = count < 2;
+        transferBtn.disabled = count < 1;
         mergeCount.textContent = count > 0 ? count + ' сонгосон' : '';
     }
 
@@ -239,6 +244,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var ids = Array.from(checked).map(function(cb) { return cb.value; }).join(',');
         window.location.href = '{% url "merge_school_users" school.id %}?user_ids=' + ids;
+    });
+
+    transferBtn.addEventListener('click', function() {
+        var ids = Array.from(document.querySelectorAll('.merge-checkbox:checked')).map(function(cb) { return cb.value; }).join(',');
+        if (ids) window.location.href = '{% url "transfer_students" school.id %}?user_ids=' + ids;
     });
 
     updateMerge();

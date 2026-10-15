@@ -29,6 +29,7 @@ from openpyxl.styles import Border, Side, Font, Alignment
 
 from . import enrollment
 from .models import School
+from .views_transfer import incoming_transfer_count
 from .forms import UserSearchForm, AddUserForm, UserForm, UserMetaForm, UploadExcelForm
 from accounts.models import UserMeta, Level, Province
 from olympiad.models import Olympiad, SchoolYear, Problem, Result
@@ -232,6 +233,7 @@ def school_dashboard(request, school_id):
         'student_counts_by_level': student_counts,
         'uncategorized_count': uncategorized_count,
         'pending_students': pending_students,
+        'incoming_transfer_count': incoming_transfer_count(school),
         'olympiads': olympiads,
     }
     return render(request, 'schools/school_dashboard.html', context)

@@ -1,5 +1,6 @@
 from django.urls import path
 from .views_round1 import round1_info_view, round1_unsubscribe_view
+from .views_transfer import school_transfers_view, transfer_students_view
 from .views import (
     school_moderators_view,
     my_managed_schools_view,
@@ -56,6 +57,8 @@ urlpatterns = [
     path('<int:school_id>/all-users/', manage_school_by_level, {'level_id': 100}, name='school_all_users'),
     path('<int:school_id>/level/<int:level_id>/', manage_school_by_level, name='manage_school_by_level'),
     path('<int:school_id>/merge-users/', merge_school_users, name='merge_school_users'),
+    path('<int:school_id>/transfer-students/', transfer_students_view, name='transfer_students'),
+    path('<int:school_id>/transfers/', school_transfers_view, name='school_transfers'),
     path('<int:school_id>/email-problems/', school_email_problems_view, name='school_email_problems'),
 
     # Olympiad management

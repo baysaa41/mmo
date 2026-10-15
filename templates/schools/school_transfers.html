@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load access_tags %}
+
+{% block content %}
+{% access_notice %}
+<div class="container">
+    <h2 class="mb-1">{{ school.name }}: сурагч шилжүүлэг</h2>
+    <p class="lead text-muted">{{ school.province.name }}</p>
+    <a href="{% url 'school_dashboard' school.id %}" class="btn btn-secondary btn-sm mb-4">&larr; Удирдлагын самбар луу буцах</a>
+
+    <h4>Ирсэн хүсэлтүүд ({{ incoming|length }})</h4>
+    <p class="text-muted">Өөр сургуулиас танай сургууль руу шилжүүлэхээр илгээсэн сурагчид. Хүлээн авбал сурагч танай сургуулийн жагсаалтад орж, хуучин сургуулиас нь хасагдана.</p>
+    {% if incoming %}
+    <form method="post" class="mb-5 transfer-form">
+        {% csrf_token %}
+        <table class="table table-sm table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th width="30"><input type="checkbox" class="form-check-input select-all" checked title="Бүгдийг сонгох"></th>
+                    <th>Овог</th><th>Нэр</th><th>Анги</th><th>Хаанаас</th><th>Илгээсэн</th><th>Тайлбар</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for t in incoming %}
+                <tr>
+                    <td><input type="checkbox" class="form-check-input row-check" name="transfer_ids" value="{{ t.id }}" checked></td>
+                    <td>{{ t.user.last_name }}</td>
+                    <td>{{ t.user.first_name }}</td>
+                    <td>{{ t.user.data.grade.name|default:"Тодорхойгүй" }}</td>
+                    <td>{{ t.from_school.name }} <small class="text-muted">({{ t.from_school.province.name }})</small></td>
+                    <td>{{ t.requested_by.get_full_name|default:t.requested_by.username }}<br><small class="text-muted">{{ t.requested_at|date:"Y-m-d H:i" }}</small></td>
+                    <td>{{ t.note }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" name="action" value="accept" class="btn btn-success"
+                onclick="return confirm('Сонгосон сурагчдыг хүлээн авах уу?')">Сонгосныг хүлээн авах</button>
+        <button type="submit" name="action" value="reject" class="btn btn-outline-danger"
+                onclick="return confirm('Сонгосон хүсэлтүүдээс татгалзах уу? Сурагчид хуучин сургуульдаа үлдэнэ.')">Татгалзах</button>
+    </form>
+    {% else %}
+        <p class="mb-5"><em>Хүлээгдэж буй ирсэн хүсэлт алга.</em></p>
+    {% endif %}
+
+    <h4>Илгээсэн хүсэлтүүд ({{ outgoing|length }})</h4>
+    <p class="text-muted">Танай сургуулиас өөр сургууль руу шилжүүлэхээр илгээсэн, хүлээн авагч сургууль хараахан шийдээгүй хүсэлтүүд. Шилжүүлэх хүсэлтийг «Бүх сурагчид» хуудаснаас сурагчдыг сонгож илгээнэ.</p>
+    {% if outgoing %}
+    <form method="post" class="mb-5 transfer-form">
+        {% csrf_token %}
+        <table class="table table-sm table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th width="30"><input type="checkbox" class="form-check-input select-all" title="Бүгдийг сонгох"></th>
+                    <th>Овог</th><th>Нэр</th><th>Анги</th><th>Хаашаа</th><th>Илгээсэн</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for t in outgoing %}
+                <tr>
+                    <td><input type="checkbox" class="form-check-input row-check" name="transfer_ids" value="{{ t.id }}"></td>
+                    <td>{{ t.user.last_name }}</td>
+                    <td>{{ t.user.first_name }}</td>
+                    <td>{{ t.user.data.grade.name|default:"Тодорхойгүй" }}</td>
+                    <td>{{ t.to_school.name }} <small class="text-muted">({{ t.to_school.province.name }})</small></td>
+                    <td>{{ t.requested_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" name="action" value="cancel" class="btn btn-outline-secondary"
+                onclick="return confirm('Сонгосон хүсэлтүүдийг цуцлах уу?')">Сонгосныг цуцлах</button>
+    </form>
+    {% else %}
+        <p class="mb-5"><em>Хүлээгдэж буй илгээсэн хүсэлт алга.</em></p>
+    {% endif %}
+
+    {% if history %}
+    <h4>Түүх</h4>
+    <table class="table table-sm table-bordered small">
+        <thead><tr><th>Сурагч</th><th>Хаанаас</th><th>Хаашаа</th><th>Төлөв</th><th>Шийдсэн</th></tr></thead>
+        <tbody>
+        {% for t in history %}
+            <tr>
+                <td>{{ t.user.last_name }} {{ t.user.first_name }}</td>
+                <td>{{ t.from_school.name }}</td>
+                <td>{{ t.to_school.name }}</td>
+                <td>{{ t.get_status_display }}</td>
+                <td>{{ t.decided_by.get_full_name|default:t.decided_by.username }} {{ t.decided_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('.transfer-form').forEach(function(form) {
+    var all = form.querySelector('.select-all');
+    if (!all) return;
+    all.addEventListener('change', function() {
+        form.querySelectorAll('.row-check').forEach(function(cb) { cb.checked = all.checked; });
+    });
+});
+</script>
+{% endblock %}

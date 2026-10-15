@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load access_tags %}
+
+{% block content %}
+{% access_notice %}
+<div class="container">
+    <h2 class="mb-1">{{ school.name }}: сурагч шилжүүлэх</h2>
+    <p class="lead text-muted">{{ school.province.name }}</p>
+    <a href="{% url 'school_all_users' school.id %}" class="btn btn-secondary btn-sm mb-4">&larr; Сурагчдын жагсаалт руу буцах</a>
+
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-1"></i>
+        Сонгосон сурагчдыг шилжүүлэх хүсэлт хүлээн авах сургуулийн бүртгэгч багш руу очно.
+        Тэр хүлээн авсны дараа сурагчид шилжинэ. Тэр болтол сурагчид танай сургуульд бүртгэлтэй хэвээр байна.
+        Сургууль хоёр хуваагдсан, эсвэл сурагч өөр сургуульд шилжсэн үед ашиглана.
+    </div>
+
+    {% if students %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <h5>Шилжүүлэх сурагчид ({{ students|length }})</h5>
+                <table class="table table-sm table-bordered">
+                    <thead><tr><th width="30"></th><th>Овог</th><th>Нэр</th><th>Анги</th></tr></thead>
+                    <tbody>
+                    {% for u in students %}
+                        <tr>
+                            <td><input type="checkbox" class="form-check-input" name="user_ids" value="{{ u.id }}" checked></td>
+                            <td>{{ u.last_name }}</td>
+                            <td>{{ u.first_name }}</td>
+                            <td>{{ u.data.grade.name|default:"Тодорхойгүй" }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6 mb-4">
+                <h5>Хүлээн авах сургууль</h5>
+                <input type="text" class="form-control mb-2" id="schoolFilter" placeholder="Сургуулийн нэрээр шүүх...">
+                <select name="to_school" id="toSchool" class="form-select mb-3" size="12" required>
+                    {% if same_province_schools %}
+                    <optgroup label="{{ school.province.name }}">
+                        {% for s in same_province_schools %}
+                        <option value="{{ s.id }}" {% if selected_to_school == s.id|stringformat:"d" %}selected{% endif %}>{{ s.name }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
+                    {% regroup other_schools by province.name as by_province %}
+                    {% for p in by_province %}
+                    <optgroup label="{{ p.grouper }}">
+                        {% for s in p.list %}
+                        <option value="{{ s.id }}" {% if selected_to_school == s.id|stringformat:"d" %}selected{% endif %}>{{ s.name }} ({{ p.grouper }})</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <p class="small text-muted">Хүлээн авах сургууль жагсаалтад байхгүй бол <a href="mailto:registration@mmo.mn">registration@mmo.mn</a> хаягаар бидэнд мэдэгдэнэ үү.</p>
+                <label for="note" class="form-label">Тайлбар (заавал биш)</label>
+                <input type="text" name="note" id="note" maxlength="255" class="form-control mb-3" value="{{ note }}"
+                       placeholder="Жишээ нь: 1–9-р ангиуд 22-р сургууль болж салсан">
+                <button type="submit" class="btn btn-primary w-100"
+                        onclick="return confirm('Сонгосон сурагчдыг шилжүүлэх хүсэлт илгээх үү?')">
+                    <i class="fas fa-exchange-alt me-1"></i> Шилжүүлэх хүсэлт илгээх
+                </button>
+            </div>
+        </div>
+    </form>
+    {% else %}
+        <div class="alert alert-warning">Шилжүүлэх сурагч сонгоогүй байна. Сурагчдын жагсаалтаас сонгоод «Шилжүүлэх» товч дарна уу.</div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var filter = document.getElementById('schoolFilter');
+    var select = document.getElementById('toSchool');
+    if (!filter || !select) return;
+    filter.addEventListener('input', function() {
+        var q = filter.value.trim().toLowerCase();
+        select.querySelectorAll('optgroup').forEach(function(g) {
+            var any = false;
+            g.querySelectorAll('option').forEach(function(o) {
+                var show = !q || o.textContent.toLowerCase().indexOf(q) !== -1;
+                o.hidden = !show;
+                any = any || show;
+            });
+            g.hidden = !any;
+        });
+    });
+});
+</script>
+{% endblock %}

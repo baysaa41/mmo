@@ -48,6 +48,7 @@
                 <ul>
                     <li>Ангиллын нэр дээр дарж тухайн ангиллын сурагчдын жагсаалтыг харна.</li>
                     <li><strong>"Бүх сурагчид"</strong> дээр дарж нийт сурагчдыг харна.</li>
+                    <li>Сурагч өөр сургуульд шилжсэн, эсвэл сургууль хуваагдсан бол <strong>"Бүх сурагчид"</strong> жагсаалтаас сурагчдыг чеклээд <strong>"Шилжүүлэх"</strong> товч дарж хүлээн авах сургуулиа сонгоно. Тэр сургуулийн бүртгэгч багш <strong>"Шилжүүлэг"</strong> хуудаснаас хүлээн авна.</li>
                 </ul>
 
                 <h6 class="fw-bold mt-3">I давааны олимпиад</h6>
@@ -105,7 +106,17 @@
 
     <hr class="my-4">
 
-    <h4>Сурагчдын тоо (Ангиллаар)</h4>
+    {% if incoming_transfer_count %}
+    <div class="alert alert-primary d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-exchange-alt me-1"></i> Өөр сургуулиас {{ incoming_transfer_count }} сурагчийг танай сургууль руу шилжүүлэх хүсэлт ирсэн байна.</span>
+        <a href="{% url 'school_transfers' school.id %}" class="btn btn-primary btn-sm">Хүлээн авах</a>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center">
+        <h4>Сурагчдын тоо (Ангиллаар)</h4>
+        <a href="{% url 'school_transfers' school.id %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-exchange-alt me-1"></i> Шилжүүлэг</a>
+    </div>
     <p>Дэлгэрэнгүй мэдээлэл харахын тулд ангиллын нэр дээр дарна уу.</p>
     <div class="list-group mb-4">
             {# --- ШИНЭ ХОЛБООС --- #}
