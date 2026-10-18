@@ -39,11 +39,12 @@ from schools import enrollment
 from schools.models import School
 from schools.moderator import NOTICE_FROM_EMAIL as FROM_EMAIL, norm_email
 
+GUIDELINE_POST = 506  # «ММО-63, I даваа: оролцох заавар» (495 нь удирдамж)
 MAX_ACCOUNTS = 4  # үүнээс олон аккаунттай хаяг = олон сурагч бүртгүүлсэн багш (#38)
 MAX_ROWS = 4
 CHUNK = 500
-# Багш, комисс зэрэг сурагч биш аккаунтуудыг энэ имэйлд оруулахгүй (Дэмжигч = эцэг эх орно)
-NON_STUDENT_GRADES = ['Багш', 'Комисс', 'БСУГ мэргэжилтэн']
+# Багш, комисс зэрэг сурагч биш аккаунтуудыг энэ имэйлд оруулахгүй (Дэмжигч-д имэйл явуулахгүй)
+NON_STUDENT_GRADES = ['Багш', 'Комисс', 'БСУГ мэргэжилтэн', 'Дэмжигч']
 STATUS_TEXT = {
     links.REGISTERED: 'I даваанд бүртгэлтэй',
     links.REQUESTED: 'бүртгэлийн хүсэлт илгээсэн, багшийн баталгаа хүлээж байна',
@@ -68,6 +69,9 @@ class Command(BaseCommand):
                             help='Зөвхөн 5+ аккаунттай хаяг (багш нар): бодлогын тайлбар + Excel хавсралт')
         parser.add_argument('--registrars', action='store_true',
                             help='Сургуулийн бүртгэгч багш нар (School.user): хүсэлт шийдэх, жагсаалт шалгах заавар (#33)')
+        parser.add_argument('--guideline-post', type=int, default=GUIDELINE_POST,
+                            help='Имэйлд оруулах постын ID (анхдагч: I давааны оролцох заавар). '
+                                 '--send үед нийтлэгдээгүй эсвэл [ТОДРУУЛАХ] үлдсэн бол илгээхгүй.')
         parser.add_argument('--limit', type=int, help='Дээд тал нь N имэйл (үе шаттай илгээхэд)')
         parser.add_argument('--skip-log', nargs='+', default=[],
                             help='Өмнөх ажиллагааны лог(ууд) — "sent" болсон хаягуудад дахин илгээхгүй')
@@ -90,8 +94,10 @@ class Command(BaseCommand):
         self.base = {
             'site': site, 'from_email': FROM_EMAIL,
             'olympiad': self._olympiad_info(),
-            'guideline_url': f'{site}/post/?id={sy.guideline_post_id}' if sy.guideline_post_id else None,
+            'guideline_url': f'{site}/post/?id={opts["guideline_post"]}',
         }
+        if opts['send']:
+            self._check_post(opts['guideline_post'])
         self.teachers = opts['teachers']
         self.registrars = opts['registrars']
         if self.teachers and self.registrars:
@@ -119,6 +125,17 @@ class Command(BaseCommand):
             self._send_all(groups, opts)
         else:
             self._preview(groups, opts['show'])
+
+    def _check_post(self, post_id):
+        """Имэйлд дурдсан пост нийтлэгдээгүй, эсвэл дутуу бол илгээхгүй."""
+        from posts.models import Post
+        post = Post.objects.filter(pk=post_id).first()
+        if post is None:
+            raise CommandError(f'Пост {post_id} олдсонгүй.')
+        if not post.isshow:
+            raise CommandError(f'Пост {post_id} («{post.title}») нийтлэгдээгүй байна (isshow=False). Нийтэлсний дараа илгээнэ.')
+        if '[ТОДРУУЛАХ]' in (post.descr or ''):
+            raise CommandError(f'Пост {post_id}-д [ТОДРУУЛАХ] тэмдэглэл үлдсэн байна. Эхлээд бөглөнө үү.')
 
     # --------------------------------------------------------------- audience
 
@@ -212,18 +229,20 @@ class Command(BaseCommand):
     def _build(self, email, users, status):
         if self.teachers:
             return self._build_teacher(email, users, status)
-        rows = [{'name': display_name(u), 'grade': getattr(getattr(getattr(u, 'data', None), 'grade', None), 'name', '') or '',
+        rows = [{'name': display_name(u), 'id': u.pk, 'username': u.username, 'grade': getattr(getattr(getattr(u, 'data', None), 'grade', None), 'name', '') or '',
                  'status': self._status_text(u, status[u.pk])} for u in users[:MAX_ROWS]]
         first = users[0]
         name = display_name(first) if len(users) == 1 else f'{first.first_name or display_name(first)} (+{len(users) - 1} хүн)'
         token = links.token_for_uid(first.pk)
         link = f'{self.base["site"]}{reverse("round1_info", args=[token])}'
         unsubscribe = f'{self.base["site"]}{reverse("round1_unsubscribe", args=[token])}'
-        context = {**self.base, 'name': name, 'rows': rows, 'hidden': len(users) - len(rows), 'link': link,
+        dups = [[f'{u.pk} ({u.username})' for u in g] for g in links.duplicate_groups(users)]
+        context = {**self.base, 'name': name, 'rows': rows, 'duplicates': dups, 'hidden': len(users) - len(rows), 'link': link,
                    'unsubscribe_url': unsubscribe, 'needs_action': any(status[u.pk] == links.NOT_REGISTERED for u in users)}
         body = render_to_string('schools/emails/round1/info.txt', context)
         return {'email': email, 'user_ids': [u.pk for u in users], 'body': body, 'html': text_to_html(body),
-                'unsubscribe': unsubscribe}
+                'unsubscribe': unsubscribe, 'link': link,
+                'kind': (len(users) > 1, frozenset(status[u.pk] for u in users))}
 
     def _build_teacher(self, email, users, status):
         counts = defaultdict(int)
@@ -289,13 +308,16 @@ class Command(BaseCommand):
         """Нэг аккаунттай, олон аккаунттай, бүртгэлгүй төрлөөс жишээ."""
         samples, seen = [], set()
         for m in self._messages(dict(list(groups.items())[:3000])):
-            kind = (len(m['user_ids']) > 1, 'Бүртгэгч багш дээр бүртгэлгүй' in m['body'] or 'бүртгэлгүй' in m['body'])
-            if kind not in seen:
+            kind = m.get('kind', ())  # аккаунтын төлөвийн хослол бүрээс нэг
+            if kind not in seen and len(samples) < 12:
                 seen.add(kind)
                 samples.append(m)
+        self.samples = samples
         for m in samples:
             self._email(m, to, f'[ТЕСТ → {m["email"]}] {self.subject}').send()
-            self.stdout.write(self.style.SUCCESS(f'Тест ({len(m["user_ids"])} аккаунт) илгээлээ → {to}'))
+            kind = m.get('kind')
+            detail = f' [{", ".join(sorted(kind[1]))}]' if kind else ''
+            self.stdout.write(self.style.SUCCESS(f'Тест ({len(m["user_ids"])} аккаунт{detail}) илгээлээ → {to}'))
 
     def _send_all(self, groups, opts):
         if not groups:

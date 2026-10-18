@@ -24,6 +24,14 @@ def round1_info_view(request, token):
                                           'Багш батлахад таны бүртгэл баталгаажна.')
             else:
                 messages.info(request, 'Илгээх шинэ хүсэлт алга.')
+        elif action == 'merge':
+            ids = [int(i) for i in request.POST.get('user_ids', '').split(',') if i.strip().isdigit()]
+            from .email_bulk import anchor_uid
+            req = links.request_merge(email, anchor_uid(token), ids)
+            if req:
+                messages.success(request, f'Нэгтгэх хүсэлт #{req.id} илгээгдлээ. Админ хянаж нэгтгэнэ.')
+            else:
+                messages.info(request, 'Энэ бүлгийн нэгтгэх хүсэлт аль хэдийн илгээгдсэн эсвэл олдсонгүй.')
         elif action == 'interests':
             links.set_interests(email, {f: request.POST.get(f) == '1' for f in links.INTERESTS})
             messages.success(request, 'Таны сонголт хадгалагдлаа.')
@@ -33,6 +41,9 @@ def round1_info_view(request, token):
         return redirect('round1_info', token=token)
 
     users = list(links.accounts_for_email(email))
+    pending_ids = links.pending_merge_ids()
+    dup_groups = [{'users': g, 'ids': ','.join(str(u.pk) for u in sorted(g, key=lambda u: u.pk)),
+                   'requested': bool({u.pk for u in g} & pending_ids)} for g in links.duplicate_groups(users)]
     rows = links.account_rows(users)
     counts = {}
     for _u, status in rows:
@@ -45,6 +56,7 @@ def round1_info_view(request, token):
         'total': len(rows),
         'counts': counts,
         'interests': links.current_interests(users),
+        'dup_groups': dup_groups,
         'S': {'registered': links.REGISTERED, 'requested': links.REQUESTED,
               'not_registered': links.NOT_REGISTERED, 'no_school': links.NO_SCHOOL},
     })

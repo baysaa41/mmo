@@ -59,6 +59,31 @@
     </form>
   {% endif %}
 
+  {% if dup_groups %}
+  <div class="card mb-4 border-warning">
+    <div class="card-body">
+      <h5 class="card-title">Нэг хүн давхар бүртгэлтэй бололтой</h5>
+      <p class="small mb-2">Дараах аккаунтууд ижил овог нэртэй. Нэг хүний аккаунт бол нэгтгэх хүсэлт илгээнэ үү: дүн, бүртгэл нэг аккаунт дээр цуглана. Админ хянаж нэгтгэнэ. Өөр хүн (жишээ нь ах дүү) бол юу ч хийх шаардлагагүй.</p>
+      {% for g in dup_groups %}
+      <div class="border rounded p-2 mb-2">
+        <ul class="small mb-2">
+          {% for u in g.users %}<li>{{ u.last_name }} {{ u.first_name }} — ID: {{ u.pk }}, нэвтрэх нэр: {{ u.username }}{% if u.data.grade %}, {{ u.data.grade }}{% endif %}{% if u.data.school %}, {{ u.data.school.name }}{% endif %}</li>{% endfor %}
+        </ul>
+        {% if g.requested %}
+          <span class="badge bg-secondary">Нэгтгэх хүсэлт илгээгдсэн</span>
+        {% else %}
+          <form method="post" class="d-inline">{% csrf_token %}
+            <input type="hidden" name="action" value="merge">
+            <input type="hidden" name="user_ids" value="{{ g.ids }}">
+            <button class="btn btn-sm btn-warning">Эдгээр нэг хүн, нэгтгэх хүсэлт илгээх</button>
+          </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   {% if total > 1 %}
   <div class="card mb-4 border-primary">
     <div class="card-body">

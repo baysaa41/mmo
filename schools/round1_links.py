@@ -135,3 +135,64 @@ def unsubscribe(email, reason='I давааны имэйлийн холбоос'
     for u in users:
         EmailUnsubscribe.objects.update_or_create(user=u, defaults={'email': u.email, 'reason': reason})
     return len(users)
+
+
+# ----------------------------------------------------------------------------- нэгтгэх
+MERGE_REASON = 'I давааны имэйлийн хувийн хуудаснаас: ижил имэйл, ижил овог нэртэй аккаунтууд нэг хүн гэж баталсан.'
+
+
+def _name_key(user):
+    from accounts.management.commands.automerge_users import normalize_fullname
+    return normalize_fullname(user.last_name or '', user.first_name or '')
+
+
+def duplicate_groups(users):
+    """[[user, ...]] — нэг имэйлийн аккаунтуудаас овог нэр нь ижил (кирилл/латин нормчилсон) бүлгүүд."""
+    groups = {}
+    for u in users:
+        if u.is_staff or u.is_superuser or not (u.first_name or u.last_name):
+            continue
+        groups.setdefault(_name_key(u), []).append(u)
+    return [g for g in groups.values() if len(g) > 1]
+
+
+def suggested_primary(group):
+    """Үндсэн аккаунтын санал: сурагчийн анги (Дэмжигч биш), дүнтэй, сүүлд нэвтэрсэн нь."""
+    from olympiad.models import Result, ScoreSheet
+
+    def score(u):
+        grade = getattr(getattr(getattr(u, 'data', None), 'grade', None), 'name', '') or ''
+        results = Result.objects.filter(contestant=u).count() + ScoreSheet.objects.filter(user=u).count()
+        return (grade not in ('', 'Дэмжигч'), results, u.last_login.timestamp() if u.last_login else 0, -u.pk)
+    return max(group, key=score)
+
+
+def pending_merge_ids():
+    """Хүлээгдэж буй нэгтгэх хүсэлтэд орсон аккаунтын id-ууд."""
+    from accounts.models import UserMergeRequest
+    ids = set()
+    for ids_list in UserMergeRequest.objects.filter(status=UserMergeRequest.Status.PENDING).values_list('user_ids', flat=True):
+        ids |= set(ids_list)
+    return ids
+
+
+def request_merge(email, anchor_uid, user_ids):
+    """Нэг бүлгийг админы батлах нэгтгэх хүсэлт болгоно (имэйлээр баталгаажуулалт шаардахгүй: бүгд нэг имэйл).
+
+    Буцаах: хүсэлт, эсвэл None (бүлэг таарахгүй / аль хэдийн хүсэлттэй).
+    """
+    from accounts.models import UserMergeRequest
+    wanted = set(user_ids)
+    for group in duplicate_groups(accounts_for_email(email)):
+        if {u.pk for u in group} != wanted:
+            continue
+        if wanted & pending_merge_ids():
+            return None
+        requester = User.objects.get(pk=anchor_uid)
+        req = UserMergeRequest.objects.create(
+            requesting_user=requester, user_ids=sorted(wanted), primary_user=suggested_primary(group),
+            reason=MERGE_REASON, status=UserMergeRequest.Status.PENDING, requires_user_confirmation=False)
+        req.detect_conflicts()
+        req.save()
+        return req
+    return None
