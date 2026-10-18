@@ -3,7 +3,6 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
 
 from . import round1_links as links
 
@@ -52,10 +51,17 @@ def round1_info_view(request, token):
 
 
 @csrf_exempt
-@require_POST
 def round1_unsubscribe_view(request, token):
-    """RFC 8058 List-Unsubscribe-Post (Gmail/Yahoo-гийн 1-click unsubscribe)."""
+    """GET: баталгаажуулах хуудас (имэйл сканнер GET-ээр юу ч өөрчилдөггүй). POST: unsubscribe.
+
+    RFC 8058 List-Unsubscribe-Post (Gmail/Yahoo-гийн 1-click) POST-оор ирнэ.
+    """
     email = links.read_token(token)
-    if email:
+    if not email:
+        return render(request, 'schools/round1/invalid.html', status=404)
+    if request.method == 'POST':
         links.unsubscribe(email, reason='List-Unsubscribe (1-click)')
-    return HttpResponse('OK')
+        if request.POST.get('confirm'):
+            return render(request, 'schools/round1/unsubscribed.html', {'email': email})
+        return HttpResponse('OK')
+    return render(request, 'schools/round1/unsubscribe.html', {'email': email, 'token': token})

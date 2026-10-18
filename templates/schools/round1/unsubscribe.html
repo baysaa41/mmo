@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Имэйлээс татгалзах{% endblock %}
+{% block content %}
+<div class="container my-5" style="max-width:640px">
+  <h4>Имэйл мэдээллээс татгалзах</h4>
+  <p><strong>{{ email }}</strong> хаягт ММО-ийн мэдээллийн имэйл илгээхээ зогсооно.</p>
+  <form method="post" action="{% url 'round1_unsubscribe' token %}">
+    <input type="hidden" name="confirm" value="1">
+    <button type="submit" class="btn btn-danger">Татгалзах</button>
+    <a href="{% url 'round1_info' token %}" class="btn btn-link">Буцах</a>
+  </form>
+</div>
+{% endblock %}
