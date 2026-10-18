@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Имэйл солих — шалгалт{% endblock %}
+{% block content %}
+<div class="container my-4" style="max-width:900px">
+  <h3 class="mb-1">Имэйл солих: шалгалтын үр дүн</h3>
+  <p class="text-muted mb-3">Баталгаажуулах хүртэл юу ч өөрчлөгдөөгүй байна.</p>
+
+  <div class="row g-2 mb-3 text-center">
+    <div class="col"><div class="border rounded p-2"><div class="fs-4 text-success">{{ change_count }}</div><div class="small">солигдох</div></div></div>
+    <div class="col"><div class="border rounded p-2"><div class="fs-4 text-danger">{{ rejected_count }}</div><div class="small">татгалзсан</div></div></div>
+    <div class="col"><div class="border rounded p-2"><div class="fs-4 text-muted">{{ unchanged }}</div><div class="small">хоосон (өөрчлөхгүй)</div></div></div>
+  </div>
+
+  {% if reasons %}
+  <div class="alert alert-warning small">
+    <strong>Татгалзсан шалтгаан:</strong>
+    {% for reason, n in reasons %}<div>{{ n }} мөр — {{ reason }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if rejected %}
+  <h6>Татгалзсан мөрүүд</h6>
+  <div class="table-responsive mb-3"><table class="table table-sm">
+    <thead class="table-light"><tr><th>Мөр</th><th>Сурагч</th><th>Оруулсан имэйл</th><th>Шалтгаан</th></tr></thead>
+    <tbody>{% for row, who, text, reason in rejected %}
+      <tr><td>{{ row }}</td><td>{{ who }}</td><td>{{ text }}</td><td class="text-danger">{{ reason }}</td></tr>
+    {% endfor %}</tbody></table>
+    {% if rejected_count > limit %}<p class="small text-muted">Эхний {{ limit }} мөрийг харуулав.</p>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if changes %}
+  <h6>Солигдох имэйлүүд</h6>
+  <div class="table-responsive mb-3"><table class="table table-sm">
+    <thead class="table-light"><tr><th>ID</th><th>Сурагч</th><th>Одоогийн</th><th>Шинэ</th></tr></thead>
+    <tbody>{% for uid, old, new, label in changes %}
+      <tr><td>{{ uid }}</td><td>{{ label }}</td><td class="text-muted">{{ old }}</td><td>{{ new }}</td></tr>
+    {% endfor %}</tbody></table>
+    {% if change_count > limit %}<p class="small text-muted">Эхний {{ limit }} мөрийг харуулав.</p>{% endif %}
+  </div>
+  <form method="post" action="{% url 'email_bulk_confirm' token=token %}" class="d-inline">{% csrf_token %}
+    <button class="btn btn-primary">Баталгаажуулах: {{ change_count }} имэйл солих</button>
+  </form>
+  {% else %}
+  <div class="alert alert-info">Солих имэйл алга.</div>
+  {% endif %}
+  <a class="btn btn-link" href="{% url 'round1_info' token=token %}">Буцах</a>
+</div>
+{% endblock %}

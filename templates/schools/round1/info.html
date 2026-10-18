@@ -59,6 +59,22 @@
     </form>
   {% endif %}
 
+  {% if total > 1 %}
+  <div class="card mb-4 border-primary">
+    <div class="card-body">
+      <h5 class="card-title">Сурагч бүрийн имэйлийг өөрийнх нь хаяг болгох</h5>
+      <p class="small mb-2">Хүн бүр өөрийн имэйл хаягаар бүртгүүлэх нь Математикийн олимпиадын хорооны бодлого.
+        Жагсаалтыг Excel-ээр татаж, «Шинэ имэйл» баганад сурагч бүрийн хаягийг бичээд буцааж оруулна.
+        Баталгаажуулсны дараа шинэ хаяг бүр рүү нууц үгээ тохируулах холбоос явна.</p>
+      <a class="btn btn-sm btn-outline-primary me-2" href="{% url 'email_bulk_download' token=token %}">1. Excel татах</a>
+      <form method="post" enctype="multipart/form-data" action="{% url 'email_bulk_upload' token=token %}" class="d-inline-flex align-items-center gap-2 mt-2">{% csrf_token %}
+        <input type="file" name="file" accept=".xlsx" class="form-control form-control-sm" required>
+        <button class="btn btn-sm btn-primary">2. Excel оруулах</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="alert alert-light border small">
     <strong>Мэдээлэл буруу байна уу?</strong> Нэр, сургууль, ангиа <a href="{% url 'login' %}?next={% url 'edit_profile' %}">нэвтэрч засна</a> уу.
     Сургуулиа сольсон бол шинэ сургуулиа сонгоод хүсэлт илгээнэ. Бүртгэгч багш хариу өгөхгүй бол аймаг, дүүргийн бүртгэгчид,

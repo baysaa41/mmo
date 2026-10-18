@@ -88,3 +88,12 @@ def send_registrar_digest_task():
     logger.info('Бүртгэгч багшийн өдрийн имэйл: %s хүлээн авагч, %s хүсэлт',
                 len(sent), sum(n for _r, n in sent))
     return len(sent)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=120)
+def send_email_change_links_task(self, user_ids):
+    """Багш Excel-ээр имэйлийг сольсны дараа шинэ хаяг руу нууц үг тохируулах холбоос илгээнэ."""
+    from .email_bulk import send_set_password_links
+    sent, skipped = send_set_password_links(user_ids)
+    logger.info('Имэйл солилтын нууц үгийн холбоос: %s илгээсэн, %s алгассан', sent, skipped)
+    return {'sent': sent, 'skipped': skipped}

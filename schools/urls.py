@@ -1,5 +1,6 @@
 from django.urls import path
 from .views_round1 import round1_info_view, round1_unsubscribe_view
+from .views_email_bulk import email_bulk_download_view, email_bulk_upload_view, email_bulk_confirm_view
 from .views_transfer import school_transfers_view, transfer_students_view
 from .views import (
     school_moderators_view,
@@ -32,6 +33,9 @@ urlpatterns = [
     # I давааны имэйлийн нэвтрэлтгүй хувийн хуудас
     path('r1/<str:token>/', round1_info_view, name='round1_info'),
     path('r1/<str:token>/unsubscribe/', round1_unsubscribe_view, name='round1_unsubscribe'),
+    path('r1/<str:token>/emails.xlsx', email_bulk_download_view, name='email_bulk_download'),
+    path('r1/<str:token>/emails/upload/', email_bulk_upload_view, name='email_bulk_upload'),
+    path('r1/<str:token>/emails/confirm/', email_bulk_confirm_view, name='email_bulk_confirm'),
     # New main views
     path('', my_managed_schools_view, name='my_managed_schools'),
     path('registry/', all_schools_registry_view, name='all_schools_registry'),
