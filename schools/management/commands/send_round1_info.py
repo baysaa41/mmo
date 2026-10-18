@@ -10,6 +10,7 @@
   python manage.py send_round1_info --test-email me@example.com
   python manage.py send_round1_info --send --limit 500
   python manage.py send_round1_info --teachers --test-email me@example.com
+  python manage.py send_round1_info --registrars --test-email me@example.com
 
 --teachers: 5+ аккаунттай хаяг (олон сурагчаа өөрийн имэйлээр бүртгүүлсэн багш нар, #38). Тэдэнд
 «хүн бүр өөрийн хаягаар бүртгүүлэх» бодлогын тайлбар болон id/нэр/сургууль/анги/хоосон «шинэ имэйл»
@@ -34,6 +35,7 @@ from emails.html import text_to_html
 from olympiad.models import Olympiad, SchoolYear
 from schools import round1_links as links
 from schools.campaign_blacklist import campaign_blocked_emails
+from schools import enrollment
 from schools.models import School
 from schools.moderator import NOTICE_FROM_EMAIL as FROM_EMAIL, norm_email
 
@@ -64,6 +66,8 @@ class Command(BaseCommand):
                             help='Зөвхөн --active-days-аас өмнө нь идэвхтэй байсан (2-р үе)')
         parser.add_argument('--teachers', action='store_true',
                             help='Зөвхөн 5+ аккаунттай хаяг (багш нар): бодлогын тайлбар + Excel хавсралт')
+        parser.add_argument('--registrars', action='store_true',
+                            help='Сургуулийн бүртгэгч багш нар (School.user): хүсэлт шийдэх, жагсаалт шалгах заавар (#33)')
         parser.add_argument('--limit', type=int, help='Дээд тал нь N имэйл (үе шаттай илгээхэд)')
         parser.add_argument('--skip-log', nargs='+', default=[],
                             help='Өмнөх ажиллагааны лог(ууд) — "sent" болсон хаягуудад дахин илгээхгүй')
@@ -89,13 +93,19 @@ class Command(BaseCommand):
             'guideline_url': f'{site}/post/?id={sy.guideline_post_id}' if sy.guideline_post_id else None,
         }
         self.teachers = opts['teachers']
+        self.registrars = opts['registrars']
+        if self.teachers and self.registrars:
+            raise CommandError('--teachers болон --registrars хамт хэрэглэхгүй.')
         prefix = f'{self.olympiads[0].name.split(",")[0]} I даваа'
-        self.subject = (f'{prefix}: сурагчдаа өөрсдийн имэйлээр бүртгүүлэх тухай' if self.teachers
+        self.subject = (f'{prefix}: сурагчдын бүртгэлийн хүсэлт, жагсаалтаа шалгана уу' if self.registrars else
+                        f'{prefix}: сурагчдаа өөрсдийн имэйлээр бүртгүүлэх тухай' if self.teachers
                         else f'{prefix}: мэдээллээ шалгаж, бүртгэлээ баталгаажуулна уу')
 
         self.stdout.write('Хар жагсаалт бэлдэж байна (SES suppression орно)...')
-        self.excluded = campaign_blocked_emails() | self._official_emails() | self._already_sent(opts['skip_log'])
-        groups = self._audience(opts)
+        self.excluded = campaign_blocked_emails() | self._already_sent(opts['skip_log'])
+        if not self.registrars:
+            self.excluded |= self._official_emails()
+        groups = self._registrar_audience() if self.registrars else self._audience(opts)
         total = len(groups)
         if opts['limit']:
             groups = dict(list(groups.items())[:opts['limit']])
@@ -127,6 +137,15 @@ class Command(BaseCommand):
             emails |= {norm_email(u.email) for u in (s.user, s.manager) if u}
         return emails - {''}
 
+    def _registrar_audience(self):
+        """{email: [school_id, ...]} — School.user-ийн имэйлээр бүлэглэсэн."""
+        groups = defaultdict(list)
+        for s in School.objects.filter(user__is_active=True).exclude(name='Бусад').select_related('user').order_by('province__name', 'name'):
+            e = norm_email(s.user.email)
+            if e and e not in self.excluded:
+                groups[e].append(s.pk)
+        return dict(groups)
+
     def _already_sent(self, paths):
         sent = set()
         for path in paths:
@@ -138,6 +157,8 @@ class Command(BaseCommand):
         """{email: [user_id, ...]} — id-аар эрэмбэлсэн, 1–MAX_ACCOUNTS аккаунттай, илгээж болох хаягууд."""
         users = (User.objects.filter(is_active=True).exclude(email='')
                  .exclude(email__iendswith='@mmo.mn').exclude(data__grade__name__in=NON_STUDENT_GRADES))
+        if self.teachers:  # нэргүй хоосон аккаунтыг тоолохгүй, Excel-д оруулахгүй
+            users = users.exclude(first_name='', last_name='')
         by_email = defaultdict(list)
         for uid, email in users.order_by('id').values_list('id', 'email'):
             e = norm_email(email)
@@ -160,8 +181,24 @@ class Command(BaseCommand):
 
     # ---------------------------------------------------------------- message
 
+    def _registrar_messages(self, groups):
+        for email, school_ids in groups.items():
+            schools = list(School.objects.filter(pk__in=school_ids).select_related('user', 'province').order_by('name'))
+            rows = [{'name': sc.name, 'province': sc.province.name if sc.province else '',
+                     'registered': sc.group.user_set.count() if sc.group_id else 0,
+                     'pending': enrollment.pending_students(sc).count(),
+                     'url': f'{self.base["site"]}{reverse("school_all_users", args=[sc.pk])}'} for sc in schools]
+            user = schools[0].user
+            context = {**self.base, 'name': display_name(user), 'schools': rows[:10], 'hidden': max(0, len(rows) - 10),
+                       'login_url': f'{self.base["site"]}/accounts/login/'}
+            body = render_to_string('schools/emails/round1/registrar.txt', context)
+            yield {'email': email, 'user_ids': [user.pk], 'body': body, 'html': text_to_html(body), 'unsubscribe': None}
+
     def _messages(self, groups):
         """(email, user_ids) -> бэлэн имэйлүүд, CHUNK-аар query хийнэ."""
+        if self.registrars:
+            yield from self._registrar_messages(groups)
+            return
         items = list(groups.items())
         for i in range(0, len(items), CHUNK):
             chunk = items[i:i + CHUNK]
@@ -233,7 +270,8 @@ class Command(BaseCommand):
         from django.core.mail import EmailMultiAlternatives
         msg = EmailMultiAlternatives(
             subject=subject or self.subject, body=m['body'], from_email=FROM_EMAIL, to=[to], reply_to=[FROM_EMAIL],
-            headers={'List-Unsubscribe': f'<{m["unsubscribe"]}>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'})
+            headers=({'List-Unsubscribe': f'<{m["unsubscribe"]}>', 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'}
+                     if m['unsubscribe'] else {}))
         msg.attach_alternative(m['html'], 'text/html')
         if m.get('attachment'):
             msg.attach(*m['attachment'])
