@@ -208,7 +208,8 @@ def school_dashboard(request, school_id):
     counts_by_level = dict(
         UserMeta.objects.filter(user__groups=school.group).values_list('level').annotate(n=Count('user'))
     )
-    student_counts = list(Level.objects.order_by('name'))
+    # B (3-4) ангилал энэ жил олимпиадгүй (зөвхөн системд бүртгэлтэй) тул самбарт харуулахгүй.
+    student_counts = list(Level.objects.exclude(name__startswith='B').order_by('name'))
     for level in student_counts:
         level.student_count = counts_by_level.get(level.id, 0)
 
