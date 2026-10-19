@@ -382,6 +382,13 @@ class PendingStudentsTests(SchoolAccessTestBase):
         self.school_a.group.user_set.add(active)
         self.assertFalse(self.enrollment.pending_students(self.school_a).exists())
 
+    def test_registrar_and_manager_are_not_pending(self):
+        registrar = self.make_pending('registrar', self.now)
+        manager = self.make_pending('manager', self.now)
+        School.objects.filter(pk=self.school_a.pk).update(user=registrar, manager=manager)
+        self.school_a.refresh_from_db()
+        self.assertFalse(self.enrollment.pending_students(self.school_a).exists())
+
     def test_approve_all_skips_stale_predicted_students(self):
         active = self.make_pending('active2', self.now)
         stale = self.make_pending('stale2', self.long_ago)

@@ -157,5 +157,9 @@ def pending_students(school):
     )
     if school.group_id:
         qs = qs.exclude(groups=school.group_id)
+    # Бүртгэгч багш, менежер өөрсдөө "хүлээгдэж буй хүсэлт" болж харагдахгүй.
+    staff_ids = [pk for pk in (school.user_id, school.manager_id) if pk]
+    if staff_ids:
+        qs = qs.exclude(pk__in=staff_ids)
     return qs
 
