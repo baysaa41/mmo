@@ -38,7 +38,7 @@ from olympiad.utils.round2_quota import round2_avg_quota_by_school, round2_addit
 import pandas as pd
 from django.db import connection, transaction
 from .forms import UploadExcelForm
-from .moderator import blocked_emails, change_moderator, email_problem, norm_email, school_email_problem_users
+from .moderator import blocked_emails, change_moderator, email_problem, norm_email, school_email_problem_count, school_email_problem_users
 
 from django.contrib.admin.views.decorators import staff_member_required
 from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm, SchoolManagerAccountForm
@@ -204,9 +204,13 @@ def school_dashboard(request, school_id):
     is_manager = (school.manager == request.user) or request.user.is_staff
 
     # Сурагчдын тоог ангиллаар гаргах
-    student_counts = Level.objects.annotate(
-        student_count=Count('usermeta__user', filter=Q(usermeta__user__groups=school.group))
-    ).order_by('name')
+    # Level × бүх UserMeta-г холбохын оронд группийн гишүүдийн UserMeta-г л нэг удаа бүлэглэнэ.
+    counts_by_level = dict(
+        UserMeta.objects.filter(user__groups=school.group).values_list('level').annotate(n=Count('user'))
+    )
+    student_counts = list(Level.objects.order_by('name'))
+    for level in student_counts:
+        level.student_count = counts_by_level.get(level.id, 0)
 
     uncategorized_count = school.group.user_set.filter(data__level__isnull=True).count()
 
@@ -229,7 +233,7 @@ def school_dashboard(request, school_id):
 
     context = {
         'school': school,
-        'email_problem_count': len(school_email_problem_users(school)),
+        'email_problem_count': school_email_problem_count(school),
         'is_manager': is_manager,
         'is_province_contact': is_province_contact,
         'student_counts_by_level': student_counts,
@@ -249,6 +253,12 @@ def compute_school_round2_quota(school, level):
     (харьцуулах, ranking_a_p, A/B харьцаат) — 'new_' угтвартай талбарууд нь ШИНЭ арга."""
     current_year = SchoolYear.get_current()
     if not current_year:
+        return None
+
+    # Эрх нь зөвхөн энэ жил 2-р даваа зарлагдсан сурагчийн ангилалд (C–F) хамаарна: «Бусад»,
+    # B (3-4), мөн багш (T), ББ (S) ангилалд эрх байхгүй (school_round2_quota_totals-тэй ижил).
+    if level.name.startswith(('S', 'T')) or not Olympiad.objects.filter(
+            round=2, school_year=current_year, level=level).exists():
         return None
 
     province = school.province
@@ -303,6 +313,19 @@ def school_email_problems_view(request, school_id):
     return render(request, 'schools/email_problems.html', {'school': school, 'rows': rows})
 
 
+LEVEL_USERS_PER_PAGE = 100
+
+
+def filter_users_by_query(users, q):
+    """Овог, нэр, нэвтрэх нэрээр (эсвэл тоо бол ID-аар) хайна. q хоосон бол шүүхгүй."""
+    if not q:
+        return users
+    cond = Q(last_name__icontains=q) | Q(first_name__icontains=q) | Q(username__icontains=q)
+    if q.isdigit():
+        cond |= Q(id=int(q))
+    return users.filter(cond)
+
+
 @login_required
 def manage_school_by_level(request, school_id, level_id):
     """
@@ -314,20 +337,19 @@ def manage_school_by_level(request, school_id, level_id):
         return render(request, 'error.html', {'message': 'Хандах эрхгүй.'})
 
     group = school.group
+    q = (request.GET.get('q') or '').strip()
 
     # --- ШИНЭЧИЛСЭН ЛОГИК ---
     if level_id == 100: # 100 нь "Бүх сурагчид" гэсэн утгатай
         selected_level = {'id': 100, 'name': 'Бүх сурагчид'}
-        users_in_level = group.user_set.all().select_related('data__grade')
+        users_in_level = filter_users_by_query(group.user_set.all(), q)
         # Сургуульд бүртгэлгүй боловч өөрийгөө тухайн сургууль гэж бүртгүүлсэн сурагчид
-        pending_users = enrollment.pending_students(school).select_related('data__grade')
-        # Нэг жагсаалт болгож нэгтгэх
-        all_school_users = []
-        for u in users_in_level:
-            all_school_users.append({'user': u, 'is_registered': True})
-        for u in pending_users:
-            all_school_users.append({'user': u, 'is_registered': False})
-        all_school_users.sort(key=lambda x: (x['user'].last_name or '', x['user'].first_name or ''))
+        pending_users = filter_users_by_query(enrollment.pending_students(school), q)
+        # Нэг жагсаалт болгож нэгтгэх: 1000+ User объект үүсгэхгүйн тулд эхлээд зөвхөн
+        # (овог, нэр, id)-ээр эрэмбэлж, харагдах хуудасны сурагчдыг л доор бүтнээр нь татна.
+        level100_rows = [(l or '', f or '', pk, True) for pk, l, f in users_in_level.values_list('id', 'last_name', 'first_name')]
+        level100_rows += [(l or '', f or '', pk, False) for pk, l, f in pending_users.values_list('id', 'last_name', 'first_name')]
+        level100_rows.sort(key=lambda r: (r[0], r[1]))
     elif level_id == 0:
         selected_level = {'id': 0, 'name': 'Ангилалгүй'}
         users_in_level = group.user_set.filter(data__level__isnull=True).select_related('data__grade')
@@ -504,6 +526,18 @@ def manage_school_by_level(request, school_id, level_id):
         search_form = UserSearchForm()
         add_user_form = AddUserForm()
 
+    # Олон сурагчтай ангиллыг (1000+) нэг дор render хийхэд 1 MB HTML болж удаан тул хуудаслана.
+    if level_id == 100:
+        page_obj = Paginator(level100_rows, LEVEL_USERS_PER_PAGE).get_page(request.GET.get('page'))
+        page_users = User.objects.select_related('data__grade').in_bulk([r[2] for r in page_obj.object_list])
+        all_school_users = [
+            {'user': page_users[r[2]], 'is_registered': r[3]} for r in page_obj.object_list if r[2] in page_users
+        ]
+    else:
+        users_in_level = filter_users_by_query(users_in_level, q).order_by('last_name', 'first_name', 'id')
+        page_obj = Paginator(users_in_level, LEVEL_USERS_PER_PAGE).get_page(request.GET.get('page'))
+        users_in_level = page_obj
+
     round2_quota = None
     if isinstance(selected_level, Level) and school.province:
         round2_quota = compute_school_round2_quota(school, selected_level)
@@ -518,6 +552,8 @@ def manage_school_by_level(request, school_id, level_id):
         'search_results': search_results,
         'all_school_users': all_school_users if level_id == 100 else None,
         'round2_quota': round2_quota,
+        'page_obj': page_obj,
+        'q': q,
     }
     return render(request, 'schools/manage_school_users_level.html', context)
 

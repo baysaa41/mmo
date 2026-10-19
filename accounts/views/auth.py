@@ -15,6 +15,7 @@ from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, 
 from ..models import UserMeta
 from .. import activation
 from schools import enrollment
+import logging
 import re
 
 from oauth2_provider.decorators import protected_resource
@@ -202,6 +203,38 @@ def user_profile_edit(request, user_id):
 def profile_ready(request):
     return render(request, 'accounts/profile_ready.html')
 
+login_failure_logger = logging.getLogger('accounts.login_failures')
+
+
+def _log_login_failure(username, pending_correct=False, form_invalid=False):
+    """Нэвтрэх амжилтгүй болсон шалтгааныг logs/login_failures.log-д тоолохын тулд бичнэ.
+
+    Шалтгаан:
+      form_invalid -> user_not_found / user_not_found_email_like / empty_username
+        (LoginForm.clean_username нь олдохгүй нэрийг authenticate-аас өмнө татгалзана — hash тооцохгүй)
+      username_case_mismatch -> form нь iexact-аар давсан боловч authenticate (exact) олоогүй;
+        ModelBackend хоосон hash тооцдог тул CPU идэнэ (утасны гар эхний үсгийг том болгодог)
+      bad_password / inactive_bad_password -> hash тооцоод таараагүй (alg нь зардлыг заана)
+      pending_activation -> нууц үг зөв, бүртгэл идэвхжээгүй
+
+    Нэвтрэх нэр, нууц үг, IP-г БИЧИХГҮЙ."""
+    alg = ''
+    if form_invalid:
+        reason = ('empty_username' if not username
+                  else 'user_not_found_email_like' if '@' in username else 'user_not_found')
+    elif pending_correct:
+        reason = 'pending_activation'
+    else:
+        user = User.objects.filter(username=username).only('is_active', 'password').first()
+        if user is None:
+            reason = ('username_case_mismatch' if User.objects.filter(username__iexact=username).exists()
+                      else 'user_not_found')
+        else:
+            alg = (user.password or '').split('$')[0]
+            reason = 'bad_password' if user.is_active else 'inactive_bad_password'
+    login_failure_logger.info('login_fail reason=%s alg=%s', reason, alg or '-')
+
+
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('posts:home')
@@ -223,11 +256,15 @@ def login_view(request):
                 next_url = reverse('profile_edit')
             return redirect(next_url)
         pending = activation.pending_activation_users().filter(username=username).first()
-        if pending and pending.check_password(password):
+        pending_ok = bool(pending and pending.check_password(password))
+        _log_login_failure(username, pending_correct=pending_ok)
+        if pending_ok:
             # authenticate() идэвхгүй хэрэглэгчийг None буцаадаг тул «буруу» гэж
             # ойлгомжгүй мессеж харуулахын оронд идэвхжүүлэх замыг зааж өгнө.
             return render(request, 'accounts/login.html', {'form': form, 'pending_activation': pending})
         messages.error(request, 'Нэвтрэх нэр эсвэл нууц үг буруу байна.')
+    elif form.is_bound:
+        _log_login_failure((request.POST.get('username') or '').strip(), form_invalid=True)
     return render(request, 'accounts/login.html', {'form': form})
 
 def logout_view(request):

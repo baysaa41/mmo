@@ -187,6 +187,106 @@ class AddNewStudentTests(SchoolAccessTestBase):
         self.assertEqual(new_user.data.school, self.school_b)
 
 
+class LevelPagePaginationTests(SchoolAccessTestBase):
+    """manage_school_by_level: хуудаслалт, хайлт, мөр бүрийн ганц form."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        for i in range(12):
+            u = make_user(f'lvl{i:02d}', school=cls.school_b, province=cls.province_b,
+                          last_name=f'Овог{i:02d}', first_name='Нэр')
+            u.data.level = cls.level
+            u.data.save()
+            cls.school_b.group.user_set.add(u)
+
+    def get(self, level_id, **params):
+        from unittest import mock
+        self.client.force_login(self.moderator_b)
+        with mock.patch('schools.views.LEVEL_USERS_PER_PAGE', 5):
+            return self.client.get(reverse('manage_school_by_level', args=[self.school_b.id, level_id]), params)
+
+    def test_level_pages_split_students(self):
+        sizes = [len(self.get(self.level.id, page=p).context['users_in_level']) for p in (1, 2, 3)]
+        self.assertEqual(sizes, [5, 5, 2])
+
+    def test_level_search_filters_by_name(self):
+        response = self.get(self.level.id, q='Овог03')
+        self.assertEqual(response.context['page_obj'].paginator.count, 1)
+        self.assertEqual([u.last_name for u in response.context['users_in_level']], ['Овог03'])
+
+    def test_level_search_by_id(self):
+        target = User.objects.get(username='lvl07')
+        response = self.get(self.level.id, q=str(target.id))
+        self.assertEqual([u.id for u in response.context['users_in_level']], [target.id])
+
+    def test_all_students_view_is_paginated_and_searchable(self):
+        response = self.get(100)
+        self.assertEqual(len(response.context['all_school_users']), 5)
+        # группын 13 (12 + student_b) + сургуульд бүртгэлтэй боловч группд ороогүй moderator_b
+        self.assertEqual(response.context['page_obj'].paginator.count, 14)
+        filtered = self.get(100, q='Овог1')  # Овог10, Овог11
+        self.assertEqual(
+            sorted(i['user'].last_name for i in filtered.context['all_school_users']),
+            ['Овог10', 'Овог11'])
+
+    def test_rows_use_single_shared_form(self):
+        response = self.get(self.level.id)
+        self.assertContains(response, 'btn-outline-danger row-action"', count=5)
+        self.assertNotContains(response, 'name="remove_user"')
+        self.assertContains(response, 'id="rowActionForm"', count=1)
+
+    def test_remove_via_shared_form_still_removes_user(self):
+        target = User.objects.get(username='lvl00')
+        self.client.force_login(self.moderator_b)
+        response = self.client.post(
+            reverse('manage_school_by_level', args=[self.school_b.id, self.level.id]),
+            {'user_id': target.id, 'remove_user': '1'},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(self.school_b.group.user_set.filter(pk=target.pk).exists())
+
+
+class Round2QuotaVisibilityTests(SchoolAccessTestBase):
+    """Эрхийн тоо зөвхөн энэ жил 2-р даваа зарлагдсан сурагчийн ангилалд харагдана."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from datetime import date
+        from olympiad.models import Olympiad, SchoolYear
+        cls.year = SchoolYear.objects.create(name='2000-3000', start=date(2000, 1, 1), end=date(3000, 1, 1))
+        cls.level_c = Level.objects.create(name='C (5-6)')
+        cls.level_other = Level.objects.create(name='Бусад')
+        cls.level_b = Level.objects.create(name='B (3-4)')
+        cls.level_t = Level.objects.create(name='T (ДБ)')
+        # C болон T-д 2-р даваа бий; «Бусад», B-д байхгүй
+        Olympiad.objects.create(name='C r2', round=2, school_year=cls.year, level=cls.level_c)
+        Olympiad.objects.create(name='T r2', round=2, school_year=cls.year, level=cls.level_t)
+
+    def quota(self, level):
+        self.client.force_login(self.moderator_b)
+        response = self.client.get(reverse('manage_school_by_level', args=[self.school_b.id, level.id]))
+        self.assertEqual(response.status_code, 200)
+        return response
+
+    def test_quota_shown_for_level_with_round2(self):
+        response = self.quota(self.level_c)
+        self.assertIsNotNone(response.context['round2_quota'])
+        self.assertContains(response, 'оролцох эрхтэй')
+
+    def test_quota_hidden_for_other_level(self):
+        response = self.quota(self.level_other)
+        self.assertIsNone(response.context['round2_quota'])
+        self.assertNotContains(response, 'оролцох эрхтэй')
+
+    def test_quota_hidden_for_level_without_round2(self):
+        self.assertIsNone(self.quota(self.level_b).context['round2_quota'])
+
+    def test_quota_hidden_for_teacher_level_even_with_round2(self):
+        self.assertIsNone(self.quota(self.level_t).context['round2_quota'])
+
+
 class EnrollmentServiceTests(SchoolAccessTestBase):
     def setUp(self):
         from schools import enrollment

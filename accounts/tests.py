@@ -209,3 +209,102 @@ class ResendActivationTests(TestCase):
                                     {'username': 'waiting', 'password': 'Xk9!qweRTY12'}, **self.IP)
         self.assertContains(response, 'идэвхжээгүй')
         self.assertContains(response, reverse('resend_activation') + '?u=waiting')
+
+
+@override_settings(
+    STORAGES={
+        'default': {'BACKEND': 'django.core.files.storage.InMemoryStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    },
+    MAINTENANCE_MODE=False,
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class PasswordHasherUpgradeTests(TestCase):
+    """Шинэ hash scrypt; хуучин PBKDF2 hash-тай хэрэглэгч нэвтрэхэд scrypt-д шилжинэ."""
+
+    PASSWORD = 'Xk29!mmoNewPass'
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth.hashers import get_hasher
+        cls.user = User.objects.create(username='old_hash_user', is_active=True)
+        UserMeta.objects.create(user=cls.user)
+        # production-д байгаа хуучин hash: PBKDF2 (тест хурдан байхын тулд цөөн давталттай)
+        cls.user.password = get_hasher('pbkdf2_sha256').encode(cls.PASSWORD, 'oldsalt', iterations=1000)
+        cls.user.save()
+
+    def login(self, password):
+        return self.client.post(reverse('user_login'), {'username': 'old_hash_user', 'password': password})
+
+    def test_settings_prefer_scrypt_and_keep_pbkdf2_for_existing_hashes(self):
+        from django.conf import settings
+        self.assertEqual(settings.PASSWORD_HASHERS[0], 'django.contrib.auth.hashers.ScryptPasswordHasher')
+        self.assertIn('django.contrib.auth.hashers.PBKDF2PasswordHasher', settings.PASSWORD_HASHERS)
+
+    def test_old_pbkdf2_hash_is_accepted_and_upgraded_to_scrypt_on_login(self):
+        self.assertTrue(self.user.password.startswith('pbkdf2_sha256$'))
+        response = self.login(self.PASSWORD)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.user.pk)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.password.startswith('scrypt$'))
+        self.assertTrue(self.user.check_password(self.PASSWORD))
+
+    def test_wrong_password_is_rejected_and_hash_unchanged(self):
+        before = self.user.password
+        response = self.login('wrong-password')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.password, before)
+
+
+@override_settings(
+    STORAGES={
+        'default': {'BACKEND': 'django.core.files.storage.InMemoryStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    },
+    MAINTENANCE_MODE=False,
+    PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class LoginFailureLoggingTests(TestCase):
+    """Амжилтгүй нэвтрэлтийн шалтгаан нь нууц мэдээлэлгүйгээр log-д бичигдэнэ."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('real_user', password='Right-Pass-123')
+        UserMeta.objects.create(user=cls.user)
+
+    def failed_login(self, username, password):
+        with self.assertLogs('accounts.login_failures', level='INFO') as captured:
+            response = self.client.post(reverse('user_login'), {'username': username, 'password': password})
+        self.assertEqual(response.status_code, 200)
+        return captured.output
+
+    def test_bad_password_is_logged_without_credentials(self):
+        out = self.failed_login('real_user', 'Wrong-Pass-999')
+        self.assertEqual(len(out), 1)
+        self.assertIn('reason=bad_password', out[0])
+        self.assertIn('alg=md5', out[0])
+        self.assertNotIn('real_user', out[0])
+        self.assertNotIn('Wrong-Pass-999', out[0])
+
+    def test_unknown_username_is_logged(self):
+        self.assertIn('reason=user_not_found ', self.failed_login('nobody', 'x')[0] + ' ')
+
+    def test_username_case_mismatch_is_distinguished(self):
+        """Form iexact-аар давдаг ч authenticate exact тул hash хоосон тооцогддог тохиолдол."""
+        out = self.failed_login('REAL_USER', 'Right-Pass-123')
+        self.assertIn('reason=username_case_mismatch', out[0])
+        self.assertNotIn('REAL_USER', out[0])
+
+    def test_email_instead_of_username_is_distinguished(self):
+        out = self.failed_login('someone@example.com', 'x')
+        self.assertIn('reason=user_not_found_email_like', out[0])
+        self.assertNotIn('someone@example.com', out[0])
+
+    def test_successful_login_writes_no_failure_log(self):
+        with self.assertNoLogs('accounts.login_failures', level='INFO'):
+            response = self.client.post(reverse('user_login'), {'username': 'real_user', 'password': 'Right-Pass-123'})
+        self.assertEqual(response.status_code, 302)

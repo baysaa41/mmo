@@ -65,6 +65,39 @@ def email_problem(user, blocked):
     return None
 
 
+def _email_problem_users_qs(school):
+    """school_email_problem_users болон school_email_problem_count-ийн нийтлэг хайлт."""
+    from django.db.models import Q
+    from django.db.models.functions import Lower
+    from emails.models import EmailBounce
+    from emails.suppression import UNDELIVERABLE_BOUNCE_TYPES
+
+    roles = {}
+    if school.user_id:
+        roles[school.user_id] = 'Бүртгэгч багш'
+    if school.manager_id:
+        roles.setdefault(school.manager_id, 'Сургуулийн удирдлага')
+
+    # `groups=` нөхцөлийг OR-той хамт JOIN-оор өгөхөд auth_user-ийг бүхэлд нь group-тэй холбож
+    # (~160k мөр) скан хийдэг тул group-ийн гишүүдийг дэд хайлтаар (индексээр) авна.
+    member_filter = Q(pk__in=list(roles))
+    if school.group_id:
+        member_filter |= Q(pk__in=User.groups.through.objects.filter(group_id=school.group_id).values('user_id'))
+
+    bounced = EmailBounce.objects.filter(bounce_type__in=UNDELIVERABLE_BOUNCE_TYPES)
+    users = (
+        User.objects.filter(member_filter)
+        .annotate(email_lower=Lower('email'))
+        .filter(email_lower__in=bounced.annotate(e=Lower('email')).values('e'))
+    )
+    return roles, bounced, users
+
+
+def school_email_problem_count(school):
+    """school_email_problem_users-ийн мөрийн тоо — хэрэглэгчдийг ачаалахгүйгээр DB дээр тоолно."""
+    return _email_problem_users_qs(school)[2].count()
+
+
 def school_email_problem_users(school):
     """Сургуулийн бүртгэгч багш, удирдлага болон группийн гишүүдээс имэйл нь
     хүргэгдэхгүй (hard bounce / complaint) болсон хэрэглэгчид.
@@ -73,29 +106,10 @@ def school_email_problem_users(school):
     өөрсдөө татгалзсан. Мөр бүр: user, role, email, bounce_type, bounced_at,
     suggestion (домэйны бичгийн алдааны засвар, байвал).
     """
-    from django.db.models import Q
-    from django.db.models.functions import Lower
-    from emails.models import EmailBounce
-    from emails.suppression import UNDELIVERABLE_BOUNCE_TYPES, email_typo_suggestion
+    from emails.suppression import email_typo_suggestion
 
-    roles = {}
-    if school.user_id:
-        roles[school.user_id] = 'Бүртгэгч багш'
-    if school.manager_id:
-        roles.setdefault(school.manager_id, 'Сургуулийн удирдлага')
-
-    member_filter = Q(pk__in=list(roles))
-    if school.group_id:
-        member_filter |= Q(groups=school.group_id)
-
-    bounced = EmailBounce.objects.filter(bounce_type__in=UNDELIVERABLE_BOUNCE_TYPES)
-    users = (
-        User.objects.filter(member_filter)
-        .annotate(email_lower=Lower('email'))
-        .filter(email_lower__in=bounced.annotate(e=Lower('email')).values('e'))
-        .distinct()
-        .order_by('last_name', 'first_name', 'username')
-    )
+    roles, bounced, users = _email_problem_users_qs(school)
+    users = users.order_by('last_name', 'first_name', 'username')
 
     rows = [(u, (u.email or '').strip()) for u in users]
     latest = {}

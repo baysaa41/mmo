@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load access_tags %}
 {% load crispy_forms_tags %}
+{% load fast_urls %}
 
 {% block content %}
 {% access_notice %}
@@ -77,6 +78,23 @@
         </div>
     </div>
 
+    {# Хайлт ба хуудаслалт #}
+    <form method="get" class="row g-2 align-items-center mb-2">
+        <div class="col-12 col-md-6">
+            <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Овог, нэр, нэвтрэх нэр эсвэл ID-аар хайх">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-primary">Хайх</button>
+            {% if q %}<a href="?" class="btn btn-link">Цэвэрлэх</a>{% endif %}
+        </div>
+    </form>
+    {% if page_obj.paginator.count %}
+        <p class="text-muted small mb-2">
+            {% if q %}Хайлтад тохирсон{% else %}Нийт{% endif %} {{ page_obj.paginator.count }} сурагч
+            ({{ page_obj.start_index }}–{{ page_obj.end_index }} харуулж байна)
+        </p>
+    {% endif %}
+
     {# Сурагчдын жагсаалт #}
     {% if all_school_users %}
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -131,19 +149,11 @@
                     </td>
                     <td>
                         {% if item.is_registered %}
-                            <a href="{% url 'edit_user_in_group' item.user.id %}" class="btn btn-sm btn-outline-secondary">Засах</a>
-                            <a href="{% url 'change_student_password' item.user.id %}" class="btn btn-sm btn-outline-secondary">Нууц үг солих</a>
-                            <form method="post" class="d-inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="user_id" value="{{ item.user.id }}">
-                                <button type="submit" name="remove_user" class="btn btn-sm btn-outline-danger">Хасах</button>
-                            </form>
+                            <a href="{% id_url 'edit_user_in_group' item.user.id %}" class="btn btn-sm btn-outline-secondary">Засах</a>
+                            <a href="{% id_url 'change_student_password' item.user.id %}" class="btn btn-sm btn-outline-secondary">Нууц үг солих</a>
+                            <button type="button" class="btn btn-sm btn-outline-danger row-action" data-action="remove_user" data-user-id="{{ item.user.id }}">Хасах</button>
                         {% else %}
-                            <form method="post" class="d-inline">
-                                {% csrf_token %}
-                                <input type="hidden" name="user_id" value="{{ item.user.id }}">
-                                <button type="submit" name="approve_user" class="btn btn-sm btn-success">Бүртгэх</button>
-                            </form>
+                            <button type="button" class="btn btn-sm btn-success row-action" data-action="approve_user" data-user-id="{{ item.user.id }}">Бүртгэх</button>
                         {% endif %}
                     </td>
                 </tr>
@@ -172,18 +182,14 @@
                     <td>{{ user.first_name }}</td>
                     <td>{{ user.data.grade.name|default:"Тодорхойгүй" }}</td>
                     <td>
-                        <a href="{% url 'edit_user_in_group' user.id %}" class="btn btn-sm btn-outline-secondary">Засах</a>
-                        <a href="{% url 'change_student_password' user.id %}" class="btn btn-sm btn-outline-secondary">Нууц үг солих</a>
-                        <form method="post" style="display: inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="user_id" value="{{ user.id }}">
-                            <button type="submit" name="remove_user" class="btn btn-sm btn-outline-danger">Хасах</button>
-                        </form>
+                        <a href="{% id_url 'edit_user_in_group' user.id %}" class="btn btn-sm btn-outline-secondary">Засах</a>
+                        <a href="{% id_url 'change_student_password' user.id %}" class="btn btn-sm btn-outline-secondary">Нууц үг солих</a>
+                        <button type="button" class="btn btn-sm btn-outline-danger row-action" data-action="remove_user" data-user-id="{{ user.id }}">Хасах</button>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center">Энэ ангилалд сурагч бүртгэгдээгүй байна.</td>
+                    <td colspan="6" class="text-center">{% if q %}Хайлтад тохирох сурагч олдсонгүй.{% else %}Энэ ангилалд сурагч бүртгэгдээгүй байна.{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -203,11 +209,34 @@
             </thead>
             <tbody>
                 <tr>
-                    <td colspan="6" class="text-center">Энэ ангилалд сурагч бүртгэгдээгүй байна.</td>
+                    <td colspan="6" class="text-center">{% if q %}Хайлтад тохирох сурагч олдсонгүй.{% else %}Энэ ангилалд сурагч бүртгэгдээгүй байна.{% endif %}</td>
                 </tr>
             </tbody>
         </table>
     {% endif %}
+
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Хуудаслалт" class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center flex-wrap">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page=1{% if q %}&q={{ q|urlencode }}{% endif %}">&laquo;</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Өмнөх</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Дараах</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q|urlencode }}{% endif %}">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+
+    {# Мөр бүрийн "Хасах"/"Бүртгэх" товчны ганц form (мөр бүрт form + csrf token давтахгүй) #}
+    <form method="post" id="rowActionForm" class="d-none">
+        {% csrf_token %}
+        <input type="hidden" name="user_id" id="rowActionUserId">
+        <input type="hidden" id="rowActionName" value="1">
+    </form>
 </div>
 
 <script>
@@ -220,6 +249,19 @@ document.querySelectorAll('form[method="post"]').forEach(function(form) {
         form.dataset.submitted = '1';
         form.querySelectorAll('button[type="submit"]').forEach(function(b) { b.classList.add('disabled'); });
     });
+});
+
+// Мөр бүрийн "Хасах"/"Бүртгэх" товч: ганц form-ын user_id болон үйлдлийн нэрийг бөглөж илгээнэ.
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.row-action');
+    if (!btn) return;
+    var form = document.getElementById('rowActionForm');
+    if (!form || form.dataset.submitted) return;
+    form.dataset.submitted = '1';
+    document.getElementById('rowActionUserId').value = btn.dataset.userId;
+    document.getElementById('rowActionName').name = btn.dataset.action;
+    btn.classList.add('disabled');
+    form.submit();
 });
 
 document.addEventListener('DOMContentLoaded', function() {
