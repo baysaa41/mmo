@@ -24,6 +24,10 @@ def text_to_html(text):
             + '\n'.join(parts) + '</div>')
 
 
+# Бүртгэл, аккаунттай холбоотой имэйлүүд (идэвхжүүлэх, нууц үг, шилжүүлэг) энэ хаягаас явна; хариу ч энд очно.
+REGISTRATION_FROM_EMAIL = 'registration@mmo.mn'
+
+
 def text_email(subject, body, from_email, to, **kwargs):
     """Текст + автомат HTML хувилбартай имэйл. kwargs нь EmailMultiAlternatives-д дамжина."""
     msg = EmailMultiAlternatives(subject=subject, body=body, from_email=from_email, to=to, **kwargs)

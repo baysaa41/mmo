@@ -2,6 +2,7 @@ import logging
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
+from emails.html import REGISTRATION_FROM_EMAIL
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
@@ -65,7 +66,7 @@ class SchoolEmailService:
             email = EmailMultiAlternatives(
                 subject='ММОХ - Нууц үг сэргээх',
                 body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=REGISTRATION_FROM_EMAIL,
                 to=[user.email],
             )
             email.attach_alternative(html_content, "text/html")
@@ -125,7 +126,7 @@ class SchoolEmailService:
             email = EmailMultiAlternatives(
                 subject='ММОХ - Тавтай морилно уу!',
                 body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=REGISTRATION_FROM_EMAIL,
                 to=[user.email],
             )
             email.attach_alternative(html_content, "text/html")
@@ -164,7 +165,7 @@ class SchoolEmailService:
             email = EmailMultiAlternatives(
                 subject='ММОХ - Нууц үг солигдлоо',
                 body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=REGISTRATION_FROM_EMAIL,
                 to=[user.email],
             )
             email.attach_alternative(html_content, "text/html")

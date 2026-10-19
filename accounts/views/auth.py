@@ -15,6 +15,7 @@ from ..forms import UserForm, UserMetaForm, LoginForm, CustomPasswordResetForm, 
 from ..models import UserMeta
 from .. import activation
 from schools import enrollment
+from emails.html import REGISTRATION_FROM_EMAIL
 import logging
 import re
 
@@ -273,6 +274,7 @@ def logout_view(request):
 
 class CustomPasswordResetView(PasswordResetView):
     form_class = CustomPasswordResetForm
+    from_email = REGISTRATION_FROM_EMAIL
     email_template_name = 'registration/password_reset_email.html'
     success_url = '/password_reset/done/'
 

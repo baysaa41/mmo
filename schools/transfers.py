@@ -17,7 +17,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from emails.html import text_email
+from emails.html import REGISTRATION_FROM_EMAIL, text_email
 
 from . import enrollment
 from .models import StudentTransfer
@@ -126,7 +126,7 @@ def _send(subject, body, to):
     if not to:
         return False
     try:
-        text_email(subject, body, settings.DEFAULT_FROM_EMAIL, to).send()
+        text_email(subject, body, REGISTRATION_FROM_EMAIL, to).send()
         return True
     except Exception:
         logger.exception('Шилжүүлгийн мэдэгдэл илгээж чадсангүй: %s', subject)

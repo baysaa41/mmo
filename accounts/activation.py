@@ -13,7 +13,7 @@ from django.core.cache import cache
 from django.urls import reverse
 from django_registration.backends.activation.views import REGISTRATION_SALT
 
-from emails.html import text_email
+from emails.html import REGISTRATION_FROM_EMAIL, text_email
 from emails.suppression import is_undeliverable
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,6 @@ def send_activation_email(request, user):
         'mmo.mn'
     )
     text_email('mmo.mn: бүртгэлээ идэвхжүүлнэ үү', body,
-               settings.DEFAULT_FROM_EMAIL, [user.email]).send()
+               REGISTRATION_FROM_EMAIL, [user.email]).send()
     cache.set(_cooldown_key(user), 1, RESEND_COOLDOWN_SECONDS)
     return True

@@ -11,6 +11,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.conf import settings
+from emails.html import REGISTRATION_FROM_EMAIL
 from ..models import Province, Level, UserMeta, Zone, UserMergeRequest
 from schools.models import School
 from .. import services
@@ -58,7 +59,7 @@ def _send_confirmation_emails(merge_request, users):
             send_mail(
                 subject=f'[MMO] Нэгтгэх хүсэлт #{merge_request.id} - Баталгаажуулна уу',
                 message=f'Нэгтгэх хүсэлт #{merge_request.id}\n\nБаталгаажуулах: {confirm_url}\nТатгалзах: {reject_url}',
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=REGISTRATION_FROM_EMAIL,
                 recipient_list=[user.email],
                 html_message=html_message,
                 fail_silently=True,
