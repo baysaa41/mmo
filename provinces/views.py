@@ -55,7 +55,8 @@ def my_managed_provinces(request):
 
         # Удирдах ажилтан, бүртгэгч багш эсвэл Province_{id}_Managers group-д байгаа аймгууд
         managed_provinces = Province.objects.filter(
-            Q(contact_person=request.user) | Q(contact_person2=request.user) | Q(registrar=request.user) | Q(id__in=province_ids)
+            Q(contact_person=request.user) | Q(contact_person2=request.user) | Q(registrar=request.user)
+            | Q(id__in=province_ids) | Q(zone__contact_person=request.user)
         ).select_related('zone', 'contact_person', 'contact_person2', 'registrar').distinct().order_by('name')
 
     context = {
@@ -128,10 +129,11 @@ def edit_province_admin_view(request, user_id):
 
 @login_required
 def province_change_registrar(request, province_id):
-    """Аймгийн бүртгэгч багшийг солих (staff эсвэл тухайн аймгийн удирдах ажилтан)"""
+    """Аймгийн бүртгэгч багшийг солих (staff, тухайн аймгийн удирдах ажилтан эсвэл бүсийн удирдагч)"""
     province = get_object_or_404(Province, id=province_id)
 
-    if not (request.user.is_staff or province.is_contact_person(request.user)):
+    if not (request.user.is_staff or province.is_contact_person(request.user)
+            or province.is_zone_contact(request.user)):
         messages.error(request, 'Та энэ үйлдлийг хийх эрхгүй байна.')
         return redirect('province_dashboard', province_id=province_id)
 
@@ -240,7 +242,7 @@ def province_dashboard(request, province_id):
 
     context = {
         'province': province,
-        'is_province_contact': province.is_contact_person(request.user),
+        'is_province_contact': province.is_contact_person(request.user) or province.is_zone_contact(request.user),
         'teacher_olympiads': teacher_olympiads,
         'student_olympiads': student_olympiads,
         'teacher_levels': ', '.join(teacher_levels),

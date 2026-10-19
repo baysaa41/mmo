@@ -141,15 +141,20 @@ class Province(models.Model):
     def is_contact_person(self, user):
         return user is not None and user.pk is not None and user.pk in (self.contact_person_id, self.contact_person2_id)
 
+    def is_zone_contact(self, user):
+        """Хэрэглэгч энэ аймаг/дүүргийн харьяалах бүсийн удирдагч эсэх."""
+        return (user is not None and user.pk is not None and self.zone_id is not None
+                and self.zone.contact_person_id == user.pk)
+
     def user_has_access(self, user):
         """
         Хэрэглэгч энэ аймаг/дүүргийг удирдах эрхтэй эсэхийг шалгана.
-        Staff, удирдах ажилтан (contact_person, contact_person2), бүртгэгч багш (registrar),
-        эсвэл Province_{id}_Managers группд байгаа бол эрхтэй.
+        Staff, удирдах ажилтан (contact_person, contact_person2), харьяалах бүсийн удирдагч,
+        бүртгэгч багш (registrar), эсвэл Province_{id}_Managers группд байгаа бол эрхтэй.
         """
         if user.is_staff:
             return True
-        if self.is_contact_person(user):
+        if self.is_contact_person(user) or self.is_zone_contact(user):
             return True
         if self.registrar == user:
             return True
