@@ -864,7 +864,7 @@ def _perform_merge(merge_request, field_selections=None, conflict_resolutions=No
     """
     from olympiad.models import Result, Award, Comment, ScoreSheet
     from schools.models import School
-    from ..models import UserMeta
+    from ..models import UserMeta, UserMergeRequest
     from django.contrib.auth.models import User
 
     field_selections = field_selections or {}
@@ -885,6 +885,10 @@ def _perform_merge(merge_request, field_selections=None, conflict_resolutions=No
     else:
         primary_user = users[0]
         duplicate_users = users[1:]
+    merge_request.primary_user = primary_user
+
+    # Устах хэрэглэгчийн мэдээллийг мэдэгдэлд зориулж хадгална
+    merged_accounts = [(u.id, u.username, u.email) for u in duplicate_users]
 
     # Ensure primary user has UserMeta
     primary_meta, _ = UserMeta.objects.get_or_create(user=primary_user)
@@ -996,11 +1000,55 @@ def _perform_merge(merge_request, field_selections=None, conflict_resolutions=No
         ScoreSheet.objects.filter(user=dup_user).update(user=primary_user)
         School.objects.filter(user=dup_user).update(user=primary_user)
         School.objects.filter(manager=dup_user).update(manager=primary_user)
+        # requesting_user нь CASCADE тул шилжүүлэхгүй бол хүсэлт өөрөө устана
+        UserMergeRequest.objects.filter(requesting_user=dup_user).update(requesting_user=primary_user)
+        if merge_request.requesting_user_id == dup_user.id:
+            merge_request.requesting_user = primary_user
 
         # Delete duplicate user
         dup_user.delete()
 
+    primary_email = primary_user.email
+    primary_username = primary_user.username
+    primary_id = primary_user.id
+    transaction.on_commit(lambda: _send_merge_notifications(
+        primary_id, primary_username, primary_email, merged_accounts))
+
     return True
+
+
+def _send_merge_notifications(primary_id, primary_username, primary_email, merged_accounts):
+    """Нэгтгэлд оролцсон имэйл хаяг бүрт registration@mmo.mn-ээс мэдэгдэл илгээх."""
+    import logging
+    from emails.html import REGISTRATION_FROM_EMAIL, text_email
+    from schools.moderator import blocked_emails
+
+    logger = logging.getLogger(__name__)
+    merged_list = '\n'.join(f'  - ID {uid} ({username})' for uid, username, _ in merged_accounts)
+    body = (
+        'Сайн байна уу,\n\n'
+        'mmo.mn сайт дээрх таны давхардсан бүртгэлүүдийг нэгтгэлээ.\n\n'
+        f'Үлдсэн бүртгэл: ID {primary_id}, нэвтрэх нэр: {primary_username}\n'
+        f'Нэгтгэгдэж хаагдсан бүртгэл:\n{merged_list}\n\n'
+        'Хаагдсан бүртгэлийн олимпиадын дүн, шагнал үлдсэн бүртгэл рүү шилжсэн. '
+        f'Цаашид {primary_username} нэрээр нэвтэрнэ үү. Нууц үгээ мартсан бол '
+        'https://www.mmo.mn/password_reset/ хаягаар сэргээнэ үү.\n\n'
+        'Асуух зүйл байвал энэ имэйлд хариу бичнэ үү.\n\n'
+        'ММО-ын бүртгэл'
+    )
+
+    blocked = blocked_emails()
+    seen = set()
+    for email in [primary_email] + [e for _, _, e in merged_accounts]:
+        email = (email or '').strip()
+        if not email or email.lower() in seen or email.lower() in blocked:
+            continue
+        seen.add(email.lower())
+        try:
+            text_email('mmo.mn: бүртгэлүүдийг нэгтгэлээ', body,
+                       REGISTRATION_FROM_EMAIL, [email]).send()
+        except Exception:
+            logger.exception('Нэгтгэлийн мэдэгдэл илгээж чадсангүй: %s', email)
 
 
 @staff_member_required
