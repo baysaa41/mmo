@@ -15,10 +15,14 @@
 --teachers: 5+ аккаунттай хаяг (олон сурагчаа өөрийн имэйлээр бүртгүүлсэн багш нар, #38). Тэдэнд
 «хүн бүр өөрийн хаягаар бүртгүүлэх» бодлогын тайлбар болон id/нэр/сургууль/анги/хоосон «шинэ имэйл»
 баганатай Excel хавсаргана.
+
+Сонирхлоо (UserMeta.interests_updated_at) хадгалаагүй хаягт сонирхол асуух хэсэг (/schools/i/<token>/) нэмнэ;
+логийн «interest_ask» багана (1/0) — send_interest_ask эдгээрийг дахин асуухгүй.
 """
 import csv
 import io
 import os
+import re
 import time
 from collections import defaultdict
 from datetime import timedelta
@@ -43,8 +47,8 @@ GUIDELINE_POST = 506  # «ММО-63, I даваа: оролцох заавар»
 MAX_ACCOUNTS = 4  # үүнээс олон аккаунттай хаяг = олон сурагч бүртгүүлсэн багш (#38)
 MAX_ROWS = 4
 CHUNK = 500
-# Багш, комисс зэрэг сурагч биш аккаунтуудыг энэ имэйлд оруулахгүй (Дэмжигч-д имэйл явуулахгүй)
-NON_STUDENT_GRADES = ['Багш', 'Комисс', 'БСУГ мэргэжилтэн', 'Дэмжигч']
+# Зөвхөн I даваанд оролцох ангийн (энэ жилийн ангиллууд, жишээ нь C–F = 5–12) сурагчдад илгээнэ.
+# Анги хоосон, Оюутан (төгссөн), Багш, Комисс, Дэмжигч зэрэг аккаунт орохгүй.
 STATUS_TEXT = {
     links.REGISTERED: 'I даваанд бүртгэлтэй',
     links.REQUESTED: 'бүртгэлийн хүсэлт илгээсэн, багшийн баталгаа хүлээж байна',
@@ -147,6 +151,17 @@ class Command(BaseCommand):
         levels = ', '.join(o.level.name.replace('-', '–') for o in self.olympiads) + ' анги'
         return {'name': self.olympiads[0].name.split(',')[0], 'date': date or 'тодорхойгүй', 'levels_display': levels}
 
+    def _participant_grades(self):
+        """I давааны ангиллуудын ангиуд — «C (5-6)» → ['5-р анги', '6-р анги']."""
+        names = []
+        for o in self.olympiads:
+            nums = [int(n) for n in re.findall(r'\d+', o.level.name)]
+            if nums:
+                names += [f'{g}-р анги' for g in range(min(nums), max(nums) + 1)]
+        if not names:
+            raise CommandError('I давааны ангиллаас анги тодорхойлж чадсангүй.')
+        return names
+
     def _official_emails(self):
         """Сануулгын хүлээн авагчид (бүртгэгч багш, удирдлага, аймгийн админ) — тусдаа имэйл авна."""
         emails = set()
@@ -173,7 +188,7 @@ class Command(BaseCommand):
     def _audience(self, opts):
         """{email: [user_id, ...]} — id-аар эрэмбэлсэн, 1–MAX_ACCOUNTS аккаунттай, илгээж болох хаягууд."""
         users = (User.objects.filter(is_active=True).exclude(email='')
-                 .exclude(email__iendswith='@mmo.mn').exclude(data__grade__name__in=NON_STUDENT_GRADES))
+                 .exclude(email__iendswith='@mmo.mn').filter(data__grade__name__in=self._participant_grades()))
         if self.teachers:  # нэргүй хоосон аккаунтыг тоолохгүй, Excel-д оруулахгүй
             users = users.exclude(first_name='', last_name='')
         by_email = defaultdict(list)
@@ -187,6 +202,9 @@ class Command(BaseCommand):
                          .values_list('id', flat=True))
         else:
             active = None
+        # Сонирхлоо хадгалсан хаяг (аль ч аккаунтаар, ангиар шүүлгүй) — тэдэнд сонирхол асуух хэсэг орохгүй
+        self.answered = {norm_email(e) for e in User.objects.filter(is_active=True, data__interests_updated_at__isnull=False)
+                         .values_list('email', flat=True)}
         groups = {}
         for e, ids in by_email.items():
             if (len(ids) > MAX_ACCOUNTS) != self.teachers:
@@ -237,12 +255,14 @@ class Command(BaseCommand):
         link = f'{self.base["site"]}{reverse("round1_info", args=[token])}'
         unsubscribe = f'{self.base["site"]}{reverse("round1_unsubscribe", args=[token])}'
         dups = [[f'{u.pk} ({u.username})' for u in g] for g in links.duplicate_groups(users)]
+        ask = email not in self.answered
         context = {**self.base, 'name': name, 'rows': rows, 'duplicates': dups, 'hidden': len(users) - len(rows), 'link': link,
-                   'unsubscribe_url': unsubscribe, 'needs_action': any(status[u.pk] == links.NOT_REGISTERED for u in users)}
+                   'unsubscribe_url': unsubscribe, 'needs_action': any(status[u.pk] == links.NOT_REGISTERED for u in users),
+                   'ask_interests': ask, 'interests_url': f'{self.base["site"]}{reverse("round1_interests", args=[token])}'}
         body = render_to_string('schools/emails/round1/info.txt', context)
         return {'email': email, 'user_ids': [u.pk for u in users], 'body': body, 'html': text_to_html(body),
-                'unsubscribe': unsubscribe, 'link': link,
-                'kind': (len(users) > 1, frozenset(status[u.pk] for u in users))}
+                'unsubscribe': unsubscribe, 'link': link, 'ask_interests': ask,
+                'kind': (len(users) > 1, frozenset(status[u.pk] for u in users), ask)}
 
     def _build_teacher(self, email, users, status):
         counts = defaultdict(int)
@@ -251,13 +271,16 @@ class Command(BaseCommand):
         first = users[0]
         token = links.token_for_uid(first.pk)
         link = f'{self.base["site"]}{reverse("round1_info", args=[token])}'
+        ask = email not in self.answered
         context = {**self.base, 'name': display_name(first), 'total': len(users), 'link': link,
                    'unsubscribe_url': f'{self.base["site"]}{reverse("round1_unsubscribe", args=[token])}',
                    'registered': counts[links.REGISTERED], 'not_registered': counts[links.NOT_REGISTERED],
-                   'requested': counts[links.REQUESTED], 'no_school': counts[links.NO_SCHOOL]}
+                   'requested': counts[links.REQUESTED], 'no_school': counts[links.NO_SCHOOL],
+                   'ask_interests': ask, 'interests_url': f'{self.base["site"]}{reverse("round1_interests", args=[token])}'}
         body = render_to_string('schools/emails/round1/teacher.txt', context)
         return {'email': email, 'user_ids': [u.pk for u in users], 'body': body, 'html': text_to_html(body),
-                'unsubscribe': context['unsubscribe_url'], 'attachment': self._students_xlsx(users)}
+                'unsubscribe': context['unsubscribe_url'], 'attachment': self._students_xlsx(users),
+                'ask_interests': ask, 'kind': ('teacher', ask)}
 
     def _students_xlsx(self, users):
         """id, нэр, сургууль, анги, хоосон «Шинэ имэйл» — багш бөглөөд registration@mmo.mn руу буцаана."""
@@ -308,15 +331,17 @@ class Command(BaseCommand):
         """Нэг аккаунттай, олон аккаунттай, бүртгэлгүй төрлөөс жишээ."""
         samples, seen = [], set()
         for m in self._messages(dict(list(groups.items())[:3000])):
-            kind = m.get('kind', ())  # аккаунтын төлөвийн хослол бүрээс нэг
-            if kind not in seen and len(samples) < 12:
+            kind = m.get('kind', ())  # аккаунтын төлөвийн хослол × сонирхол асуух эсэх бүрээс нэг
+            if kind not in seen and len(samples) < 16:
                 seen.add(kind)
                 samples.append(m)
         self.samples = samples
         for m in samples:
             self._email(m, to, f'[ТЕСТ → {m["email"]}] {self.subject}').send()
             kind = m.get('kind')
-            detail = f' [{", ".join(sorted(kind[1]))}]' if kind else ''
+            statuses = kind[1] if kind and isinstance(kind[1], frozenset) else ()
+            detail = (f' [{", ".join(sorted(statuses))}]' if statuses else '') + \
+                (' +сонирхол' if m.get('ask_interests') else '')
             self.stdout.write(self.style.SUCCESS(f'Тест ({len(m["user_ids"])} аккаунт{detail}) илгээлээ → {to}'))
 
     def _send_all(self, groups, opts):
@@ -336,19 +361,20 @@ class Command(BaseCommand):
         connection = get_connection()
         with open(log_path, 'w', newline='', encoding='utf-8') as f:
             log = csv.writer(f)
-            log.writerow(['email', 'user_ids', 'status', 'message_id', 'error', 'time'])
+            log.writerow(['email', 'user_ids', 'status', 'message_id', 'error', 'time', 'interest_ask'])
             for i, m in enumerate(self._messages(groups), 1):
                 msg = self._email(m, m['email'])
                 msg.connection = connection
                 ids = ' '.join(map(str, m['user_ids']))
+                ask = '' if 'ask_interests' not in m else int(m['ask_interests'])  # бүртгэгчийн горимд хоосон
                 try:
                     msg.send()
                     status = getattr(msg, 'anymail_status', None)
                     log.writerow([m['email'], ids, 'sent', getattr(status, 'message_id', '') or '', '',
-                                  timezone.now().isoformat()])
+                                  timezone.now().isoformat(), ask])
                     sent += 1
                 except Exception as exc:
-                    log.writerow([m['email'], ids, 'failed', '', str(exc)[:300], timezone.now().isoformat()])
+                    log.writerow([m['email'], ids, 'failed', '', str(exc)[:300], timezone.now().isoformat(), ask])
                     failed += 1
                 f.flush()
                 if i % 100 == 0:

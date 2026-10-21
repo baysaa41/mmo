@@ -5,6 +5,7 @@
 
 Нэг хаяг руу нэг л имэйл. Давхардлаас автоматаар сэргийлнэ:
   - өмнөх logs/interest_ask_*.csv-д «sent» болсон хаяг
+  - I давааны имэйлд (logs/round1_info_*.csv, interest_ask=1) сонирхлыг нь асуусан хаяг
   - сонирхлоо өмнө нь хадгалсан (wants_* null биш) аккаунттай хаяг
   - unsubscribe хийсэн, хар жагсаалтад (bounce/complaint/SES suppression) орсон хаяг
 
@@ -37,6 +38,7 @@ from schools.moderator import NOTICE_FROM_EMAIL as FROM_EMAIL, norm_email
 
 SUBJECT = 'Танд ямар мэдээлэл хүргэх вэ?'
 LOG_GLOB = 'interest_ask_*.csv'
+ROUND1_LOG_GLOB = 'round1_info_*.csv'
 CHUNK = 500
 
 
@@ -69,6 +71,11 @@ class Command(BaseCommand):
         for path in glob.glob(os.path.join(self._log_dir(), LOG_GLOB)) + list(extra):
             with open(path, newline='', encoding='utf-8-sig') as f:
                 sent |= {norm_email(r['email']) for r in csv.DictReader(f) if r['status'] == 'sent'}
+        # I давааны имэйл дотор сонирхлыг нь асуусан хаягууд (send_round1_info-ийн «interest_ask» багана)
+        for path in glob.glob(os.path.join(self._log_dir(), ROUND1_LOG_GLOB)):
+            with open(path, newline='', encoding='utf-8-sig') as f:
+                sent |= {norm_email(r['email']) for r in csv.DictReader(f)
+                         if r['status'] == 'sent' and r.get('interest_ask') == '1'}
         return sent
 
     def _excluded(self, opts):
