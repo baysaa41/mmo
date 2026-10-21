@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Танд ямар мэдээлэл хүргэх вэ?{% endblock %}
+{% block content %}
+<div class="container my-5" style="max-width:640px">
+  <h4 class="mb-2">Танд ямар мэдээлэл хүргэх вэ?</h4>
+  <p class="text-muted">Сонгосон сэдвээр л имэйл илгээнэ. Сонголтоо хүссэн үедээ өөрчилж болно.</p>
+
+  {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %}">{{ message }}</div>
+  {% endfor %}
+
+  <form method="post">{% csrf_token %}
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" name="wants_mmo_news" value="1" id="i1" {% if interests.wants_mmo_news %}checked{% endif %}>
+      <label class="form-check-label" for="i1"><strong>Математикийн олимпиад (mmo.mn)</strong><br>
+        <span class="text-muted">Олимпиадын зар, хуваарь, дүн</span></label>
+    </div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" name="wants_other_olympiads" value="1" id="i2" {% if interests.wants_other_olympiads %}checked{% endif %}>
+      <label class="form-check-label" for="i2"><strong>Бусад олимпиад, тэмцээн</strong><br>
+        <span class="text-muted">Улсын болон олон улсын тэмцээний зар</span></label>
+    </div>
+    <div class="form-check mb-4">
+      <input class="form-check-input" type="checkbox" name="wants_mathminds" value="1" id="i3" {% if interests.wants_mathminds %}checked{% endif %}>
+      <label class="form-check-label" for="i3"><strong>MathMinds (mathminds.club)</strong><br>
+        <span class="text-muted">Онлайн сургалт, бэлтгэл болон бусад мэдээлэл</span></label>
+    </div>
+    <button type="submit" class="btn btn-success">Хадгалах</button>
+  </form>
+  <p class="small text-muted mt-4">{{ email }} ·
+    <a href="{% url 'round1_unsubscribe' token %}">Бүх имэйлээс татгалзах</a></p>
+</div>
+{% endblock %}

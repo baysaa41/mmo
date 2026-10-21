@@ -77,3 +77,21 @@ def round1_unsubscribe_view(request, token):
             return render(request, 'schools/round1/unsubscribed.html', {'email': email})
         return HttpResponse('OK')
     return render(request, 'schools/round1/unsubscribe.html', {'email': email, 'token': token})
+
+
+def interests_view(request, token):
+    """Сонирхол асуух имэйлийн хуудас: ямар мэдээллийг mmo.mn / mathminds.club-аас авахаа сонгоно.
+
+    Анхдагчаар бүгд сонгоогүй (тодорхой зөвшөөрөл). GET юу ч өөрчилдөггүй, хадгалалт POST-оор.
+    """
+    email = links.read_token(token)
+    if not email:
+        return render(request, 'schools/round1/invalid.html', status=404)
+    if request.method == 'POST':
+        links.set_interests(email, {f: request.POST.get(f) == '1' for f in links.INTERESTS})
+        messages.success(request, 'Баярлалаа! Таны сонголтыг хадгаллаа.')
+        return redirect('round1_interests', token=token)
+    users = list(links.accounts_for_email(email))
+    return render(request, 'schools/round1/interests.html', {
+        'token': token, 'email': email, 'interests': links.current_interests(users),
+        'answered': links.interests_answered(users)})

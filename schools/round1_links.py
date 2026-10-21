@@ -122,6 +122,23 @@ def current_interests(users):
     return result
 
 
+def interests_answered(users):
+    """Хаягийн аль нэг аккаунт сонирхлоо хадгалсан эсэх (null биш = асуусан, хариулсан)."""
+    return any(getattr(getattr(u, 'data', None), 'interests_updated_at', None) for u in users)
+
+
+def promo_emails(field):
+    """Сурталчилгаа/зар илгээж болох хаягууд: `field` (INTERESTS-ийн нэг) дээр «тийм» гэж хариулсан,
+    unsubscribe хийгээгүй, идэвхтэй аккаунттай. Шинэ зар илгээхдээ зөвхөн эндээс авна."""
+    from emails.models import EmailUnsubscribe
+    if field not in INTERESTS:
+        raise ValueError(field)
+    emails = {norm_email(e) for e in User.objects.filter(
+        is_active=True, **{f'data__{field}': True}).exclude(email='').values_list('email', flat=True)}
+    unsub = {norm_email(e) for e in EmailUnsubscribe.objects.values_list('email', flat=True)}
+    return emails - unsub - {''}
+
+
 def set_interests(email, values):
     """values: {талбар: bool}. Тухайн хаягтай бүх аккаунтад хадгална."""
     fields = {f: bool(values.get(f)) for f in INTERESTS}
