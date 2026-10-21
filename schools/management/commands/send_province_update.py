@@ -35,7 +35,6 @@ from schools.models import EnrollmentLog, School
 from schools.moderator import NOTICE_FROM_EMAIL as FROM_EMAIL, blocked_emails, email_problem, norm_email, province_admins
 
 POST_ID = 500
-LOG_GLOB = 'province_update_*.csv'
 WEEKDAYS = ['Даваа', 'Мягмар', 'Лхагва', 'Пүрэв', 'Баасан', 'Бямба', 'Ням']
 ISSUE_ACTION = {
     'Бүртгэгч багшгүй': 'Бүртгэгч багш томилох (аймаг/дүүргийн мэргэжилтэн эсвэл registration@mmo.mn)',
@@ -47,6 +46,8 @@ POST_MARK = '<h4>Анхаарал шаардлагатай сургуулиуд'
 
 class Command(BaseCommand):
     help = 'Аймаг/дүүргийн мэргэжилтнүүдэд I давааны өмнөх шинэчилсэн мэдээлэл илгээнэ, пост 500-г шинэчилнэ.'
+    log_prefix = 'province_update'  # logs/<log_prefix>_*.csv — «sent» болсон хаягт дахин илгээхгүй
+    template = 'schools/emails/province/round1_update.txt'
 
     def add_arguments(self, parser):
         parser.add_argument('--province', type=int, nargs='+', help='Зөвхөн эдгээр аймаг/дүүрэг (ID)')
@@ -182,11 +183,14 @@ class Command(BaseCommand):
                 continue
             for pid in entry['province_ids']:  # нэг хаяг олон аймаг хариуцвал аймаг тус бүрт тусдаа имэйл
                 d = data[pid]
-                body = render_to_string('schools/emails/province/round1_update.txt', {**self.base, **d})
+                body = render_to_string(self.template, {**self.base, **d})
                 messages.append({'email': email, 'province_ids': [pid], 'to_names': sorted(entry['names']),
-                                 'subject': f'{self.olympiad["name"]} I даваа: {d["province"]} — сургуулиудын бүртгэл, хамтын ажиллагааны хүсэлт',
+                                 'subject': self._subject(d),
                                  'body': body, 'html': text_to_html(body), 'attachment': self._xlsx(d)})
         return messages
+
+    def _subject(self, d):
+        return f'{self.olympiad["name"]} I даваа: {d["province"]} — сургуулиудын бүртгэл, хамтын ажиллагааны хүсэлт'
 
     def _xlsx(self, d):
         from openpyxl import Workbook
@@ -231,7 +235,7 @@ class Command(BaseCommand):
 
     def _already_sent(self):
         sent = set()
-        for path in glob.glob(os.path.join(self._log_dir(), LOG_GLOB)):
+        for path in glob.glob(os.path.join(self._log_dir(), f'{self.log_prefix}_*.csv')):
             with open(path, newline='', encoding='utf-8-sig') as f:
                 sent |= {norm_email(r['email']) for r in csv.DictReader(f) if r['status'] == 'sent'}
         return sent
@@ -244,7 +248,7 @@ class Command(BaseCommand):
             self.stdout.write('Цуцаллаа.')
             return
         os.makedirs(self._log_dir(), exist_ok=True)
-        log_path = os.path.join(self._log_dir(), f'province_update_{timezone.localtime():%Y%m%d_%H%M%S}.csv')
+        log_path = os.path.join(self._log_dir(), f'{self.log_prefix}_{timezone.localtime():%Y%m%d_%H%M%S}.csv')
         connection = get_connection()
         sent = failed = 0
         with open(log_path, 'w', newline='', encoding='utf-8') as f:
