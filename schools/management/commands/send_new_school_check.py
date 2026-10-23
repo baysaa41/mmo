@@ -3,7 +3,8 @@
 админууд) баталгаажуулуулах лавлагаа илгээнэ. Сургуулийн бүртгэлийн хүсэлтийг шалгуургүй хүлээн авдаг тул.
 
 School-д үүсгэсэн огноо байхгүй тул удирдлагын s-аккаунт (School.manager) үүссэн огноогоор шинэ эсэхийг тогтооно.
-Нэг хаяг, нэг аймагт нэг л имэйл; өмнөх logs/new_school_check_*.csv-д «sent» болсон бол дахин илгээхгүй.
+Хаяг бүрт зөвхөн өмнө нь лавлаагүй (logs/new_school_check_*.csv-д «sent» болоогүй) сургуулиудыг илгээнэ —
+шинээр сургууль бүртгэх бүрт дахин ажиллуулахад тухайн сургуулийн лавлагаа л явна.
 
   python manage.py send_new_school_check                                 # тоо, жишээ (юу ч илгээхгүй)
   python manage.py send_new_school_check --test-email me@example.com --province 22
@@ -14,7 +15,7 @@ import glob
 import os
 import time
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
@@ -73,6 +74,7 @@ class Command(BaseCommand):
             out[s.province].append({
                 'id': s.id, 'name': s.name,
                 'created': timezone.localtime(s.manager.date_joined).strftime('%Y-%m-%d'),
+                'created_at': s.manager.date_joined,
                 'registrar': s.user.get_full_name() if s.user else '',
                 'registrar_email': s.user.email if s.user else '',
                 'students': s.group.user_set.count() if s.group else 0,
@@ -80,20 +82,21 @@ class Command(BaseCommand):
         return out
 
     def _messages(self, by_province):
-        sent = self._already_sent()
+        sent = self._already_sent(by_province)
         messages, no_admin = [], []
-        for province, schools in by_province.items():
+        for province, all_schools in by_province.items():
             admins = province_admins(province, self.blocked)
             if not admins:
                 no_admin.append(province.name)
                 continue
-            body = render_to_string(TEMPLATE, {'province': province.name, 'count': len(schools),
-                                               'schools': schools, 'from_email': FROM_EMAIL})
             for email in sorted({norm_email(u.email) for u in admins}):
-                if (email, province.id) in sent:
+                schools = [s for s in all_schools if (email, s['id']) not in sent]
+                if not schools:
                     continue
+                body = render_to_string(TEMPLATE, {'province': province.name, 'count': len(schools),
+                                                   'schools': schools, 'from_email': FROM_EMAIL})
                 messages.append({'email': email, 'province_id': province.id, 'province': province.name,
-                                 'count': len(schools),
+                                 'count': len(schools), 'school_ids': ' '.join(str(s['id']) for s in schools),
                                  'subject': f'Лавлагаа: {province.name} — mmo.mn-д шинээр бүртгүүлсэн {len(schools)} сургууль',
                                  'body': body, 'html': text_to_html(body)})
         return messages, no_admin
@@ -107,11 +110,22 @@ class Command(BaseCommand):
     def _log_dir(self):
         return os.path.join(settings.BASE_DIR, 'logs')
 
-    def _already_sent(self):
+    def _already_sent(self, by_province):
+        """{(email, school_id)} — аль хэдийн лавласан. Эхний логт school_ids багана байхгүй тул тухайн
+        аймгийн илгээх үеэс өмнө бүртгэгдсэн сургуулиудыг лавласан гэж үзнэ."""
+        by_pid = {p.id: schools for p, schools in by_province.items()}
         sent = set()
         for path in glob.glob(os.path.join(self._log_dir(), LOG_GLOB)):
             with open(path, newline='', encoding='utf-8-sig') as f:
-                sent |= {(r['email'], int(r['province_id'])) for r in csv.DictReader(f) if r['status'] == 'sent'}
+                for r in csv.DictReader(f):
+                    if r['status'] != 'sent':
+                        continue
+                    if r.get('school_ids'):
+                        ids = [int(x) for x in r['school_ids'].split()]
+                    else:
+                        at = datetime.fromisoformat(r['time'])
+                        ids = [s['id'] for s in by_pid.get(int(r['province_id']), []) if s['created_at'] <= at]
+                    sent |= {(r['email'], i) for i in ids}
         return sent
 
     def _send_all(self, messages, opts):
@@ -127,18 +141,18 @@ class Command(BaseCommand):
         sent = failed = 0
         with open(log_path, 'w', newline='', encoding='utf-8') as f:
             log = csv.writer(f)
-            log.writerow(['province_id', 'email', 'count', 'status', 'message_id', 'error', 'time'])
+            log.writerow(['province_id', 'email', 'count', 'school_ids', 'status', 'message_id', 'error', 'time'])
             for m in messages:
                 msg = self._email(m, m['email'])
                 msg.connection = connection
                 try:
                     msg.send()
                     status = getattr(msg, 'anymail_status', None)
-                    log.writerow([m['province_id'], m['email'], m['count'], 'sent',
+                    log.writerow([m['province_id'], m['email'], m['count'], m['school_ids'], 'sent',
                                   getattr(status, 'message_id', '') or '', '', timezone.now().isoformat()])
                     sent += 1
                 except Exception as exc:
-                    log.writerow([m['province_id'], m['email'], m['count'], 'failed', '', str(exc)[:300],
+                    log.writerow([m['province_id'], m['email'], m['count'], m['school_ids'], 'failed', '', str(exc)[:300],
                                   timezone.now().isoformat()])
                     failed += 1
                 f.flush()
