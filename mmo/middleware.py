@@ -7,9 +7,27 @@ logger = logging.getLogger(__name__)
 MAINTENANCE_FLAG_FILE = settings.BASE_DIR / 'maintenance' / 'ON'
 
 
+def is_province_or_zone_specialist(user):
+    """
+    Аймаг/дүүргийн мэргэжилтэн (Province.contact_person, contact_person2, registrar,
+    Province_{id}_Managers групп) эсвэл бүсийн удирдагч (Zone.contact_person) эсэх.
+    """
+    from django.db.models import Q
+    from accounts.models import Province, Zone
+
+    if Province.objects.filter(
+        Q(contact_person=user) | Q(contact_person2=user) | Q(registrar=user)
+    ).exists():
+        return True
+    if Zone.objects.filter(contact_person=user).exists():
+        return True
+    return user.groups.filter(name__regex=r'^Province_[0-9]+_Managers$').exists()
+
+
 class MaintenanceModeMiddleware:
     """
-    Maintenance mode middleware - зөвхөн staff болон school moderator-д хандалт олгоно.
+    Maintenance mode middleware - зөвхөн staff (хорооны гишүүд), school moderator/manager
+    болон аймаг/дүүрэг, бүсийн мэргэжилтнүүдэд хандалт олгоно.
     Бусад хэрэглэгчдэд maintenance page харуулна.
 
     Асаах/унтраах: BASE_DIR/maintenance/ON файлыг үүсгэх/устгах замаар хийнэ
@@ -62,6 +80,10 @@ class MaintenanceModeMiddleware:
                 # School manager эсэхийг шалгах
                 # School.manager field-ээр тодорхойлогддог
                 if hasattr(request.user, 'managing') and request.user.managing.exists():
+                    return self.get_response(request)
+
+                # Аймаг/дүүрэг, бүсийн мэргэжилтэн эсэхийг шалгах
+                if is_province_or_zone_specialist(request.user):
                     return self.get_response(request)
 
             # Бусад бүх тохиолдолд maintenance page харуулах

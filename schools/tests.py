@@ -1015,3 +1015,53 @@ class Round1LinkTests(SchoolAccessTestBase):
         self.assertEqual(mail.outbox[0].to, ['mod_a@example.mn'])
         self.assertIn(f'ID {self.kid2.pk}', mail.outbox[0].body)
         self.assertIn(reverse('school_all_users', args=[self.school_a.pk]), mail.outbox[0].body)
+
+
+class MaintenanceModeAccessTests(SchoolAccessTestBase):
+    """Maintenance горимд staff, сургуулийн бүртгэгч/удирдлага, аймаг/дүүрэг, бүсийн мэргэжилтэн нэвтэрнэ."""
+
+    def setUp(self):
+        from unittest import mock
+        from django.http import HttpResponse
+        from django.test import RequestFactory
+        from mmo.middleware import MaintenanceModeMiddleware
+
+        patcher = mock.patch('mmo.middleware.MAINTENANCE_FLAG_FILE')
+        patcher.start().is_file.return_value = True
+        self.addCleanup(patcher.stop)
+        self.middleware = MaintenanceModeMiddleware(lambda request: HttpResponse('ok'))
+        self.factory = RequestFactory()
+
+    def status_for(self, user=None):
+        from django.contrib.auth.models import AnonymousUser
+        request = self.factory.get('/schools/')
+        request.user = user or AnonymousUser()
+        return self.middleware(request).status_code
+
+    def test_anonymous_and_student_blocked(self):
+        self.assertEqual(self.status_for(), 503)
+        self.assertEqual(self.status_for(self.student_b), 503)
+
+    def test_staff_and_school_moderator_allowed(self):
+        self.assertEqual(self.status_for(self.staff), 200)
+        self.assertEqual(self.status_for(self.moderator_a), 200)
+
+    def test_province_contacts_and_registrar_allowed(self):
+        second, registrar = make_user('pm_b2'), make_user('preg_a')
+        self.province_b.contact_person2 = second
+        self.province_b.save()
+        self.province_a.registrar = registrar
+        self.province_a.save()
+        for user in (self.province_manager_b, second, registrar):
+            self.assertEqual(self.status_for(user), 200, user.username)
+
+    def test_province_managers_group_allowed(self):
+        user = make_user('pgroup')
+        user.groups.add(Group.objects.create(name=f'Province_{self.province_a.id}_Managers'))
+        self.assertEqual(self.status_for(user), 200)
+
+    def test_zone_contact_allowed(self):
+        from accounts.models import Zone
+        user = make_user('zone_head')
+        Zone.objects.create(name='Бүс', description='', contact_person=user)
+        self.assertEqual(self.status_for(user), 200)
