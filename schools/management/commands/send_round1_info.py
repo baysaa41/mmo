@@ -11,6 +11,10 @@
   python manage.py send_round1_info --send --limit 500
   python manage.py send_round1_info --teachers --test-email me@example.com
   python manage.py send_round1_info --registrars --test-email me@example.com
+  python manage.py send_round1_info --active-days 0 --enrolled-since 2026-08-01 --skip-log logs/round1_info_*.csv
+
+--enrolled-since: тухайн өдрөөс хойш сургуульд бүртгэгдсэн (EnrollmentLog enroll/transfer), одоо ч сургуулийн
+группт байгаа аккаунттай хаяг л үлдэнэ — шинэ оролцогчид ихэвчлэн нэвтрээгүй тул --active-days 0-тэй хэрэглэнэ.
 
 --teachers: 5+ аккаунттай хаяг (олон сурагчаа өөрийн имэйлээр бүртгүүлсэн багш нар, #38). Тэдэнд
 «хүн бүр өөрийн хаягаар бүртгүүлэх» бодлогын тайлбар болон id/нэр/сургууль/анги/хоосон «шинэ имэйл»
@@ -25,12 +29,12 @@ import os
 import re
 import time
 from collections import defaultdict
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
+from django.db.models import F, Q
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
@@ -40,7 +44,7 @@ from olympiad.models import Olympiad, SchoolYear
 from schools import round1_links as links
 from schools.campaign_blacklist import campaign_blocked_emails
 from schools import enrollment
-from schools.models import School
+from schools.models import EnrollmentLog, School
 from schools.moderator import NOTICE_FROM_EMAIL as FROM_EMAIL, norm_email
 
 GUIDELINE_POST = 506  # «ММО-63, I даваа: оролцох заавар» (495 нь удирдамж)
@@ -73,6 +77,8 @@ class Command(BaseCommand):
                             help='Зөвхөн 5+ аккаунттай хаяг (багш нар): бодлогын тайлбар + Excel хавсралт')
         parser.add_argument('--registrars', action='store_true',
                             help='Сургуулийн бүртгэгч багш нар (School.user): хүсэлт шийдэх, жагсаалт шалгах заавар (#33)')
+        parser.add_argument('--enrolled-since', type=date.fromisoformat, metavar='YYYY-MM-DD',
+                            help='Зөвхөн энэ өдрөөс хойш сургуульд бүртгэгдсэн, одоо бүртгэлтэй аккаунттай хаяг')
         parser.add_argument('--guideline-post', type=int, default=GUIDELINE_POST,
                             help='Имэйлд оруулах постын ID (анхдагч: I давааны оролцох заавар). '
                                  '--send үед нийтлэгдээгүй эсвэл [ТОДРУУЛАХ] үлдсэн бол илгээхгүй.')
@@ -202,6 +208,7 @@ class Command(BaseCommand):
                          .values_list('id', flat=True))
         else:
             active = None
+        enrolled = self._enrolled_since(users, opts['enrolled_since']) if opts['enrolled_since'] else None
         # Сонирхлоо хадгалсан хаяг (аль ч аккаунтаар, ангиар шүүлгүй) — тэдэнд сонирхол асуух хэсэг орохгүй
         self.answered = {norm_email(e) for e in User.objects.filter(is_active=True, data__interests_updated_at__isnull=False)
                          .values_list('email', flat=True)}
@@ -211,8 +218,18 @@ class Command(BaseCommand):
                 continue
             if active is not None and bool(active.intersection(ids)) == opts['inactive_only']:
                 continue
+            if enrolled is not None and not enrolled.intersection(ids):
+                continue
             groups[e] = ids
         return groups
+
+    def _enrolled_since(self, users, day):
+        """day-ээс хойш сургуульд бүртгэгдсэн (enroll/transfer) бөгөөд одоо сургуулийнхаа группт байгаа аккаунтууд."""
+        since = timezone.make_aware(datetime.combine(day, datetime.min.time()))
+        logged = EnrollmentLog.objects.filter(
+            created_at__gte=since, action__in=[EnrollmentLog.Action.ENROLL, EnrollmentLog.Action.TRANSFER])
+        return set(users.filter(pk__in=logged.values('user_id'), groups=F('data__school__group'))
+                   .values_list('id', flat=True))
 
     # ---------------------------------------------------------------- message
 
