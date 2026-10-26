@@ -45,6 +45,8 @@ from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm, SchoolManagerA
 
 # "Бүх сурагчид" хэсгээс шинээр нэмсэн сурагчид оноох "Бусад" ангилал
 OTHER_LEVEL_ID = 8
+# «Дэмжигч» (төгссөн г.м.) — бүртгэгчийн «Бүх сурагчид» жагсаалтаас тусад нь (level_id=101) харуулна.
+SUPPORTER_GRADE_ID = 17
 
 # Бүх сургуулийг удирдах хуудасны нэг хуудсанд харуулах сургуулийн тоо
 MANAGE_ALL_SCHOOLS_PER_PAGE = 100
@@ -214,6 +216,8 @@ def school_dashboard(request, school_id):
         level.student_count = counts_by_level.get(level.id, 0)
 
     uncategorized_count = school.group.user_set.filter(data__level__isnull=True).count()
+    supporter_count = school.group.user_set.filter(data__grade_id=SUPPORTER_GRADE_ID).count()
+    member_count = school.group.user_set.count() - supporter_count
 
     # Одоогийн хичээлийн жилийн, 1-р давааны тестүүдийг шүүх
     today = date.today()
@@ -239,6 +243,8 @@ def school_dashboard(request, school_id):
         'is_province_contact': is_province_contact,
         'student_counts_by_level': student_counts,
         'uncategorized_count': uncategorized_count,
+        'supporter_count': supporter_count,
+        'member_count': member_count,
         'pending_students': pending_students,
         'incoming_transfer_count': incoming_transfer_count(school),
         'olympiads': olympiads,
@@ -317,6 +323,22 @@ def school_email_problems_view(request, school_id):
 LEVEL_USERS_PER_PAGE = 100
 
 
+def _same_name_users(add_user_form, request):
+    """Шинээр үүсгэх гэж буй хүнтэй овог, нэр ижил бүртгэлтэй хэрэглэгчид.
+
+    Давхар аккаунт үүсэхээс сэргийлж бүртгэгчид анхааруулна; «Үргэлжлүүлэх»
+    (confirm_duplicate) дарвал шалгахгүй.
+    """
+    if request.POST.get('confirm_duplicate'):
+        return []
+    last = (add_user_form.cleaned_data.get('last_name') or '').strip()
+    first = (add_user_form.cleaned_data.get('first_name') or '').strip()
+    if not last or not first:
+        return []
+    return list(User.objects.filter(last_name__iexact=last, first_name__iexact=first)
+                .select_related('data__school', 'data__grade').order_by('-last_login', '-id')[:10])
+
+
 def filter_users_by_query(users, q):
     """Овог, нэр, нэвтрэх нэрээр (эсвэл тоо бол ID-аар) хайна. q хоосон бол шүүхгүй."""
     if not q:
@@ -341,16 +363,27 @@ def manage_school_by_level(request, school_id, level_id):
     q = (request.GET.get('q') or '').strip()
 
     # --- ШИНЭЧИЛСЭН ЛОГИК ---
-    if level_id == 100: # 100 нь "Бүх сурагчид" гэсэн утгатай
-        selected_level = {'id': 100, 'name': 'Бүх сурагчид'}
-        users_in_level = filter_users_by_query(group.user_set.all(), q)
-        # Сургуульд бүртгэлгүй боловч өөрийгөө тухайн сургууль гэж бүртгүүлсэн сурагчид
-        pending_users = filter_users_by_query(enrollment.pending_students(school), q)
+    if level_id in (100, 101):
+        # 100 = "Бүх сурагчид" (сурагч, багш — дэмжигчгүй), 101 = "Дэмжигчид"
+        if level_id == 100:
+            selected_level = {'id': 100, 'name': 'Бүх сурагчид'}
+            users_in_level = filter_users_by_query(group.user_set.exclude(data__grade_id=SUPPORTER_GRADE_ID), q)
+            # Сургуульд бүртгэлгүй боловч өөрийгөө тухайн сургууль гэж бүртгүүлсэн сурагчид
+            pending_users = filter_users_by_query(
+                enrollment.pending_students(school).exclude(data__grade_id=SUPPORTER_GRADE_ID), q)
+        else:
+            selected_level = {'id': 101, 'name': 'Дэмжигчид'}
+            users_in_level = filter_users_by_query(group.user_set.filter(data__grade_id=SUPPORTER_GRADE_ID), q)
+            pending_users = User.objects.none()
         # Нэг жагсаалт болгож нэгтгэх: 1000+ User объект үүсгэхгүйн тулд эхлээд зөвхөн
         # (овог, нэр, id)-ээр эрэмбэлж, харагдах хуудасны сурагчдыг л доор бүтнээр нь татна.
         level100_rows = [(l or '', f or '', pk, True) for pk, l, f in users_in_level.values_list('id', 'last_name', 'first_name')]
         level100_rows += [(l or '', f or '', pk, False) for pk, l, f in pending_users.values_list('id', 'last_name', 'first_name')]
-        level100_rows.sort(key=lambda r: (r[0], r[1]))
+        pending_count = sum(1 for r in level100_rows if not r[3])
+        if request.GET.get('pending') == '1':
+            level100_rows = [r for r in level100_rows if not r[3]]
+        # Хүсэлт илгээсэн (бүртгэлгүй) сурагчид бөөнөөрөө эхэнд
+        level100_rows.sort(key=lambda r: (r[3], r[0], r[1]))
     elif level_id == 0:
         selected_level = {'id': 0, 'name': 'Ангилалгүй'}
         users_in_level = group.user_set.filter(data__level__isnull=True).select_related('data__grade')
@@ -359,6 +392,7 @@ def manage_school_by_level(request, school_id, level_id):
         users_in_level = group.user_set.filter(data__level=selected_level).select_related('data__grade')
 
     search_results = None
+    duplicate_candidates = []
     if request.method == 'POST':
         if 'search_users' in request.POST:
             search_form = UserSearchForm(request.POST)
@@ -370,6 +404,8 @@ def manage_school_by_level(request, school_id, level_id):
             add_user_form = AddUserForm(request.POST)
             search_form = UserSearchForm()
             if add_user_form.is_valid():
+                duplicate_candidates = _same_name_users(add_user_form, request)
+            if add_user_form.is_valid() and not duplicate_candidates:
                 new_user = None
                 try:
                     with transaction.atomic():
@@ -382,7 +418,7 @@ def manage_school_by_level(request, school_id, level_id):
                         new_user.username = f'u{new_user.id}'
                         new_user.save()
 
-                        if level_id == 100:
+                        if level_id in (100, 101):
                             selected_level = Level.objects.get(pk=OTHER_LEVEL_ID)
 
                         # Нэмж буй хүний биш, URL-д заасан сургуулийг оноох
@@ -528,7 +564,7 @@ def manage_school_by_level(request, school_id, level_id):
         add_user_form = AddUserForm()
 
     # Олон сурагчтай ангиллыг (1000+) нэг дор render хийхэд 1 MB HTML болж удаан тул хуудаслана.
-    if level_id == 100:
+    if level_id in (100, 101):
         page_obj = Paginator(level100_rows, LEVEL_USERS_PER_PAGE).get_page(request.GET.get('page'))
         page_users = User.objects.select_related('data__grade').in_bulk([r[2] for r in page_obj.object_list])
         all_school_users = [
@@ -551,7 +587,10 @@ def manage_school_by_level(request, school_id, level_id):
         'search_form': search_form,
         'add_user_form': add_user_form,
         'search_results': search_results,
-        'all_school_users': all_school_users if level_id == 100 else None,
+        'all_school_users': all_school_users if level_id in (100, 101) else None,
+        'pending_count': pending_count if level_id in (100, 101) else 0,
+        'only_pending': request.GET.get('pending') == '1',
+        'duplicate_candidates': duplicate_candidates,
         'round2_quota': round2_quota,
         'page_obj': page_obj,
         'q': q,

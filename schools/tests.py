@@ -186,6 +186,21 @@ class AddNewStudentTests(SchoolAccessTestBase):
         new_user = User.objects.get(email='sukh@example.com')
         self.assertEqual(new_user.data.school, self.school_b)
 
+    def test_same_name_warns_before_creating(self):
+        """Овог, нэр ижил хэрэглэгч байвал анхааруулж, «Үргэлжлүүлэх» дарвал үүсгэнэ."""
+        make_user('old_dorj', last_name='Бат', first_name='Дорж')
+        self.client.force_login(self.staff)
+        url = reverse('manage_school_by_level', args=[self.school_b.id, self.level.id])
+        data = {'add_user': '1', 'last_name': 'бат ', 'first_name': 'Дорж', 'email': 'dorj@example.com'}
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([u.username for u in response.context['duplicate_candidates']], ['old_dorj'])
+        self.assertFalse(User.objects.filter(email='dorj@example.com').exists())
+
+        response = self.client.post(url, {**data, 'confirm_duplicate': '1'})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(email='dorj@example.com').exists())
+
 
 class LevelPagePaginationTests(SchoolAccessTestBase):
     """manage_school_by_level: хуудаслалт, хайлт, мөр бүрийн ганц form."""
@@ -223,12 +238,30 @@ class LevelPagePaginationTests(SchoolAccessTestBase):
     def test_all_students_view_is_paginated_and_searchable(self):
         response = self.get(100)
         self.assertEqual(len(response.context['all_school_users']), 5)
-        # группын 13 (12 + student_b) + сургуульд бүртгэлтэй боловч группд ороогүй moderator_b
-        self.assertEqual(response.context['page_obj'].paginator.count, 14)
+        # группын 13 (12 + student_b); бүртгэгч moderator_b хүсэлтээр харагдахгүй (5524992)
+        self.assertEqual(response.context['page_obj'].paginator.count, 13)
         filtered = self.get(100, q='Овог1')  # Овог10, Овог11
         self.assertEqual(
             sorted(i['user'].last_name for i in filtered.context['all_school_users']),
             ['Овог10', 'Овог11'])
+
+    def test_supporters_listed_separately(self):
+        from accounts.models import Grade
+        Grade.objects.get_or_create(id=17, defaults={'name': 'Дэмжигч'})
+        UserMeta.objects.filter(user__username__in=['lvl00', 'lvl01']).update(grade_id=17)
+        all_ids = {i['user'].username for i in self.get(100, q='Овог0').context['all_school_users']}
+        self.assertFalse({'lvl00', 'lvl01'} & all_ids)
+        supporters = self.get(101)
+        self.assertEqual(sorted(i['user'].username for i in supporters.context['all_school_users']), ['lvl00', 'lvl01'])
+
+    def test_pending_requests_listed_first(self):
+        from unittest import mock
+        pending = make_user('pend', school=self.school_b, province=self.province_b, last_name='Яаа', first_name='Хүсэлт')
+        with mock.patch('schools.enrollment.pending_students', return_value=User.objects.filter(pk=pending.pk)):
+            response = self.get(100)
+        first = response.context['all_school_users'][0]
+        self.assertEqual((first['user'], first['is_registered']), (pending, False))
+        self.assertEqual(response.context['pending_count'], 1)
 
     def test_rows_use_single_shared_form(self):
         response = self.get(self.level.id)

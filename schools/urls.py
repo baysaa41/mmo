@@ -60,6 +60,7 @@ urlpatterns = [
     # School management
     path('<int:school_id>/', school_dashboard, name='school_dashboard'),
     path('<int:school_id>/all-users/', manage_school_by_level, {'level_id': 100}, name='school_all_users'),
+    path('<int:school_id>/supporters/', manage_school_by_level, {'level_id': 101}, name='school_supporters'),
     path('<int:school_id>/level/<int:level_id>/', manage_school_by_level, name='manage_school_by_level'),
     path('<int:school_id>/merge-users/', merge_school_users, name='merge_school_users'),
     path('<int:school_id>/transfer-students/', transfer_students_view, name='transfer_students'),

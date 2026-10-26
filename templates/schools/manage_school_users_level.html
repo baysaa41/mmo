@@ -6,7 +6,7 @@
 {% block content %}
 {% access_notice %}
 <div class="container">
-    <h2 class="mb-1">{{ school.name }}: {{ selected_level.name }} ангилал</h2>
+    <h2 class="mb-1">{{ school.name }}: {{ selected_level.name }}{% if selected_level.id != 100 and selected_level.id != 101 %} ангилал{% endif %}</h2>
     <p class="lead text-muted">{{ school.province.name }}</p>
     <a href="{% url 'school_dashboard' school.id %}" class="btn btn-secondary btn-sm mb-4">&larr; Удирдлагын самбар луу буцах</a>
     <hr>
@@ -66,12 +66,46 @@
                     <i class="fas fa-user-plus"></i> Шинээр бүртгэл үүсгэх
                 </a>
             </p>
-            <div class="collapse" id="addNewUserCollapse">
+            <div class="collapse{% if duplicate_candidates or add_user_form.errors %} show{% endif %}" id="addNewUserCollapse">
                 <div class="card card-body">
+                    {% if duplicate_candidates %}
+                        {# Овог, нэр ижил хэрэглэгч байгаа — давхар аккаунт үүсгэхээс өмнө анхааруулна #}
+                        <div class="alert alert-warning small">
+                            <strong>Анхаар:</strong> «{{ add_user_form.cleaned_data.last_name }} {{ add_user_form.cleaned_data.first_name }}» нэртэй
+                            {{ duplicate_candidates|length }} хэрэглэгч системд бүртгэлтэй байна. Энэ сурагч өмнө нь бүртгүүлсэн бол шинэ аккаунт
+                            үүсгэлгүй, хуучин аккаунтыг нь сургуульдаа нэмнэ үү (өмнөх дүн нь хадгалагдана).
+                            <ul class="list-group my-2">
+                                {% for u in duplicate_candidates %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>
+                                            {{ u.last_name }} {{ u.first_name }} <span class="text-muted">(ID {{ u.id }}, {{ u.username }})</span><br>
+                                            <span class="text-muted">{{ u.data.school.name|default:"сургуульгүй" }} · {{ u.data.grade.name|default:"анги тодорхойгүй" }}</span>
+                                        </span>
+                                        {% if u.data.school_id != school.id %}
+                                        <form method="post" class="ms-2">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ u.id }}">
+                                            <button type="submit" name="add_existing_user" class="btn btn-sm btn-outline-success">Энэ сургуульд нэмэх</button>
+                                        </form>
+                                        {% else %}
+                                        <span class="badge bg-success ms-2">Танай сургуульд</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            Өөр хүүхэд бол доорх «Үргэлжлүүлж шинээр үүсгэх» товчийг дарна уу.
+                        </div>
+                    {% endif %}
                     <form method="post">
                         {% csrf_token %}
                         {{ add_user_form|crispy }}
-                        <button type="submit" name="add_user" class="btn btn-success my-3">Бүртгэл үүсгэх</button>
+                        {% if duplicate_candidates %}
+                            <input type="hidden" name="confirm_duplicate" value="1">
+                            <input type="hidden" name="add_user" value="1">
+                            <button type="submit" class="btn btn-warning my-3">Үргэлжлүүлж шинээр үүсгэх</button>
+                        {% else %}
+                            <button type="submit" name="add_user" class="btn btn-success my-3">Бүртгэл үүсгэх</button>
+                        {% endif %}
                     </form>
                 </div>
             </div>
@@ -90,15 +124,25 @@
     </form>
     {% if page_obj.paginator.count %}
         <p class="text-muted small mb-2">
-            {% if q %}Хайлтад тохирсон{% else %}Нийт{% endif %} {{ page_obj.paginator.count }} сурагч
+            {% if q %}Хайлтад тохирсон{% else %}Нийт{% endif %} {{ page_obj.paginator.count }} {% if selected_level.id == 101 %}дэмжигч{% else %}сурагч{% endif %}
             ({{ page_obj.start_index }}–{{ page_obj.end_index }} харуулж байна)
         </p>
+    {% endif %}
+    {% if pending_count %}
+        <div class="alert alert-warning py-2 d-flex justify-content-between align-items-center">
+            <span><strong>{{ pending_count }}</strong> сурагч танай сургуульд бүртгүүлэх хүсэлт илгээсэн — жагсаалтын эхэнд «Бүртгэлгүй» гэж харагдана.</span>
+            {% if only_pending %}
+                <a href="?{% if q %}q={{ q|urlencode }}{% endif %}" class="btn btn-sm btn-outline-secondary">Бүгдийг харуулах</a>
+            {% else %}
+                <a href="?pending=1{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn btn-sm btn-warning">Зөвхөн хүсэлтүүдийг харуулах</a>
+            {% endif %}
+        </div>
     {% endif %}
 
     {# Сурагчдын жагсаалт #}
     {% if all_school_users %}
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="mb-0">Сурагчдын жагсаалт</h4>
+            <h4 class="mb-0">{% if selected_level.id == 101 %}Дэмжигчдийн жагсаалт{% else %}Сурагчдын жагсаалт{% endif %}</h4>
             <div class="d-flex gap-2">
                 <button type="button" class="btn btn-warning btn-sm" id="mergeBtn" disabled>
                     Бүртгэл нэгтгэх
@@ -219,13 +263,13 @@
         <nav aria-label="Хуудаслалт" class="mt-3">
             <ul class="pagination pagination-sm justify-content-center flex-wrap">
                 {% if page_obj.has_previous %}
-                    <li class="page-item"><a class="page-link" href="?page=1{% if q %}&q={{ q|urlencode }}{% endif %}">&laquo;</a></li>
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Өмнөх</a></li>
+                    <li class="page-item"><a class="page-link" href="?page=1{% if q %}&q={{ q|urlencode }}{% endif %}{% if only_pending %}&pending=1{% endif %}">&laquo;</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if only_pending %}&pending=1{% endif %}">Өмнөх</a></li>
                 {% endif %}
                 <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
                 {% if page_obj.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Дараах</a></li>
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q|urlencode }}{% endif %}">&raquo;</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if only_pending %}&pending=1{% endif %}">Дараах</a></li>
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if only_pending %}&pending=1{% endif %}">&raquo;</a></li>
                 {% endif %}
             </ul>
         </nav>
