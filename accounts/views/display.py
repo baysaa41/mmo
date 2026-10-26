@@ -198,7 +198,7 @@ def group_users_excel(request, group_id):
     ws = wb.active
     ws.title = group.name[:31]
 
-    headers = ['№', 'ID', 'Хэрэглэгчийн нэр', 'Овог', 'Нэр', 'Аймаг/Дүүрэг', 'Сургууль', 'Анги', 'Регистр', 'Утас', 'И-мэйл']
+    headers = ['№', 'ID', 'Хэрэглэгчийн нэр', 'Овог', 'Нэр', 'Аймаг/Дүүрэг', 'Сургууль', 'Анги', 'Регистр', 'Утас', 'Имэйл']
     header_font = Font(bold=True)
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),

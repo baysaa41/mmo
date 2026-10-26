@@ -59,9 +59,9 @@ def send_email_to_schools(request):
                     fail_count += 1
 
             if sent_count > 0:
-                messages.success(request, f"{sent_count} сургууль руу и-мэйлийг амжилттай илгээлээ.")
+                messages.success(request, f"{sent_count} сургууль руу имэйлийг амжилттай илгээлээ.")
             if fail_count > 0:
-                messages.warning(request, f"{fail_count} сургууль руу и-мэйл илгээхэд алдаа гарлаа.")
+                messages.warning(request, f"{fail_count} сургууль руу имэйл илгээхэд алдаа гарлаа.")
 
             print(sent_count,fail_count)
 

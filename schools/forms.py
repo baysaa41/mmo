@@ -61,7 +61,7 @@ class AddUserForm(forms.ModelForm):
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if not email:
-            raise forms.ValidationError('И-мэйл хаяг заавал шаардлагатай.')
+            raise forms.ValidationError('Имэйл хаяг заавал шаардлагатай.')
 
         validator = EmailValidator()
         try:

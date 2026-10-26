@@ -72,8 +72,8 @@ def email_bulk_confirm_view(request, token):
         messages.success(request, f'{len(done)} аккаунтын имэйл солигдлоо. Шинэ хаяг бүр рүү нууц үг '
                                   'тохируулах холбоос илгээж байна.')
     if rejected:
-        messages.warning(request, f'{len(rejected)} мөр баталгаажуулах үед татгалзагдлаа (хэн нэгэн хаягийг '
-                                  'завсар авсан байж болно). Файлаа дахин оруулж шалгана уу.')
+        messages.warning(request, f'{len(rejected)} мөр баталгаажуулах үед татгалзагдлаа (энэ хооронд хаягийг '
+                                  'өөр аккаунт авсан байж болно). Файлаа дахин оруулж шалгана уу.')
     if not done and not rejected:
         messages.info(request, 'Өөрчлөх зүйл алга.')
     return redirect('round1_info', token=token)

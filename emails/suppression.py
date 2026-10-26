@@ -16,7 +16,7 @@ from .models import EmailBounce
 logger = logging.getLogger(__name__)
 
 # Хүргэгдэхгүй гэж үзэх bounce төрөл. `soft` (түр зуурын: хайрцаг дүүрсэн г.м.)
-# ороогүй — тэр нь хожим засрах боломжтой.
+# ороогүй — тэр нь хожим засагдах боломжтой.
 UNDELIVERABLE_BOUNCE_TYPES = ('hard', 'complaint')
 
 # Монгол хэрэглэгчдийн хамгийн их алдах домэйнууд. Зөвхөн ТОДОРХОЙ алдааг

@@ -43,7 +43,7 @@ class Command(BaseCommand):
 
                     if created:
                         # Шинэ хэрэглэгч үүссэн бол
-                        # Бүртгэгч багшийн и-мэйл, гар утсыг хуулах
+                        # Бүртгэгч багшийн имэйл, гар утсыг хуулах
                         if school.user:
                             user.email = school.user.email or ''
                             # Анхны нууц үг үүсгэх

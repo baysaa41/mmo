@@ -509,7 +509,7 @@ def answers_view(request, olympiad_id):
 
 # views_results.py файлд нэмнэ үү
 # (Энэ файл дахь бусад import-ууд (pandas, User, School г.м)
-# хэдийнэ байгаа тул шинээр import хийх шаардлагагүй)
+# хэдийн байгаа тул шинээр import хийх шаардлагагүй)
 
 # views_results.py файл дахь функцээ энэ кодоор солино уу
 
@@ -665,7 +665,7 @@ def first_round_stats(request):
     year_id = request.GET.get('year', school_year.id if school_year else None)
     year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
-    # Олимпиад сонгох (заавал биш, сонгоогүй бол хамгийг багтаана)
+    # Олимпиад сонгох (заавал биш, сонгоогүй бол бүгдийг багтаана)
     olympiad_id = request.GET.get('olympiad', None)
 
     prev = SchoolYear.objects.filter(pk=year.id - 1).first() if year else None
@@ -708,7 +708,7 @@ def first_round_stats(request):
         # Сурагчдын тоо (давхардсан тоолохгүйгээр)
         student_count = province_results.values('contestant').distinct().count()
 
-        # Хэрэв оролцсон бол жагсаалтанд нэмэх
+        # Хэрэв оролцсон бол жагсаалтад нэмэх
         if school_count > 0 or student_count > 0:
             province_stats.append({
                 'province': province,

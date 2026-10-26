@@ -887,7 +887,7 @@ def _perform_merge(merge_request, field_selections=None, conflict_resolutions=No
         duplicate_users = users[1:]
     merge_request.primary_user = primary_user
 
-    # Устах хэрэглэгчийн мэдээллийг мэдэгдэлд зориулж хадгална
+    # Устгах хэрэглэгчийн мэдээллийг мэдэгдэлд зориулж хадгална
     merged_accounts = [(u.id, u.username, u.email) for u in duplicate_users]
 
     # Ensure primary user has UserMeta
@@ -1000,7 +1000,7 @@ def _perform_merge(merge_request, field_selections=None, conflict_resolutions=No
         ScoreSheet.objects.filter(user=dup_user).update(user=primary_user)
         School.objects.filter(user=dup_user).update(user=primary_user)
         School.objects.filter(manager=dup_user).update(manager=primary_user)
-        # requesting_user нь CASCADE тул шилжүүлэхгүй бол хүсэлт өөрөө устана
+        # requesting_user нь CASCADE тул шилжүүлэхгүй бол хүсэлт өөрөө устгагдана
         UserMergeRequest.objects.filter(requesting_user=dup_user).update(requesting_user=primary_user)
         if merge_request.requesting_user_id == dup_user.id:
             merge_request.requesting_user = primary_user

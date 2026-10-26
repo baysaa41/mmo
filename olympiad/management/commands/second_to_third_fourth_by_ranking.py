@@ -142,7 +142,7 @@ def select_for_third_round(df, quota_config):
 
             quota = int(quota)
 
-            # Тухайн аймаг, ангиллалын сурагчдыг сонгох
+            # Тухайн аймаг, ангиллын сурагчдыг сонгох
             category_df = region_df[region_df['category'] == category].copy()
 
             if len(category_df) == 0:
@@ -222,7 +222,7 @@ def select_for_fourth_round(df, quota_config, max_per_province=2):
             # 4-р давааны хувьд max_per_province-оос хэтрэхгүй
             quota = min(int(quota), max_per_province)
 
-            # Тухайн аймаг, ангиллалын сурагчдыг сонгох
+            # Тухайн аймаг, ангиллын сурагчдыг сонгох
             category_df = region_df[region_df['category'] == category].copy()
 
             if len(category_df) == 0:
@@ -562,7 +562,7 @@ class Command(BaseCommand):
                     quota = int(row[category]) if pd.notna(row[category]) else 0
                     region_name = region_names.get(region_id, f'ID={region_id}')
 
-                    # Энэ аймаг, ангиллалаас хэдэн сурагч сонгогдсон
+                    # Энэ аймаг, ангиллаас хэдэн сурагч сонгогдсон
                     selected_count = len(combined_third[
                         (combined_third['region_id'] == region_id) &
                         (combined_third['category'] == category)

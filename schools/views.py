@@ -77,7 +77,7 @@ def _managed_student_school(request_user, target_user):
 @login_required
 def my_managed_schools_view(request):
     """
-    Миний удардаж байгаа сургуулиуд - Shows schools where user is moderator or manager
+    Миний удирдаж байгаа сургуулиуд - Shows schools where user is moderator or manager
     """
     schools_moderating = request.user.moderating.all()
     schools_managing = request.user.managing.all()
@@ -443,12 +443,12 @@ def manage_school_by_level(request, school_id, level_id):
                         messages.success(
                             request,
                             f"'{new_user.get_full_name()}' хэрэглэгчийг '{level_name}' хэсэгт "
-                            f"амжилттай нэмж, нэвтрэх мэдээллийг и-мэйлээр илгээлээ."
+                            f"амжилттай нэмж, нэвтрэх мэдээллийг имэйлээр илгээлээ."
                         )
                     else:
                         messages.warning(
                             request,
-                            f"Хэрэглэгч үүссэн ч и-мэйл илгээхэд алдаа гарлаа. "
+                            f"Хэрэглэгч үүссэн ч имэйл илгээхэд алдаа гарлаа. "
                             f"Та дахин илгээх эсвэл password reset хийлгэнэ үү."
                         )
 

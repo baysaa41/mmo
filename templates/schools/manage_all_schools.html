@@ -67,7 +67,7 @@
                                         <div><label>Хэрэглэгчийн нэр:</label> {{ school.user.username }}</div>
                                         <div><label>Овог, нэр:</label> {{ school.user.last_name }} {{ school.user.first_name|upper }}</div>
                                         <div><label>Гар утас:</label> {{ school.user.data.mobile|default:"-" }}</div>
-                                        <div><label>И-мэйл:</label> {{ school.user.email }}{% include 'schools/partials/_email_problem_badge.html' with problem=school.moderator_email_problem %}</div>
+                                        <div><label>Имэйл:</label> {{ school.user.email }}{% include 'schools/partials/_email_problem_badge.html' with problem=school.moderator_email_problem %}</div>
                                     {% else %}
                                         <span class="text-muted">Тодорхойгүй</span>
                                     {% endif %}
@@ -149,7 +149,7 @@
                                         <div><label>Хэрэглэгчийн нэр:</label> {{ school.manager.username }}</div>
                                         <div><label>Овог, нэр:</label> {{ school.manager.last_name }} {{ school.manager.first_name|upper }}</div>
                                         <div><label>Гар утас:</label> {{ school.manager.data.mobile|default:"-" }}</div>
-                                        <div><label>И-мэйл:</label> {{ school.manager.email }}{% include 'schools/partials/_email_problem_badge.html' with problem=school.manager_email_problem %}</div>
+                                        <div><label>Имэйл:</label> {{ school.manager.email }}{% include 'schools/partials/_email_problem_badge.html' with problem=school.manager_email_problem %}</div>
                                         {% if school.manager_email_same_as_moderator %}
                                             <div class="alert alert-warning py-1 px-2 mt-1 mb-0 small">
                                                 ⚠ Бүртгэгч багшийн имэйлтэй ижил. Удирдлагын өөрийн имэйлийг оруулна уу — эс бөгөөс бүртгэгч багш солигдоход удирдлагад мэдэгдэл очихгүй.

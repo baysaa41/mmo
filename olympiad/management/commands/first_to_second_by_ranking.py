@@ -143,7 +143,7 @@ def select_next_stage(df, region_type, additional_quota_config=None):
         for res_df in result:
             selected_user_ids.update(res_df['user_id'].tolist())
 
-        # Ангиллалын багануудыг тодорхойлох (region_id-аас бусад бүх багана)
+        # Ангиллын багануудыг тодорхойлох (region_id-аас бусад бүх багана)
         category_columns = [col for col in additional_quota_config.columns if col != 'region_id']
 
         # Тохиргооны мөр бүрээр (аймаг бүрээр) ажиллах
@@ -155,7 +155,7 @@ def select_next_stage(df, region_type, additional_quota_config=None):
                 if pd.notna(row[category]) and row[category] > 0:
                     threshold_score = float(row[category])
 
-                    # Тухайн аймаг, ангиллалын сурагчдыг сонгох
+                    # Тухайн аймаг, ангиллын сурагчдыг сонгох
                     mask = (
                         (df['region_id'] == region_id) &
                         (df['category'] == category) &
@@ -379,7 +379,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  Аймгийн оролцогч: {len(df_aimag)}')
             self.stdout.write(f'  Дүүргийн оролцогч: {len(df_duureg)}')
 
-            # Тухайн ангиллалын нэмэлт эрхийн тохиргоог бэлтгэх
+            # Тухайн ангиллын нэмэлт эрхийн тохиргоог бэлтгэх
             category_quota_config = None
             if quota_config is not None and category in quota_config.columns:
                 category_quota_config = quota_config[['region_id', category]].copy()

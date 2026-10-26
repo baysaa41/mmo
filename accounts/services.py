@@ -18,7 +18,7 @@ def generate_styled_user_dataframe_html(users_queryset, is_staff=False):
         rename_map = {
             'id': 'ID', 'first_name': 'Нэр', 'last_name': 'Овог', 'username': 'Хэрэглэгчийн нэр',
             'data__province__name': 'Аймаг/Дүүрэг', 'data__school__name': 'Cургууль', 'data__grade__name': 'Анги',
-            'data__reg_num': 'Регистрын дугаар', 'data__mobile': 'Гар утас', 'email': 'И-мэйл'
+            'data__reg_num': 'Регистрын дугаар', 'data__mobile': 'Гар утас', 'email': 'Имэйл'
         }
     else:
         fieldnames = ['id', 'username', 'last_name', 'first_name', 'data__province__name',

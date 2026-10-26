@@ -40,7 +40,7 @@ class Command(BaseCommand):
             problem_count = o.problem_set.count()
             self.stdout.write(
                 f"  - [{o.id}] {o.name or '(no name)'} | "
-                f"Тайлбар: {o.description or '(no description)'} | Бодлогоын тоо: {problem_count}"
+                f"Тайлбар: {o.description or '(no description)'} | Бодлогын тоо: {problem_count}"
             )
 
         # --- Хэрэглэгчээс баталгаажуулалт авах ---

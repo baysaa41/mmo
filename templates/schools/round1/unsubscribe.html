@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container my-5" style="max-width:640px">
   <h4>Имэйл мэдээллээс татгалзах</h4>
-  <p><strong>{{ email }}</strong> хаягт ММО-ийн мэдээллийн имэйл илгээхээ зогсооно.</p>
+  <p><strong>{{ email }}</strong> хаяг руу ММО-ийн мэдээллийн имэйл илгээхийг зогсооно.</p>
   <form method="post" action="{% url 'round1_unsubscribe' token %}">
     <input type="hidden" name="confirm" value="1">
     <button type="submit" class="btn btn-danger">Татгалзах</button>
