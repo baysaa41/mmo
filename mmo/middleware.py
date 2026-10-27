@@ -57,7 +57,15 @@ class MaintenanceModeMiddleware:
                 '/password_change/',  # Password change
                 '/accounts/password/',  # User password change
                 '/o/',  # OAuth2 endpoints
+                # OAuth2 Bearer токеноор хамгаалагдсан (mathminds.club); request.user нь anonymous тул тусад нь зөвшөөрнө
+                '/accounts/user-info/',
+                '/accounts/user-profile/',
+                '/emails/sns/',  # SES-ийн хүргэлт/нээлт/bounce мэдэгдэл (Amazon SNS)
+                '/emails/unsubscribe/',
             ]
+            # Имэйлийн нэг товшилтоор татгалзах холбоос (List-Unsubscribe) хаалттай үед ч ажиллах ёстой
+            if request.path.startswith('/schools/r1/') and request.path.endswith('/unsubscribe/'):
+                return self.get_response(request)
 
             # Debug logging
             logger.info(f"Maintenance mode: checking path {request.path}")
