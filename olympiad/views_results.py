@@ -691,29 +691,26 @@ def first_round_stats(request):
     # Бүх аймгийг авах
     provinces = Province.objects.all().order_by('name')
 
-    # Аймаг бүрээр статистик бэлтгэх
+    # Аймаг бүрээр статистик бэлтгэх — нэг query-ээр бүлэглэнэ (аймаг бүрт тусад нь тоолбол timeout болдог)
+    counts = {
+        r['contestant__data__province']: r
+        for r in results_query.values('contestant__data__province').annotate(
+            # Сургууль, сурагчийн тоо (давхардсан тоолохгүйгээр; сургуульгүйг тоолохгүй)
+            school_count=Count('contestant__data__school', distinct=True),
+            student_count=Count('contestant', distinct=True),
+        )
+    }
     province_stats = []
 
     for province in provinces:
-        # Энэ аймгаас оролцсон Results-үүд
-        province_results = results_query.filter(
-            contestant__data__province=province
-        )
-
-        # Сургуулийн тоо (давхардсан тоолохгүйгээр)
-        school_count = province_results.filter(
-            contestant__data__school__isnull=False
-        ).values('contestant__data__school').distinct().count()
-
-        # Сурагчдын тоо (давхардсан тоолохгүйгээр)
-        student_count = province_results.values('contestant').distinct().count()
+        r = counts.get(province.id)
 
         # Хэрэв оролцсон бол жагсаалтад нэмэх
-        if school_count > 0 or student_count > 0:
+        if r and (r['school_count'] > 0 or r['student_count'] > 0):
             province_stats.append({
                 'province': province,
-                'school_count': school_count,
-                'student_count': student_count,
+                'school_count': r['school_count'],
+                'student_count': r['student_count'],
             })
 
     # Нийт тоо
