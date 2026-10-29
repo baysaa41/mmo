@@ -18,6 +18,8 @@ class School(models.Model):
     is_sent_confirmation = models.BooleanField(default=False)
     is_received_confirmation = models.BooleanField(default=False)
     is_official_participation = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True, verbose_name="Идэвхтэй",
+                                    help_text="Татан буугдсан/хаагдсан сургуулийг идэвхгүй болгоно")
     official_levels = models.ManyToManyField(
         "accounts.Level",
         blank=True,

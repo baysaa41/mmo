@@ -3,8 +3,9 @@ from .models import School, StudentTransfer
 # Register your models here.
 
 class SchoolAdmin(admin.ModelAdmin):
-    fields = ('name','province','group', 'user', 'manager')
-    list_display = ('name','province', 'user', 'manager')
+    fields = ('name','province','group', 'user', 'manager', 'is_active')
+    list_display = ('name','province', 'user', 'manager', 'is_active')
+    list_filter = ('is_active',)
     list_select_related = ('province', 'user', 'manager')
     autocomplete_fields = ['user', 'manager']
 
