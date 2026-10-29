@@ -1,3 +1,4 @@
+import sys
 from django.contrib.auth.models import Group, User
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -537,6 +538,34 @@ class ImportAnswerSheetTests(SchoolAccessTestBase):
         self.assertLess(run(40), 20)  # бүгд шинээр үүснэ
         self.assertEqual(run(5), run(40))  # бүгд шинэчлэгдэнэ
 
+    def test_concurrent_upload_does_not_duplicate(self):
+        """Ижил файлыг зэрэг илгээхэд (товч давхар дарах) Result давхардахгүй."""
+        from unittest import mock
+        from django.utils import timezone
+        from olympiad.models import Result
+        self.client.force_login(self.moderator_b)
+        real_now = timezone.now
+        done = []
+
+        def competing_request_commits_first():
+            # Эхний уншилтын дараа өөр хүсэлт ижил мөрийг үүсгэсэн мэт
+            # Зөвхөн view-ийн to_create бэлэн болсны дараах дуудлага дээр
+            frame = sys._getframe(1)
+            while frame and frame.f_code.co_name != 'import_school_answer_sheet':
+                frame = frame.f_back
+            if not done and frame and frame.f_locals.get('to_create'):
+                done.append(1)
+                Result.objects.create(contestant=self.student2, olympiad=self.olympiad,
+                                      problem=self.p1, answer=1)
+            return real_now()
+
+        with mock.patch('schools.views.timezone.now', side_effect=competing_request_commits_first):
+            self.client.post(self.url, {'file': self.make_excel([[self.student2.id, 5, 7]])})
+
+        rows = Result.objects.filter(olympiad=self.olympiad, contestant=self.student2)
+        self.assertEqual(rows.count(), 2)
+        self.assertEqual(dict(rows.values_list('problem_id', 'answer')), {self.p1.id: 5, self.p2.id: 7})
+
     def student_a_like(self):
         return make_user('other_school_student', school=self.school_a)
 
@@ -1065,11 +1094,16 @@ class MaintenanceModeAccessTests(SchoolAccessTestBase):
         self.middleware = MaintenanceModeMiddleware(lambda request: HttpResponse('ok'))
         self.factory = RequestFactory()
 
-    def status_for(self, user=None):
+    def status_for(self, user=None, path='/schools/'):
         from django.contrib.auth.models import AnonymousUser
-        request = self.factory.get('/schools/')
+        request = self.factory.get(path)
         request.user = user or AnonymousUser()
         return self.middleware(request).status_code
+
+    def test_email_webhooks_and_unsubscribe_pass_for_anonymous(self):
+        for path in ('/emails/sns/notification/', '/emails/unsubscribe/', '/schools/r1/abc/unsubscribe/'):
+            self.assertEqual(self.status_for(path=path), 200, path)
+        self.assertEqual(self.status_for(path='/schools/r1/abc/'), 503)
 
     def test_anonymous_and_student_blocked(self):
         self.assertEqual(self.status_for(), 503)

@@ -847,6 +847,21 @@ def import_school_answer_sheet(request, school_id, olympiad_id):
                     r.date = now
 
                 with transaction.atomic():
+                    # Нэг файлыг зэрэг хэд илгээхэд (товч давхар дарах) Result давхардаж
+                    # байсан тул сургуулиар түгжиж, хооронд нь үүссэнийг шинэчлэлт болгоно
+                    School.objects.select_for_update().filter(pk=school.pk).exists()
+                    for r in Result.objects.filter(
+                        olympiad=olympiad,
+                        contestant_id__in={uid for uid, _ in to_create},
+                        problem_id__in={pid for _, pid in to_create},
+                    ):
+                        new = to_create.pop((r.contestant_id, r.problem_id), None)
+                        if new is not None:
+                            r.answer = new.answer
+                            r.date = now
+                            to_update.append(r)
+                            created_count -= 1
+                            updated_count += 1
                     _bulk_update_result_answers(to_update, now)
                     Result.objects.bulk_create(to_create.values(), batch_size=1000)
 
