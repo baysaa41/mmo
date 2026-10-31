@@ -63,6 +63,9 @@
                     <div class="card h-100">
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title text-center">2. Дүн хуулах</h5>
+                            {% if upload_closed %}
+                            <p class="text-center text-danger">Хариулт оруулах хугацаа дууссан. Засвар байвал registration@mmo.mn хаягаар ирүүлнэ үү.</p>
+                            {% else %}
                             <p class="text-center">Бөглөсөн Excel файлаа сонгож системд оруулах.</p>
                             <div class="mt-auto">
                                 <form action="{% url 'import_school_answer_sheet' school.id olympiad.id %}"
@@ -77,6 +80,7 @@
                                     </div>
                                 </form>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

@@ -1306,6 +1306,10 @@ def import_province_answer_sheet(request, province_id, olympiad_id):
         messages.error(request, 'Хандах эрхгүй.')
         return redirect('my_managed_provinces')
 
+    if olympiad.is_answer_upload_closed(request.user):
+        messages.error(request, 'Хариулт оруулах хугацаа дууссан. Засвар байвал registration@mmo.mn хаягаар ирүүлнэ үү.')
+        return redirect('province_olympiad_view', province_id=province_id, olympiad_id=olympiad_id)
+
     if request.method == 'POST':
         from .forms import UploadExcelForm
         form = UploadExcelForm(request.POST, request.FILES)
@@ -2308,6 +2312,10 @@ def zone_import_answer_sheet(request, zone_id, olympiad_id):
     if not user_can_manage_zone(request.user, zone):
         messages.error(request, 'Хандах эрхгүй.')
         return redirect('my_managed_zones')
+
+    if olympiad.is_answer_upload_closed(request.user):
+        messages.error(request, 'Хариулт оруулах хугацаа дууссан. Засвар байвал registration@mmo.mn хаягаар ирүүлнэ үү.')
+        return redirect('zone_olympiad_view', zone_id=zone_id, olympiad_id=olympiad_id)
 
     if request.method == 'POST':
         from .forms import UploadExcelForm

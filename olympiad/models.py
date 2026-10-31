@@ -62,6 +62,10 @@ class Olympiad(models.Model):
     is_open = models.BooleanField(default=True)
     is_grading = models.BooleanField(default=False)
     is_problems_confidential = models.BooleanField(default=False)
+    answer_upload_deadline = models.DateTimeField(
+        null=True, blank=True, verbose_name="Хариулт оруулах эцсийн хугацаа",
+        help_text="Энэ хугацаанаас хойш staff-аас бусад нь хариултын хуудас upload хийх боломжгүй. Хоосон бол хязгааргүй."
+    )
     rounds = [
         (0, 'Бусад олимпиад'),
         (1, 'Сургуулийн олимпиад'),
@@ -107,6 +111,12 @@ class Olympiad(models.Model):
     def is_active(self):
         now = timezone.now()
         return bool(self.start_time and self.end_time and self.start_time <= now <= self.end_time)
+
+    def is_answer_upload_closed(self, user=None):
+        """Хариултын хуудас upload хийх хугацаа дууссан эсэх (staff-д үргэлж нээлттэй)."""
+        if user is not None and user.is_staff:
+            return False
+        return bool(self.answer_upload_deadline and timezone.now() >= self.answer_upload_deadline)
 
     def is_started(self):
         now = timezone.now()

@@ -610,6 +610,7 @@ def school_olympiad_view(request, school_id, olympiad_id):
         'olympiad': olympiad,
         'selected_level': selected_level,
         'upload_form': upload_form,
+        'upload_closed': olympiad.is_answer_upload_closed(request.user),
     }
     return render(request, 'schools/school_level_olympiad_detail.html', context)
 
@@ -737,6 +738,10 @@ def import_school_answer_sheet(request, school_id, olympiad_id):
     if not school.user_has_access(request.user):
         messages.error(request, "Та энэ үйлдлийг хийх эрхгүй.")
         return redirect('school_dashboard', school_id=school_id)
+
+    if olympiad.is_answer_upload_closed(request.user):
+        messages.error(request, "Хариулт оруулах хугацаа дууссан. Засвар байвал registration@mmo.mn хаягаар ирүүлнэ үү.")
+        return redirect('school_olympiad_view', school_id=school_id, olympiad_id=olympiad_id)
 
     if request.method == 'POST':
         form = UploadExcelForm(request.POST, request.FILES)

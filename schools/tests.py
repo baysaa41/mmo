@@ -566,6 +566,26 @@ class ImportAnswerSheetTests(SchoolAccessTestBase):
         self.assertEqual(rows.count(), 2)
         self.assertEqual(dict(rows.values_list('problem_id', 'answer')), {self.p1.id: 5, self.p2.id: 7})
 
+    def test_upload_closed_after_deadline(self):
+        """Хугацаа дууссаны дараа бүртгэгч оруулж чадахгүй, staff оруулж чадна."""
+        from datetime import timedelta
+        from django.utils import timezone
+        from olympiad.models import Result
+        self.olympiad.answer_upload_deadline = timezone.now() - timedelta(minutes=1)
+        self.olympiad.save()
+        self.client.force_login(self.moderator_b)
+        page = self.client.get(reverse('school_olympiad_view', args=[self.school_b.id, self.olympiad.id]))
+        self.assertTrue(page.context['upload_closed'])
+        self.assertNotContains(page, self.url)
+
+        self.client.post(self.url, {'file': self.make_excel([[self.student2.id, 5, 7]])})
+        self.assertFalse(Result.objects.filter(contestant=self.student2).exists())
+
+        self.moderator_b.is_staff = True
+        self.moderator_b.save()
+        self.client.post(self.url, {'file': self.make_excel([[self.student2.id, 5, 7]])})
+        self.assertEqual(Result.objects.filter(contestant=self.student2).count(), 2)
+
     def student_a_like(self):
         return make_user('other_school_student', school=self.school_a)
 
