@@ -9,6 +9,7 @@ from django.contrib.auth.models import User, Group
 from olympiad.models import Olympiad, Problem, Result, ScoreSheet
 from schools.models import School
 from accounts.models import UserMeta, Province, Grade, Level
+from olympiad.management.placeholder_guard import NeedsReview, pick_unique, print_review_summary, record_review, require_school
 
 class Command(BaseCommand):
     help = 'Заасан хавтас доторх бүх Excel файлаас олимпиадын оноог импортолно.'
@@ -121,12 +122,11 @@ class Command(BaseCommand):
                 if participated_in_round1:
                     round1_candidates.append(user)
 
-            if round1_candidates:
-                self.stdout.write(f"  Round 1-д орсон {len(round1_candidates)} сурагч байна, эхнийг сонгоно")
+            # Нэг л round 1-ийн оролцогч байвал түүнийг; үгүй бол эхнийхийг сонгохгүй — review (placeholder_guard)
+            if len(round1_candidates) == 1:
+                self.stdout.write(f"  Round 1-д орсон 1 сурагч байна: ID={round1_candidates[0].id}")
                 return round1_candidates[0]
-            else:
-                self.stdout.write(f"  Round 1-д орсон сурагч байхгүй, эхнийг сонгоно")
-                return candidates[0]
+            return pick_unique(round1_candidates or candidates)
 
         # 1 л сурагч байвал шууд буцаана
         if len(candidates) == 1:
@@ -198,8 +198,8 @@ class Command(BaseCommand):
             except School.DoesNotExist:
                 pass
 
-        if not school:
-            school = self.get_or_create_busad_school(user_province)
+        # Шинэ түр бүртгэлд сургууль заавал — «Бусад» руу хийхгүй (placeholder_guard)
+        require_school(school)
 
         # User үүсгэх
         with transaction.atomic():
@@ -213,6 +213,8 @@ class Command(BaseCommand):
             # UserMeta үүсгэх
             UserMeta.objects.create(
                 user=user,
+                is_placeholder=True,
+                placeholder_source=UserMeta.PlaceholderSource.AUTO_USER,
                 province=user_province,
                 level=level,
                 grade=grade,
@@ -231,6 +233,16 @@ class Command(BaseCommand):
         return user
 
     def get_user_for_row(self, row, olympiad, province, sheet_name, force_import):
+        """_get_user_for_row + хамгаалалт: тодорхойгүй мөрийг алгасаж (None) review-д бичнэ."""
+        try:
+            return self._get_user_for_row(row, olympiad, province, sheet_name, force_import)
+        except NeedsReview as e:
+            record_review(self, e, id=row.get('ID', 'N/A'),
+                          name=f"{row.get('Овог', '')} {row.get('Нэр', '')}".strip(),
+                          province_id=getattr(province, 'id', province))
+            return None
+
+    def _get_user_for_row(self, row, olympiad, province, sheet_name, force_import):
         """
         Мөр бүрийн хувьд хэрэглэгч олох эсвэл үүсгэх логик.
 
@@ -451,6 +463,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"'{filename}' файлыг боловсруулахад алдаа гарлаа: {e}"))
                 self.stdout.write(traceback.format_exc())
 
+        print_review_summary(self)
         self.stdout.write(self.style.SUCCESS(
             f"\n{'='*80}\n"
             f"ЭЦСИЙН ТАЙЛАН\n"

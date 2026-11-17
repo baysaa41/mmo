@@ -2,6 +2,8 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.db import transaction
 
+from accounts.placeholders import protected_from_deletion_q
+
 
 class Command(BaseCommand):
     help = 'auto-user@mmo.mn email-тэй хэрэглэгчдийг бүх холбоотой мэдээллийн хамт устгана'
@@ -23,8 +25,15 @@ class Command(BaseCommand):
         confirm = options['confirm']
 
         # auto-user@mmo.mn email-тэй хэрэглэгчдийг олох
-        auto_users = User.objects.filter(email='auto-user@mmo.mn')
+        # Системийн түр бүртгэл (placeholder) эсвэл олимпиадын дүн/шагнал/оноо хуудастай хэрэглэгчийг
+        # ХЭЗЭЭ Ч устгахгүй: ≈205k дүн устах эрсдэлтэй (accounts/placeholders.py).
+        candidates = User.objects.filter(email='auto-user@mmo.mn')
+        protected = candidates.filter(protected_from_deletion_q()).distinct().count()
+        auto_users = candidates.exclude(protected_from_deletion_q())
         user_count = auto_users.count()
+        if protected:
+            self.stdout.write(self.style.WARNING(
+                f'{protected} хэрэглэгч хамгаалагдсан (placeholder эсвэл олимпиадын өгөгдөлтэй) — устгахгүй.'))
 
         if user_count == 0:
             self.stdout.write(self.style.SUCCESS('auto-user@mmo.mn email-тэй хэрэглэгч олдсонгүй.'))

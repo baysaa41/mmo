@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 
+from accounts.placeholders import protected_from_deletion_q
+
 class Command(BaseCommand):
     help = 'Deletes inactive users who have not logged in for a specified number of days and have no results.'
 
@@ -42,9 +44,9 @@ class Command(BaseCommand):
             is_superuser=False,
             last_login__lt=cutoff_date
         ).exclude(
-            # Олимпиадын дүнгийн моделтой холбох шаардлагатай.
-            # Жишээ: `contest_results` нь User моделтой холбогдсон `Result`-ийн `related_name`
-            contest_results__isnull=False
+            # Placeholder эсвэл олимпиадын дүн (Result), шагнал (Award), оноо хуудас (ScoreSheet)-тай
+            # хэрэглэгчийг хэзээ ч устгахгүй (accounts/placeholders.py).
+            protected_from_deletion_q()
         )
 
         user_count = inactive_users.count()

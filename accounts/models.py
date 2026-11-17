@@ -65,6 +65,17 @@ class UserMeta(models.Model):
     wants_mathminds = models.BooleanField(null=True, blank=True, verbose_name='MathMinds-ийн санал авах')
     interests_updated_at = models.DateTimeField(null=True, blank=True)
 
+    class PlaceholderSource(models.TextChoices):
+        MMO60 = 'mmo60', 'ММО-60 (mmo60official)'
+        AUTO_USER = 'auto_user', 'Дүнгийн импорт (auto-user)'
+        NO_EMAIL = 'no_email', 'И-мэйлгүй, нэвтэрч байгаагүй'
+
+    # Дүн импортлоход сурагч олдоогүй үед системээс үүсгэсэн түр бүртгэл (accounts/placeholders.py).
+    # Устгахгүй — бодит хэрэглэгчид нэгтгэх хүртэл дүнг хадгална.
+    is_placeholder = models.BooleanField(default=False, db_index=True, verbose_name='Системийн түр бүртгэл')
+    placeholder_source = models.CharField(max_length=20, blank=True, default='',
+                                          choices=PlaceholderSource.choices, verbose_name='Түр бүртгэлийн эх')
+
     class Meta:
         indexes = [
             # models.Index(fields=['school']),

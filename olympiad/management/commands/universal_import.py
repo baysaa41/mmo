@@ -1,6 +1,8 @@
 import os
 import re
 import pandas as pd
+
+from olympiad.management.placeholder_guard import NeedsReview, pick_unique, record_review, require_school, print_review_summary
 import numpy as np
 from datetime import datetime
 from django.core.management.base import BaseCommand
@@ -417,6 +419,15 @@ class Command(BaseCommand):
         return max(direct_score, romanized_score, partial_score)
 
     def get_user_smart(self, uid, last_name, first_name, school_name=None, province_id=None, dry_run=False, category=None):
+        """_get_user_smart + хамгаалалт: тодорхойгүй мөрийг review-д гаргаж None буцаана."""
+        try:
+            return self._get_user_smart(uid, last_name, first_name, school_name, province_id, dry_run, category)
+        except NeedsReview as e:
+            record_review(self, e, id=uid if pd.notna(uid) else 'N/A',
+                          name=f"{last_name or ''} {first_name or ''}".strip(), province_id=province_id)
+            return None
+
+    def _get_user_smart(self, uid, last_name, first_name, school_name=None, province_id=None, dry_run=False, category=None):
         """
         Хэрэглэгч олох - ID, овог нэр, олон янзын форматыг дэмжинэ
         Хэрэв олдохгүй бол шинэ хэрэглэгч үүсгэнэ (dry_run=False үед)
@@ -520,7 +531,7 @@ class Command(BaseCommand):
                                             ]
 
                                             if matching_users:
-                                                selected_user = matching_users[0]
+                                                selected_user = pick_unique(matching_users)
                                                 self.stdout.write(self.style.SUCCESS(
                                                     f"      ✅ Province-д овог нэр БА level таарах хэрэглэгч олдлоо: {selected_user.username} (ID: {selected_user.id}, Level: {selected_user.data.level.name if selected_user.data and selected_user.data.level else 'N/A'})"
                                                 ))
@@ -531,14 +542,14 @@ class Command(BaseCommand):
                                                 ))
                                         else:
                                             # Category-аас level олдсонгүй - анхны хэрэглэгчийг авах
-                                            selected_user = candidates.first()
+                                            selected_user = pick_unique(candidates)
                                             self.stdout.write(self.style.SUCCESS(
                                                 f"      ✅ Province-д ижил нэртэй хэрэглэгч олдлоо: {selected_user.username} (ID: {selected_user.id})"
                                             ))
                                             return selected_user
                                     else:
                                         # Category байхгүй - анхны хэрэглэгчийг авах
-                                        selected_user = candidates.first()
+                                        selected_user = pick_unique(candidates)
                                         self.stdout.write(self.style.SUCCESS(
                                             f"      ✅ Province-д ижил нэртэй хэрэглэгч олдлоо: {selected_user.username} (ID: {selected_user.id})"
                                         ))
@@ -579,12 +590,17 @@ class Command(BaseCommand):
                             ]
 
                             if matching_users:
-                                return matching_users[0]
+                                return pick_unique(matching_users)
 
                     # Category байхгүй эсвэл level таарахгүй бол эхний хэрэглэгчийг буцаах
-                    return candidates.first()
+                    return pick_unique(candidates)
 
-        # 3. Хэрэглэгч олдоогүй - шинэ хэрэглэгч үүсгэх
+        # 3. Хэрэглэгч олдоогүй - шинэ хэрэглэгч үүсгэх (сургууль тодорхой үед л — placeholder_guard)
+        if last_name and first_name:
+            found_school = None
+            if school_name and pd.notna(school_name) and str(school_name).strip():
+                found_school, _ = self.find_school_by_name(str(school_name).strip(), province_id)
+            require_school(found_school)
         if last_name and first_name and not dry_run:
             # Түр username-тэй хэрэглэгч үүсгэх (ID авахын тулд)
             import time
@@ -635,6 +651,8 @@ class Command(BaseCommand):
             UserMeta.objects.create(
                 user=user,
                 reg_num='',  # Default утга
+                is_placeholder=True,
+                placeholder_source=UserMeta.PlaceholderSource.AUTO_USER,
                 province_id=province_id,  # Зөвхөн параметрээс авсан province
                 school=school,
                 grade_id=grade_id,
@@ -1385,6 +1403,7 @@ class Command(BaseCommand):
 
 
     def print_summary(self, dry_run):
+        print_review_summary(self)
         """Эцсийн дүгнэлт хэвлэх"""
         duration = (datetime.now() - self.stats['start_time']).total_seconds()
 
