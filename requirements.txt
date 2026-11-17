@@ -127,3 +127,4 @@ urllib3==1.26.14
 typing_extensions==4.15.0
 wcwidth==0.2.13
 python-dotenv==1.2.3
+sentry-sdk[django,celery]==2.75.0
