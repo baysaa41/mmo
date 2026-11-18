@@ -16,6 +16,7 @@ import logging
 from .models import EmailCampaign, EmailUnsubscribe, EmailRecipient, EmailBounce
 from .sns import is_sns_url, record_ses_event, verify_sns_message
 from .forms import EmailCampaignForm
+from olympiad.utils.params import get_int_param
 from .tasks import (
     create_recipients_from_filters,
     create_recipients_from_email_list,
@@ -77,7 +78,7 @@ def create_campaign(request):
 
 def get_schools_by_province(request):
     """AJAX: Аймгаар сургууль шүүх"""
-    province_id = request.GET.get('province_id')
+    province_id = get_int_param(request.GET, 'province_id')
     if province_id:
         try:
             from schools.models import School

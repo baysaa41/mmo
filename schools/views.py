@@ -42,6 +42,7 @@ from .moderator import blocked_emails, change_moderator, email_problem, norm_ema
 
 from django.contrib.admin.views.decorators import staff_member_required
 from .forms import SchoolModeratorChangeForm, EditSchoolInfoForm, SchoolManagerAccountForm
+from olympiad.utils.params import get_int_param
 
 # "Бүх сурагчид" хэсгээс шинээр нэмсэн сурагчид оноох "Бусад" ангилал
 OTHER_LEVEL_ID = 8
@@ -110,8 +111,8 @@ def all_schools_registry_view(request):
     """
     # Эрх шалгах
     is_staff = request.user.is_staff
-    pid = request.GET.get('p')
-    zid = request.GET.get('z')
+    pid = get_int_param(request.GET, 'p')
+    zid = get_int_param(request.GET, 'z')
     name_query = request.GET.get('q', '')
 
     # Аймгийн manager эсэхийг шалгах
@@ -1133,7 +1134,7 @@ def manage_all_schools_view(request):
     """
     # Эрх шалгах
     is_staff = request.user.is_staff
-    province_id = request.GET.get('p', '')
+    province_id = get_int_param(request.GET, 'p')
 
     # Аймгийн manager эсэхийг шалгах
     managed_province = None
@@ -1184,7 +1185,7 @@ def manage_all_schools_view(request):
 
     # URL-аас шүүлтүүрийн утгуудыг авах
     name_query = request.GET.get('q', '')
-    zone_id = request.GET.get('z', '')
+    zone_id = get_int_param(request.GET, 'z')
     inactive_filter = request.GET.get('inactive', '')
     active_filter = request.GET.get('active', '')
 
@@ -1576,8 +1577,8 @@ def school_official_levels_view(request):
         return redirect(redirect_url)
 
     # Get filter parameters
-    selected_province_id = request.GET.get('p', '')
-    selected_level_id = request.GET.get('l', '')
+    selected_province_id = get_int_param(request.GET, 'p')
+    selected_level_id = get_int_param(request.GET, 'l')
 
     # Base queryset
     schools = School.objects.select_related('province').prefetch_related('official_levels').order_by('province__name', 'name')
@@ -1593,8 +1594,8 @@ def school_official_levels_view(request):
         'schools': schools,
         'levels': levels,
         'provinces': provinces,
-        'selected_province_id': int(selected_province_id) if selected_province_id else '',
-        'selected_level_id': int(selected_level_id) if selected_level_id else '',
+        'selected_province_id': selected_province_id or '',
+        'selected_level_id': selected_level_id or '',
         'total_schools': schools.count(),
     }
 
@@ -1765,10 +1766,9 @@ def merge_school_users(request, school_id):
 
     # === GET: Step 1 or Step 2 ===
     step = request.GET.get('step', '1')
-    primary_id = request.GET.get('primary')
+    primary_id = get_int_param(request.GET, 'primary')
 
     if step == '2' and primary_id:
-        primary_id = int(primary_id)
         primary_user = next((u for u in users if u.id == primary_id), None)
         if not primary_user:
             messages.error(request, 'Үндсэн хэрэглэгч олдсонгүй.')

@@ -7,7 +7,10 @@ PSTRICKS_SERVER_BASE_URL = 'https://pst.mathminds.club'
 
 @register.filter(name='latex')
 def latex(value):
-    value = enum2ol(value)
+    # Архиваас оруулсан бодлогуудад statement хоосон (None) байж болно
+    if not value:
+        return ''
+    value = enum2ol(str(value))
     value = emph2em(value)
     value = bf2strong(value)
     value = center2div(value)

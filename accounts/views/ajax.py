@@ -3,10 +3,11 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.http import JsonResponse
 from schools.models import School
+from olympiad.utils.params import get_int_param
 
 
 def load_schools(request):
-    province_id = request.GET.get('province_id')
+    province_id = get_int_param(request.GET, 'province_id')
     # province_id-г ашиглан зөвхөн тухайн аймагт хамаарах сургуулиудыг шүүх
     schools = School.objects.filter(province_id=province_id).order_by('name')
     # Сургуулиудын ID болон нэрийг JSON хэлбэрээр буцаах

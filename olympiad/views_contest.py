@@ -6,6 +6,7 @@ from .forms import ResultsForm, UploadForm
 
 
 from schools.models import School
+from olympiad.utils.params import get_int_param
 
 ResultsFormSet = modelformset_factory(Result, form=ResultsForm, extra=0)
 
@@ -29,7 +30,7 @@ def get_result_form(request):
     """
     AJAX request-аар UploadForm буцаах
     """
-    result_id = request.GET.get('result_id')
+    result_id = get_int_param(request.GET, 'result_id')
     result = get_object_or_404(Result, pk=result_id)
 
     # Form үүсгэх
@@ -58,7 +59,7 @@ def get_result_form(request):
 
 @login_required
 def student_exam_materials_view(request):
-    user_id = request.GET.get('user_id', request.user.id)
+    user_id = get_int_param(request.GET, 'user_id', request.user.id)
     results = Result.objects.filter(contestant_id=user_id)
     title = "ID: {}, {}, {} сурагчийн илгээсэн материалууд".format(request.user.id, request.user.first_name,
                                                                    request.user.last_name)

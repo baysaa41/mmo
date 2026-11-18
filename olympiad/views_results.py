@@ -14,13 +14,14 @@ import numpy as np
 import re
 
 from django.core.cache import cache
+from olympiad.utils.params import get_int_param
 
 
 
 def results_home(request):
     now = datetime.now(timezone.utc)
     school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
-    year_id = request.GET.get('year', school_year.id if school_year else None)
+    year_id = get_int_param(request.GET, 'year', school_year.id if school_year else None)
     year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
     prev = SchoolYear.objects.filter(pk=year.id - 1).first() if year else None
@@ -65,8 +66,8 @@ def olympiad_results(request, olympiad_id):
     show_all = request.GET.get('all', False)
     olympiad = get_object_or_404(Olympiad, pk=olympiad_id)
 
-    province_id = request.GET.get("p", "0").strip()
-    zone_id = request.GET.get("z", "0").strip()
+    province_id = get_int_param(request.GET, "p", 0)
+    zone_id = get_int_param(request.GET, "z", 0)
     page_number = request.GET.get("page", "1")
 
     # Шинэ шүүлтүүрүүд
@@ -110,7 +111,7 @@ def olympiad_results(request, olympiad_id):
             scoresheets = scoresheets.filter(is_official=False)
 
         # --- Аймаг/Бүс шүүлтүүр ---
-        if province_id != "0":
+        if province_id:
             scoresheets = scoresheets.filter(school__province_id=province_id)
             # Ranking field сонголт: official/all/unofficial
             if official_filter == "official":
@@ -125,7 +126,7 @@ def olympiad_results(request, olympiad_id):
                 rank_field_a = "ranking_a_p_all"
                 rank_field_b = "ranking_b_p_all"
                 list_rank_field = "list_rank_p_all"
-        elif zone_id != "0":
+        elif zone_id:
             scoresheets = scoresheets.filter(school__province__zone_id=zone_id)
             # Ranking field сонголт: official/all/unofficial
             if official_filter == "official":
@@ -369,8 +370,8 @@ def olympiad_group_result_view(request, group_id):
 
 @login_required
 def answers_view(request, olympiad_id):
-    pid = int(request.GET.get('p', 0))
-    sid = int(request.GET.get('s', 0))
+    pid = get_int_param(request.GET, 'p', 0)
+    sid = get_int_param(request.GET, 's', 0)
     top_n = request.GET.get('top', None)
     if top_n:
         try:
@@ -517,8 +518,8 @@ def answers_view(request, olympiad_id):
 
 @login_required
 def province_summary_view(request, olympiad_id):
-    pid = int(request.GET.get('p', 0))
-    sid = int(request.GET.get('s', 0))
+    pid = get_int_param(request.GET, 'p', 0)
+    sid = get_int_param(request.GET, 's', 0)
 
     school_summaries = [] # Тойм хадгалах лист
 
@@ -662,11 +663,11 @@ def first_round_stats(request):
     # Хичээлийн жилийг сонгох
     now = datetime.now(timezone.utc)
     school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
-    year_id = request.GET.get('year', school_year.id if school_year else None)
+    year_id = get_int_param(request.GET, 'year', school_year.id if school_year else None)
     year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
     # Олимпиад сонгох (заавал биш, сонгоогүй бол бүгдийг багтаана)
-    olympiad_id = request.GET.get('olympiad', None)
+    olympiad_id = get_int_param(request.GET, 'olympiad')
 
     prev = SchoolYear.objects.filter(pk=year.id - 1).first() if year else None
     next = SchoolYear.objects.filter(pk=year.id + 1).first() if year else None
@@ -848,7 +849,7 @@ def round2_summary_view(request):
     Бүх хэрэглэгчид харах боломжтой
     """
     # School year авах - query parameter-ээс эсвэл current
-    school_year_id = request.GET.get('school_year')
+    school_year_id = get_int_param(request.GET, 'school_year')
 
     if school_year_id:
         try:

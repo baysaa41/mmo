@@ -14,6 +14,7 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
+from olympiad.utils.params import get_int_param
 
 @require_POST
 @csrf_exempt  # production-д бол csrf token ашиглаарай
@@ -47,7 +48,7 @@ def results_home(request):
     mode = request.GET.get('mode', 0)
 
     school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
-    id = request.GET.get('year', school_year.id if school_year else None)
+    id = get_int_param(request.GET, 'year', school_year.id if school_year else None)
     year = SchoolYear.objects.filter(pk=id).first() if id else None
     prev = SchoolYear.objects.filter(pk=year.id - 1).first() if year else None
     next = SchoolYear.objects.filter(pk=year.id + 1).first() if year else None
@@ -319,7 +320,7 @@ def staff_supplements_view(request):
 
 @staff_member_required
 def approve_supplement(request):
-    id = request.GET.get('id', False)
+    id = get_int_param(request.GET, 'id')
     if id and request.user.is_superuser:
         upload = Upload.objects.filter(pk=id).first()
         upload.result.state = 3
@@ -331,7 +332,7 @@ def approve_supplement(request):
 
 @staff_member_required
 def remove_supplement(request):
-    id = request.GET.get('id', False)
+    id = get_int_param(request.GET, 'id')
     if id and request.user.is_superuser:
         upload = Upload.objects.filter(pk=id).first()
         upload.delete()
@@ -341,7 +342,7 @@ def remove_supplement(request):
 
 @login_required
 def view_result(request):
-    result_id = int(request.GET.get('result_id', 0))
+    result_id = get_int_param(request.GET, 'result_id', 0)
     if result_id > 0:
         result = Result.objects.filter(pk=result_id).first()
         return render(request, "olympiad/upload_viewer.html", {'result': result})
@@ -380,7 +381,7 @@ def exam_grading_view(request, problem_id):
 
 @login_required
 def grade(request):
-    result_id = int(request.GET.get('result_id', 0))
+    result_id = get_int_param(request.GET, 'result_id', 0)
     if result_id > 0:
         result = Result.objects.get(pk=result_id)
 

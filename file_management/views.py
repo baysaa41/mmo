@@ -12,6 +12,7 @@ from .forms import FileUploadForm, TrainingMaterialForm
 from django.contrib.auth.models import User
 import mimetypes
 import os
+from olympiad.utils.params import get_int_param
 
 
 @login_required
@@ -62,7 +63,7 @@ def download_file(request, file_id):
 def file_list(request):
     if is_manager(request.user.id):
         # Хичээлийн жил сонгох (query parameter ашиглана)
-        selected_year_id = request.GET.get('year', None)
+        selected_year_id = get_int_param(request.GET, 'year')
 
         # Бүх хичээлийн жилүүдийг авах
         school_years = SchoolYear.objects.all()
@@ -128,7 +129,7 @@ def training_materials(request):
 
     school_years = SchoolYear.objects.filter(uploaded_files__kind=FileUpload.Kind.TRAINING).distinct()
     selected_year = None
-    selected_year_id = request.GET.get('year')
+    selected_year_id = get_int_param(request.GET, 'year')
     if selected_year_id:
         selected_year = get_object_or_404(SchoolYear, id=selected_year_id)
         materials = materials.filter(school_year=selected_year)

@@ -3,6 +3,7 @@ from django.db.models import Q
 from .models import Post
 from olympiad.models import SchoolYear
 from datetime import date
+from olympiad.utils.params import get_int_param
 
 def post_list_view(request):
     """
@@ -13,7 +14,7 @@ def post_list_view(request):
 
     # Determine the active and selected school years
     active_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
-    year_id = request.GET.get('year', active_year.id if active_year else None)
+    year_id = get_int_param(request.GET, 'year', active_year.id if active_year else None)
     selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
     posts = []
@@ -55,7 +56,7 @@ def post_search_view(request):
     return render(request, 'posts/post_search_view.html', context)
 
 def post_view(request):
-    id = int(request.GET.get('id', 0))
+    id = get_int_param(request.GET, 'id', 0)
     if id > 0:
         post = Post.objects.filter(pk=id).first()
         return render(request, 'posts/post_view.html', {

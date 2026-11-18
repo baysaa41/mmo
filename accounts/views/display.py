@@ -16,6 +16,7 @@ from ..models import Province, Level, UserMeta, Zone, UserMergeRequest
 from schools.models import School
 from .. import services
 import datetime
+from olympiad.utils.params import get_int_param
 
 
 def _send_confirmation_emails(merge_request, users):
@@ -298,9 +299,9 @@ def participant_search(request):
     """
     # Get search parameters
     query = request.GET.get('q', '').strip()
-    province_id = request.GET.get('p', '')
-    zone_id = request.GET.get('z', '')
-    school_id = request.GET.get('s', '')
+    province_id = get_int_param(request.GET, 'p')
+    zone_id = get_int_param(request.GET, 'z')
+    school_id = get_int_param(request.GET, 's')
 
     # Check if any search parameter is provided
     has_search_params = bool(query or province_id or zone_id or school_id)
@@ -378,9 +379,10 @@ def participant_search(request):
         'zones': zones,
         'schools': schools,
         'search_query': query,
-        'selected_province': province_id,
-        'selected_zone': zone_id,
-        'selected_school': school_id,
+        # Темплэйт province.id|stringformat:"s"-тэй харьцуулдаг тул string
+        'selected_province': str(province_id or ''),
+        'selected_zone': str(zone_id or ''),
+        'selected_school': str(school_id or ''),
     }
 
     return render(request, 'accounts/participant_search.html', context)

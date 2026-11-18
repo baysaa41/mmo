@@ -9,6 +9,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
 from olympiad.models import Olympiad, Problem, AnswerChoice, Topic, ScoreSheet
+from olympiad.utils.params import get_int_param
 
 
 def check_api_key(request):
@@ -39,8 +40,8 @@ def list_olympiads(request):
     if not check_api_key(request):
         return JsonResponse({'error': 'Invalid or missing API key'}, status=401)
 
-    limit = int(request.GET.get('limit', 100))
-    offset = int(request.GET.get('offset', 0))
+    limit = get_int_param(request.GET, 'limit', 100)
+    offset = get_int_param(request.GET, 'offset', 0)
 
     olympiads = Olympiad.objects.select_related(
         'school_year', 'level', 'host'

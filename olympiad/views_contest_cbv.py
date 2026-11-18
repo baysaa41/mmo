@@ -12,6 +12,7 @@ from django.db import transaction
 from .models import Olympiad, Result, Upload
 from .forms import ResultsForm, UploadForm
 from .mixins import OlympiadAccessMixin, ResultsEnsureMixin
+from olympiad.utils.params import get_int_param
 
 
 # ----------------------------
@@ -105,7 +106,7 @@ class StudentResultUploadView(LoginRequiredMixin, OlympiadAccessMixin, ResultsEn
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
     def get(self, request, *args, **kwargs):
-        result_id = request.GET.get('result_id')
+        result_id = get_int_param(request.GET, 'result_id')
         result = get_object_or_404(Result, pk=result_id, contestant=request.user, olympiad=self.olympiad)
         form = UploadForm()
         return render(request, self.template_name, {
@@ -314,7 +315,7 @@ class OlympiadResultViewerView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        result_id = self.request.GET.get('result_id')
+        result_id = get_int_param(self.request.GET, 'result_id')
         result = get_object_or_404(Result, pk=result_id, contestant=self.request.user)
         context['result'] = result
         context['uploads'] = result.get_uploads()

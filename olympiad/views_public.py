@@ -10,6 +10,7 @@ from olympiad.utils.series_files import series_file_sizes
 from accounts.models import Province
 from django.db.models import Q, Count
 from django.core.cache import cache
+from olympiad.utils.params import get_int_param
 
 
 def _round1_student_status(user):
@@ -113,7 +114,7 @@ def get_capital_quota_tables(selected_year, force_update=False):
 def round_guideline_view(request, round):
     now = datetime.now(timezone.utc).date()
     active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
-    year_id = request.GET.get('year', active_year.id if active_year else None)
+    year_id = get_int_param(request.GET, 'year', active_year.id if active_year else None)
     selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
     guideline = None
@@ -201,7 +202,7 @@ def round2_school_quota_view(request):
     ангилал сонгож харах нийтийн хуудас."""
     now = datetime.now(timezone.utc).date()
     active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
-    year_id = request.GET.get('year', active_year.id if active_year else None)
+    year_id = get_int_param(request.GET, 'year', active_year.id if active_year else None)
     selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
     prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first() if selected_year else None
@@ -209,7 +210,7 @@ def round2_school_quota_view(request):
 
     all_provinces = Province.objects.order_by('name')
     selected_province = None
-    province_id = request.GET.get('province')
+    province_id = get_int_param(request.GET, 'province')
     if province_id:
         selected_province = Province.objects.filter(pk=province_id).first()
 
@@ -258,7 +259,7 @@ def round2_quota_summary_view(request):
     харуулах нэгдсэн тайлан (Квотын дэвтэр)."""
     now = datetime.now(timezone.utc).date()
     active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
-    year_id = request.GET.get('year', active_year.id if active_year else None)
+    year_id = get_int_param(request.GET, 'year', active_year.id if active_year else None)
     selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
     prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first() if selected_year else None
@@ -347,7 +348,7 @@ def round3_district_quota_view(request):
     ангилал бүрээр (D, E, F, S, T) нэг дор харах нийтийн хуудас ("Хотын эрхийн дэвтэр")."""
     now = datetime.now(timezone.utc).date()
     active_year = SchoolYear.objects.filter(start__lte=now, end__gte=now).first()
-    year_id = request.GET.get('year', active_year.id if active_year else None)
+    year_id = get_int_param(request.GET, 'year', active_year.id if active_year else None)
     selected_year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
     prev_year = SchoolYear.objects.filter(pk=selected_year.id - 1).first() if selected_year else None
@@ -370,7 +371,7 @@ def round3_district_quota_view(request):
 def problems_home(request):
     now = datetime.now(timezone.utc)
     school_year = SchoolYear.objects.filter(start__lt=now, end__gt=now).first()
-    year_id = request.GET.get('year', school_year.id if school_year else None)
+    year_id = get_int_param(request.GET, 'year', school_year.id if school_year else None)
     year = SchoolYear.objects.filter(pk=year_id).first() if year_id else None
 
     prev = SchoolYear.objects.filter(pk=year.id - 1).first() if year else None
@@ -492,16 +493,16 @@ def problem_list_with_topics(request):
 
 def olympiad_top_stats(request, olympiad_id):
     olympiad = get_object_or_404(Olympiad, id=olympiad_id)
-    province_id = request.GET.get("p", "0").strip()
-    zone_id = request.GET.get("z", "0").strip()
+    province_id = get_int_param(request.GET, "p", 0)
+    zone_id = get_int_param(request.GET, "z", 0)
 
     scoresheets = ScoreSheet.objects.filter(olympiad=olympiad)
 
     # --- аль ranking багана ашиглахыг шийдэх ---
-    if province_id != "0":
+    if province_id:
         scoresheets = scoresheets.filter(school__province_id=province_id)
         rank_field = "ranking_a_p"
-    elif zone_id != "0":
+    elif zone_id:
         scoresheets = scoresheets.filter(school__province__zone_id=zone_id)
         rank_field = "ranking_a_z"
     else:

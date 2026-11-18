@@ -17,6 +17,7 @@ from django.contrib.auth.models import User, Group
 import pandas as pd
 import io
 from openpyxl.styles import Border, Side, Font, Alignment
+from olympiad.utils.params import get_int_param
 
 
 def user_can_manage_province(user, province):
@@ -1056,11 +1057,10 @@ def merge_teachers(request, province_id, olympiad_id):
 
     # === GET: Step 1 or Step 2 ===
     step = request.GET.get('step', '1')
-    primary_id = request.GET.get('primary')
+    primary_id = get_int_param(request.GET, 'primary')
 
     if step == '2' and primary_id:
         # STEP 2: Compare fields
-        primary_id = int(primary_id)
         primary_user = next((u for u in users if u.id == primary_id), None)
         if not primary_user:
             messages.error(request, 'Үндсэн хэрэглэгч олдсонгүй.')
